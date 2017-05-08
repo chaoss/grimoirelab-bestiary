@@ -1,0 +1,11 @@
+*.pyc
+*.pyo
+build
+dist
+bestiary.egg-info
+__pycache__
+
+# Eclipse's files and directories
+.project
+.pydevproject
+.settings
