@@ -101,9 +101,17 @@ class ReposGitHub(Repos):
             url_owner = url_user
         return url_owner
 
+    def get_ids(self):
+        repo_list = self.get_repos()
+        repo_ids_list = [self.get_id(repo) for repo in repo_list]
 
-    def get_list(self):
+        return repo_ids_list
 
+    def get_id(self, repo):
+        return repo['html_url']
+
+    def get_repos(self):
+        """ Get the repository list for all the owners """
         for owner in self.owners:
             owner_url = self.__get_owner_repos_url(owner)
             logger.debug("Getting repos from: %s", owner_url)

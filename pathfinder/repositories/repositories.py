@@ -33,6 +33,14 @@ class Repos():
         """ Empty constructor """
         pass
 
-    def get_list(self):
+    def get_repos(self):
         """ Return a generator of repositories """
+        raise NotImplementedError
+
+    def get_ids(self):
+        """ Return a generator of repositories ids """
+        raise NotImplementedError
+
+    def get_id(self, repository):
+        """ Return the id for a repository """
         raise NotImplementedError

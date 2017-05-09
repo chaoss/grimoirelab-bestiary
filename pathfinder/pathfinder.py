@@ -78,7 +78,9 @@ if __name__ == '__main__':
     # Retrieve all the repositories
     if args.data_source == 'github':
         repos = ReposGitHub(args.owners, args.token)
-        for repo in repos.get_list():
+        for repo in repos.get_repos():
+            print(repo)
+        for repo in repos.get_ids():
             print(repo)
     else:
         logger.error("Data source %s not supported", data_source)
