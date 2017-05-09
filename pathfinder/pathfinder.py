@@ -27,8 +27,10 @@ import json
 import logging
 import sys
 
-from repositories.github import ReposGitHub
 from repositories.eclipse import ReposEclipse
+from repositories.gerrit import ReposGerrit
+from repositories.github import ReposGitHub
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,16 +58,23 @@ def get_params():
     parser.add_argument('-t', '--token', dest='token', help="Auth token")
     parser.add_argument('-o', '--owners', dest='owners', nargs='*',
                         help='GitHub owners to get repos from')
+    parser.add_argument('--url', dest='url', help="URL for repositories server")
+    parser.add_argument('--user', dest='user', help="User for accessing the repositories server")
 
     args = parser.parse_args()
 
-    if not args.data_source:
-        parser.error("data source must be provided.")
+    if not args.backend:
+        parser.error("backend must be provided.")
         sys.exit(1)
 
-    if args.data_source == 'github' and (not args.token or not args.owners):
-        parser.error("github data source needs token and owners.")
+    if args.backend == 'github' and (not args.token or not args.owners):
+        parser.error("github backend needs token and owners.")
         sys.exit(1)
+
+    if args.backend == 'gerrit' and (not args.url or not args.user):
+        parser.error("gerrit backend needs url and user.")
+        sys.exit(1)
+
 
     return args
 
@@ -85,5 +94,9 @@ if __name__ == '__main__':
         repos = ReposEclipse(args.data_source)
         for repo in repos.get_ids():
             print(repo)
+    elif args.backend == 'gerrit':
+        repos = ReposGerrit(args.url, args.user)
+        for repo in repos.get_ids():
+            print(repo)
     else:
-        logger.error("Data source %s not supported", data_source)
+        logger.error("Backend %s not supported", args.backend)

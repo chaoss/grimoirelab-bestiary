@@ -63,4 +63,6 @@ class ReposGerrit(Repos):
         cmd = ['ssh', '-p', '29418', self.user+"@"+self.url, "gerrit"]
         cmd += ['ls-projects']
         (errs_str, outs_str) = self.__run(cmd)
-        return outs_str.split("\n")
+        projects = outs_str.split("\n")
+        repos = ['https://' + self.url + '/r/' + project for project in projects]
+        return repos

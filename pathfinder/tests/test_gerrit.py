@@ -46,6 +46,7 @@ class ReposEclipseTest(unittest.TestCase):
     def test_get_repos(self):
         repos = ReposGerrit(GERRIT_URL, GERRIT_USER, "git")
         repos_list = repos.get_repos()
+        print(repos_list)
         self.assertEqual(len(repos_list), 926)
 
     def test_get_ids(self):
