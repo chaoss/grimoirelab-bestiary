@@ -115,6 +115,9 @@ class ReposGitHub(Repos):
 
     def get_repos(self):
         """ Get the repository list for all the owners """
+
+        repos = []
+
         for owner in self.owners:
             owner_url = self.__get_owner_repos_url(owner)
             logger.debug("Getting repos from: %s", owner_url)
@@ -123,7 +126,7 @@ class ReposGitHub(Repos):
                 try:
                     repos_res = self.__call(owner_url)
                     for repo in repos_res.json():
-                        yield repo
+                        repos.append(repo)
 
                     logger.debug("Rate limit: %s", repos_res.headers['X-RateLimit-Remaining'])
 
@@ -134,3 +137,5 @@ class ReposGitHub(Repos):
                 except requests.exceptions.ConnectionError:
                     logger.error("Can not connect to GitHub")
                     break
+
+        return repos

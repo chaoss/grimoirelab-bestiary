@@ -98,9 +98,6 @@ class ReposGitHubTest(unittest.TestCase):
     def setUp(self):
         self.owners = ['grimoirelab', 'acs']
         self.token = 'github_token'
-        self.blacklist = []
-        self.add_repos = []
-        self.forks = False
 
     def tearDown(self):
         pass
@@ -108,48 +105,19 @@ class ReposGitHubTest(unittest.TestCase):
     def test_initialization(self):
         """Test whether attributes are initializated"""
 
-        repos = ReposGitHub(self.owners, self.token, self.blacklist,
-                            self.add_repos, self.forks)
+        repos = ReposGitHub(self.owners, self.token)
 
         self.assertEqual(repos.owners, self.owners)
         self.assertEqual(repos.token, self.token)
-        self.assertEqual(repos.blacklist, self.blacklist)
-        self.assertEqual(repos.add_repos, self.add_repos)
-        self.assertEqual(repos.forks, self.forks)
 
     @httpretty.activate
-    def test_get_list(self):
+    def test_get_repos(self):
         http_requests = setup_http_server()
-        total_repos = 24
-        total_forks = 17
+        total_repos = 41
 
-        repos = ReposGitHub(self.owners, self.token, self.blacklist,
-                            self.add_repos, self.forks)
-        repos_list = repos.get_list()
+        repos = ReposGitHub(self.owners, self.token)
+        repos_list = repos.get_repos()
         self.assertEqual(len(repos_list), total_repos)
-
-        # Test blacklisting some repos
-        self.blacklist = ['https://github.com/grimoirelab/panels',
-                          'https://github.com/acs/fiware-idm-old']
-        repos = ReposGitHub(self.owners, self.token, self.blacklist,
-                            self.add_repos, self.forks)
-        repos_list = repos.get_list()
-        self.assertEqual(len(repos_list), total_repos-len(self.blacklist))
-
-        # Test adding repos
-        self.add_repos = ['https://github.com/MetricsGrimoire/octopus']
-        repos = ReposGitHub(self.owners, self.token, self.blacklist,
-                            self.add_repos, self.forks)
-        repos_list = repos.get_list()
-        self.assertEqual(len(repos_list), total_repos-len(self.blacklist)+len(self.add_repos))
-
-        # Test forks
-        self.forks = True
-        repos = ReposGitHub(self.owners, self.token, self.blacklist,
-                            self.add_repos, self.forks)
-        repos_list = repos.get_list()
-        self.assertEqual(len(repos_list), total_repos-len(self.blacklist)+len(self.add_repos)+total_forks)
-
 
 if __name__ == "__main__":
     unittest.main(warnings='ignore')
