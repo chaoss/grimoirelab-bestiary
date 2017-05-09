@@ -28,6 +28,7 @@ import logging
 import sys
 
 from repositories.github import ReposGitHub
+from repositories.eclipse import ReposEclipse
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,9 @@ def get_params():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-b', '--backend', dest='backend',
+                        help='Repositories backend to use',
+                        default='github')
     parser.add_argument('-d', '--data-source', dest='data_source',
                         help='Data source to get repositories from',
                         default='github')
@@ -72,14 +76,13 @@ if __name__ == '__main__':
 
     config_logging(args.debug)
 
-    # Just github in this first iteration
-    data_source = "github"
-
     # Retrieve all the repositories
-    if args.data_source == 'github':
+    if args.backend == 'github':
         repos = ReposGitHub(args.owners, args.token)
-        for repo in repos.get_repos():
+        for repo in repos.get_ids():
             print(repo)
+    elif args.backend == 'eclipse':
+        repos = ReposEclipse(args.data_source)
         for repo in repos.get_ids():
             print(repo)
     else:
