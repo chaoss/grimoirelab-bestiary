@@ -110,6 +110,9 @@ class ReposGitHub(Repos):
     def get_id(self, repo):
         return repo['html_url']
 
+    def get_is_fork(self, repo):
+        return repo['fork']
+
     def get_repos(self):
         """ Get the repository list for all the owners """
         for owner in self.owners:

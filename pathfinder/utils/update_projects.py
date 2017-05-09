@@ -28,7 +28,7 @@ import argparse
 import logging
 import sys
 
-sys.path.insert(0, '..')
+sys.path.insert(0, '../..')
 from pathfinder.repositories.github import ReposGitHub
 from projects import Projects
 
@@ -53,9 +53,9 @@ def get_params():
     parser.add_argument('-o', '--owners', dest='owners', nargs='*',
                         help='GitHub owners to get repos from')
     parser.add_argument('-r', '--repos', dest='repos', nargs='*',
-                        help='GitHub repos to include')
+                        help='GitHub repos ids to include')
     parser.add_argument('-b', '--blacklist', dest='blacklist', nargs='*',
-                        help='GitHub repos to exclude')
+                        help='GitHub repos ids to exclude')
     parser.add_argument('-p', '--project', dest='project',
                         help='Project repos to be updated')
     parser.add_argument('--projects-file', dest='projects_file',
@@ -88,10 +88,22 @@ if __name__ == '__main__':
     # Retrieve all the repositories
     repos = ReposGitHub(args.owners, args.token)
     repos_list = []
-    for repo in repos.get_list():
-        repos_list.append(repo["html_url"])
+    for repo in repos.get_repos():
+        if not args.forks and repos.is_fork(repo):
+            logger.debug("Not adding fork %s", repos.get_id(repo))
+            continue
 
-    # args.blacklist, args.repos, args.forks
+        if args.blacklist and repos.get_id(repo) in args.blacklist:
+            logger.debug("Not adding blacklisted repo %s", repos.get_id(repo))
+            continue
+
+        repos_list.append(repos.get_id(repo))
+
+    # Adding additional repos
+    if args.repos:
+        for add_repo_id in args.repos:
+            logger.debug("Adding extra repo %s", add_repo_id)
+            repos_list.append(add_repo_id)
 
     logger.debug("Added repos: %s", set(repos_list) - set(projects.get_project_repos(project, 'github')))
     logger.debug("Removed repos: %s", set(projects.get_project_repos(project, 'github')) - set(repos_list))

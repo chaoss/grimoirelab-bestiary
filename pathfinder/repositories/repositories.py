@@ -44,3 +44,7 @@ class Repos():
     def get_id(self, repository):
         """ Return the id for a repository """
         raise NotImplementedError
+
+    def is_fork(self, repository):
+        """ Return if a repository is a fork """
+        return False
