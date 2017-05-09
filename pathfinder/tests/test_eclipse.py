@@ -75,6 +75,15 @@ class ReposEclipseTest(unittest.TestCase):
         "mls": 351
     }
 
+    test_project = 'webtools'
+
+    repos_ds_webtools = {
+        "scm": 23,
+        "its": 1,
+        "scr": 23,
+        "mls": 5
+    }
+
 
     @httpretty.activate
     def test_initialization(self):
@@ -108,6 +117,16 @@ class ReposEclipseTest(unittest.TestCase):
             repos_ids_list = repos.get_ids()
             self.assertEqual(len(repos_ids_list), self.repos_ds[ds])
 
+    @httpretty.activate
+    def test_get_projects(self):
+        http_requests = setup_http_server()
+
+        for ds in self.repos_ds:
+            repos = ReposEclipse(ds)
+            projects = repos.get_projects()
+            self.assertEqual(len(projects), 301)
+            repos_ds = repos.get_project_repos_id(self.test_project)
+            self.assertEqual(len(repos_ds), self.repos_ds_webtools[ds])
 
 
 if __name__ == "__main__":

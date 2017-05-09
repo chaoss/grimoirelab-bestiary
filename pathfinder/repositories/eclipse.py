@@ -27,7 +27,9 @@ import logging
 
 import requests
 
-from VizGrimoireUtils.eclipse.eclipse_projects_lib import get_repos_list
+from VizGrimoireUtils.eclipse.eclipse_projects_lib import (
+    get_repos_list,
+    get_project_repos)
 
 from .repositories import Repos
 
@@ -69,3 +71,9 @@ class ReposEclipse(Repos):
     def get_repos(self):
         """ Get the repository list for a data sources for all projects """
         return get_repos_list(self.eclipse_projects, self.data_source)
+
+    def get_projects(self):
+        return list(self.eclipse_projects.keys())
+
+    def get_project_repos_id(self, project):
+        return get_project_repos(project, self.eclipse_projects, self.data_source)

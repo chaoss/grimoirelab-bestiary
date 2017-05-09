@@ -33,7 +33,7 @@ class Repos():
         """ Empty constructor """
         pass
 
-    def get_repos(self):
+    def get_repos(self, data_source=None):
         """ Return a generator of repositories """
         raise NotImplementedError
 
@@ -48,3 +48,11 @@ class Repos():
     def is_fork(self, repository):
         """ Return if a repository is a fork """
         return False
+
+    def get_projects(self):
+        """ Return a list with the projects available """
+        return []
+
+    def get_project_repos_ids(self, project, data_source):
+        """ Return the repos ids in a project for a data source """
+        return []
