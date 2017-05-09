@@ -1,0 +1,36 @@
+{
+    "acs": {
+        "github": [
+            "https://github.com/acs/mordred",
+            "https://github.com/acs/fiware-deliverme",
+            "https://github.com/acs/VizGrimoireUtils",
+            "https://github.com/acs/liferay-portal",
+            "https://github.com/acs/gaas",
+            "https://github.com/acs/scout",
+            "https://github.com/acs/books",
+            "https://github.com/acs/sonar-examples",
+            "https://github.com/acs/taiga-dashboard",
+            "https://github.com/acs/sortinghat",
+            "https://github.com/acs/ReviewNinja-Welcome",
+            "https://github.com/acs/openfda",
+            "https://github.com/acs/taiga-front",
+            "https://github.com/acs/webform-plugin-portlet",
+            "https://github.com/acs/kibana",
+            "https://github.com/acs/mediawiki-dashboard",
+            "https://github.com/acs/arthur",
+            "https://github.com/acs/panels",
+            "https://github.com/acs/perceval-mozilla",
+            "https://github.com/acs/fiware-idm-old",
+            "https://github.com/acs/ceres",
+            "https://github.com/acs/revizjs",
+            "https://github.com/acs/perceval-1",
+            "https://github.com/acs/perceval",
+            "https://github.com/acs/perceval-acs",
+            "https://github.com/acs/liferay-plugins",
+            "https://github.com/acs/bestiary",
+            "https://github.com/acs/python-red",
+            "https://github.com/acs/shopping-plugin-portlet",
+            "https://github.com/acs/Bicho"
+        ]
+    }
+}
