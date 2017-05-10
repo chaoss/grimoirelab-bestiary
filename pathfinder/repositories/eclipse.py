@@ -32,6 +32,7 @@ from VizGrimoireUtils.eclipse.eclipse_projects_lib import (
     get_project_repos)
 
 from .repositories import Repos
+from fetch.eclipse import EclipseFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +47,12 @@ class ReposEclipse(Repos):
         self.data_source = data_source
         if data_source == 'git':
             self.data_source = 'scm'
+        super().__init__(None, data_source=self.data_source)
+
         if self.data_source not in self.ECLIPSE_DATA_SOURCES:
             raise RuntimeError("Data source %s does not exists in Eclipse", data_source)
 
-        self.eclipse_projects = self.__get_eclipse_projects()
-
-    def __get_eclipse_projects(self):
-        logger.info("Getting Eclipse projects (1 min) from  %s ", self.ECLIPSE_PROJECTS_URL)
-
-        eclipse_projects_resp = requests.get(self.ECLIPSE_PROJECTS_URL)
-        eclipse_projects = eclipse_projects_resp.json()['projects']
-
-        return eclipse_projects
+        self.eclipse_projects = EclipseFetcher().fetch()
 
     def get_ids(self):
         repo_list = self.get_repos()

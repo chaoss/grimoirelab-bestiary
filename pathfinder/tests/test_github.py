@@ -96,8 +96,9 @@ class ReposGitHubTest(unittest.TestCase):
     """ReposGitHub tests"""
 
     def setUp(self):
-        self.owners = ['grimoirelab', 'acs']
-        self.token = 'github_token'
+        self.host = 'github.com'
+        self.owner = 'grimoirelab'
+        self.api_token = 'github_token'
 
     def tearDown(self):
         pass
@@ -105,17 +106,17 @@ class ReposGitHubTest(unittest.TestCase):
     def test_initialization(self):
         """Test whether attributes are initializated"""
 
-        repos = ReposGitHub(self.owners, self.token)
+        repos = ReposGitHub(self.host, owner=self.owner, api_token=self.api_token)
 
-        self.assertEqual(repos.owners, self.owners)
-        self.assertEqual(repos.token, self.token)
+        self.assertEqual(repos.user, self.owner)
+        self.assertEqual(repos.api_token, self.api_token)
 
     @httpretty.activate
     def test_get_repos(self):
         http_requests = setup_http_server()
-        total_repos = 41
+        total_repos = 12
 
-        repos = ReposGitHub(self.owners, self.token)
+        repos = ReposGitHub(self.host, owner=self.owner, api_token=self.api_token)
         repos_list = repos.get_repos()
         self.assertEqual(len(repos_list), total_repos)
 

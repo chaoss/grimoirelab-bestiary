@@ -56,10 +56,10 @@ def get_params():
                         default='github')
     parser.add_argument('-g', '--debug', dest='debug', action='store_true')
     parser.add_argument('-t', '--token', dest='token', help="Auth token")
-    parser.add_argument('-o', '--owners', dest='owners', nargs='*',
-                        help='GitHub owners to get repos from')
-    parser.add_argument('--url', dest='url', help="URL for repositories server")
-    parser.add_argument('--user', dest='user', help="User for accessing the repositories server")
+    parser.add_argument('-o', '--owner', dest='owner',
+                        help='GitHub owner to get repos from')
+    parser.add_argument('--host', dest='host', help="repositories server host")
+    parser.add_argument('-u', '--user', dest='user', help="User for accessing the repositories host")
 
     args = parser.parse_args()
 
@@ -67,12 +67,12 @@ def get_params():
         parser.error("backend must be provided.")
         sys.exit(1)
 
-    if args.backend == 'github' and (not args.token or not args.owners):
-        parser.error("github backend needs token and owners.")
+    if args.backend == 'github' and (not args.token or not args.owner):
+        parser.error("github backend needs token and owner.")
         sys.exit(1)
 
-    if args.backend == 'gerrit' and (not args.url or not args.user):
-        parser.error("gerrit backend needs url and user.")
+    if args.backend == 'gerrit' and (not args.host or not args.user):
+        parser.error("gerrit backend needs host and user.")
         sys.exit(1)
 
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     # Retrieve all the repositories
     if args.backend == 'github':
-        repos = ReposGitHub(args.owners, args.token)
+        repos = ReposGitHub("github.com", args.owner, args.token)
         for repo in repos.get_ids():
             print(repo)
     elif args.backend == 'eclipse':
@@ -95,7 +95,7 @@ if __name__ == '__main__':
         for repo in repos.get_ids():
             print(repo)
     elif args.backend == 'gerrit':
-        repos = ReposGerrit(args.url, args.user)
+        repos = ReposGerrit(args.host, args.user)
         for repo in repos.get_ids():
             print(repo)
     else:

@@ -29,25 +29,15 @@ import subprocess
 import requests
 
 from .repositories import Repos
+from fetch.gerrit import GerritFetcher
 
 logger = logging.getLogger(__name__)
 
 class ReposGerrit(Repos):
     """ Get the list of repositories from Gerrit """
 
-    def __init__(self, gerrit_url, gerrit_user, data_source='git'):
-        self.url = gerrit_url
-        self.user = gerrit_user
-        self.data_source = data_source
-
-    def __run(self, cmd):
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        outs, errs = proc.communicate()
-        errs_str = errs.decode("utf8")
-        outs_str = outs.decode("utf8")
-
-        return (errs_str, outs_str)
-
+    def __init__(self, host, user):
+        super().__init__(host, user=user)
 
     def get_ids(self):
         repo_list = self.get_repos()
@@ -60,9 +50,7 @@ class ReposGerrit(Repos):
 
     def get_repos(self):
         """ Get the repository list for a data sources for all projects """
-        cmd = ['ssh', '-p', '29418', self.user+"@"+self.url, "gerrit"]
-        cmd += ['ls-projects']
-        (errs_str, outs_str) = self.__run(cmd)
-        projects = outs_str.split("\n")
-        repos = ['https://' + self.url + '/r/' + project for project in projects]
+        projects_raw = GerritFetcher(self.host, self.user).fetch()
+        projects = projects_raw.split("\n")
+        repos = ['https://' + self.host + '/r/' + project for project in projects]
         return repos

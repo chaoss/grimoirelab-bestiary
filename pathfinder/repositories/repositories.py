@@ -29,9 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 class Repos():
-    def __init__(self):
-        """ Empty constructor """
-        pass
+    def __init__(self, host, user=None, password=None, api_token=None, data_source=None):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.api_token = api_token
+        self.data_source = data_source
 
     def get_repos(self, data_source=None):
         """ Return a generator of repositories """

@@ -30,21 +30,22 @@ sys.path.insert(0, '..')
 from repositories.gerrit import ReposGerrit
 
 GERRIT_USER = 'adelcastillo'
-GERRIT_URL = 'git.eclipse.org'
+GERRIT_HOST = 'git.eclipse.org'
 
 class ReposEclipseTest(unittest.TestCase):
 
     def test_initialization(self):
         """Test whether attributes are initializated"""
 
-        repos = ReposGerrit(GERRIT_URL, GERRIT_USER, "git")
-        self.assertEqual(repos.data_source, "git")
+        repos = ReposGerrit(GERRIT_HOST, GERRIT_USER)
+        self.assertEqual(repos.user, GERRIT_USER)
+        self.assertEqual(repos.host, GERRIT_HOST)
 
         # with self.assertRaises(RuntimeError):
         #     repos = ReposEclipse("irc")
 
     def test_get_repos(self):
-        repos = ReposGerrit(GERRIT_URL, GERRIT_USER, "git")
+        repos = ReposGerrit(GERRIT_HOST, GERRIT_USER)
         repos_list = repos.get_repos()
         print(repos_list)
         self.assertEqual(len(repos_list), 926)
