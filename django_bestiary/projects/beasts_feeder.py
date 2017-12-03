@@ -93,10 +93,14 @@ def add(cls_orm, **params):
     return obj_orm
 
 
+def list_not_ds_fields():
+    return ['meta', 'git1']
+
+
 def load_projects(projects_file, organization):
 
     # fields in project that are not a data source
-    no_ds = ['meta', 'git1']
+    no_ds = list_not_ds_fields()
 
     add(Organization, **{"name": organization})
 
