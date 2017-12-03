@@ -1,0 +1,20 @@
+language: python
+
+python:
+  - "3.4"
+
+sudo: false
+
+before_install:
+  - pip install flake8
+  - pip install coveralls
+  - pip install django
+  - cd django_bestiary && python manage.py makemigrations
+  - cd django_bestiary && python manage.py migrate
+
+# install:
+#   - ./setup.py install
+
+script:
+  - flake8 .
+  - cd django_bestiary && python manage.py test
