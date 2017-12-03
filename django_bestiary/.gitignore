@@ -1,0 +1,17 @@
+*.pyc
+*.pyo
+build
+dist
+__pycache__
+
+# Eclipse's files and directories
+.project
+.pydevproject
+.settings
+
+# Databases and PDF docs and personal temporal doc
+db*
+*pdf
+TODO
+
+
