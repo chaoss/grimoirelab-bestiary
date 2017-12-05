@@ -11,12 +11,15 @@ class DataSource(models.Model):
 
 
 class Repository(models.Model):
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     # TODO: model params once we hava analyzed several use cases
     params = models.CharField(max_length=400)
     # creation_date = models.DateTimeField('date creation')
     # Relations
     data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('name', 'data_source')
 
     def __str__(self):
         return self.name
