@@ -22,7 +22,7 @@ class Repository(models.Model):
         unique_together = ('name', 'data_source')
 
     def __str__(self):
-        return self.name
+        return "%s (%s)" % (self.name, self.data_source)
 
 
 class RepositoryView(models.Model):
