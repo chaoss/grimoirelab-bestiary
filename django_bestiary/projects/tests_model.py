@@ -23,17 +23,12 @@
 #   Alvaro del Castillo San Felix <acs@bitergia.com>
 #
 
-
-import json
-
 import django
 
 from django.db import transaction
 from django.test import TestCase
 
 from .models import Organization, Project, Repository, RepositoryView, DataSource
-
-from .beasts_feeder import load_projects, list_not_ds_fields, find_repo
 
 
 class OrganizationModelTests(TestCase):
@@ -51,7 +46,7 @@ class OrganizationModelTests(TestCase):
                 org.save()
 
         # Strange that in a CharField you can store dicts!
-        org = Organization(name={'kk': 9000000000000000000000000000})
+        org = Organization(name={'trash': 90})
         org.save()
 
 
@@ -112,47 +107,3 @@ class DataSourceModelTests(TestCase):
         ds = DataSource()
         self.assertIsNot(ds, None)
         ds.save()
-
-
-class BeastFeederTests(TestCase):
-
-    def test_all_loaded(self):
-
-        projects = {}
-        no_ds = list_not_ds_fields()
-
-        projects_file = 'projects/projects-release.json'
-
-        with open(projects_file) as pfile:
-            projects = json.load(pfile)
-
-        read_projects = len(projects.keys())
-        read_data_sources = 0
-        read_orgs = 1
-        read_repos = 0
-        read_repos_views = 0
-
-        for project in projects.keys():
-            for data_source in projects[project]:
-                if data_source in no_ds:
-                    continue
-                read_data_sources += 1
-                for repo_view_str in projects[project][data_source]:
-                    if not find_repo(repo_view_str, data_source):
-                        continue
-                    read_repos += 1
-                    read_repos_views += 1
-
-        load_projects(projects_file, "Test Org")
-
-        total_orgs = Organization.objects.all().count()
-        total_projects = Project.objects.all().count()
-        total_data_sources = DataSource.objects.all().count()
-        total_repos = Repository.objects.all().count()
-        total_repos_views = RepositoryView.objects.all().count()
-
-        self.assertEqual(total_orgs, read_orgs)
-        self.assertEqual(total_projects, read_projects)
-        self.assertEqual(total_data_sources, read_data_sources)
-        self.assertEqual(total_repos, read_repos)
-        self.assertEqual(total_repos_views, read_repos_views)
