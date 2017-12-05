@@ -53,11 +53,29 @@ def find_repo(repo_view_str, data_source):
     """ Given a repo_view and its data source extract the repository """
 
     repo = None
-    if data_source in ['git', 'github', 'confluence']:
+    if data_source in ['askbot', 'hyperkitty', 'jenkins', 'mediawiki',
+                       'mozillaclub', 'phabricator', 'pipermail',
+                       'redmine', 'rss']:
+        repo = repo_view_str
+    elif data_source in ['bugzilla', 'bugzillarest']:
+        tokens = repo_view_str.split("?", 1)
+        repo = tokens[0].replace('/bugs/buglist.cgi', '')
+    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
+                         'supybot', 'nntp']:
         repo = repo_view_str.split(" ")[0]
+    elif data_source in ['crates', 'dockerhub', 'functest', 'google_hits',
+                         'meetup', 'puppetforge', 'remo', 'slack', 'telegram',
+                         'twitter']:
+        repo = ''  # not needed because it is always the same
+    elif data_source in ['gerrit']:
+        tokens = repo_view_str.split("_")
+        repo = tokens[0]
     elif data_source in ['mbox']:
         tokens = repo_view_str.split(" ")[0]
         repo = tokens[0] + " " + tokens[1]
+    elif data_source in ['stackexchange']:
+        repo = repo_view_str.split("questions")[0]
+
 
     return repo
 
@@ -67,14 +85,35 @@ def find_filters(repo_view_str, data_source):
 
     filters = ''
 
-    if data_source in ['git', 'github', 'confluence']:
+    if data_source in ['askbot', 'crates', 'functest',
+                       'hyperkitty', 'jenkins', 'mediawiki', 'mozillaclub',
+                       'phabricator', 'pipermail', 'puppetforge', 'redmine',
+                       'remo', 'rss']:
+        # THese data sources does not support filtering
+        filters = ''
+    elif data_source in ['bugzilla', 'bugzillarest']:
+        tokens = repo_view_str.split("?", 1)
+        if len(tokens) > 1:
+            filters = tokens[1]
+    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
+                         'supybot', 'nntp']:
         tokens = repo_view_str.split(" ", 1)
+        if len(tokens) > 1:
+            filters = tokens[1]
+    elif data_source in ['dockerhub', 'google_hits', 'meetup', 'slack',
+                         'telegram', 'twitter']:
+        filters = repo_view_str
+    elif data_source in ['gerrit']:
+        tokens = repo_view_str.split("_", 1)
         if len(tokens) > 1:
             filters = tokens[1]
     elif data_source in ['mbox']:
         tokens = repo_view_str.split(" ", 2)
         if len(tokens) > 2:
             filters = tokens[2]
+    elif data_source in ['stackexchange']:
+        filters = repo_view_str.split("tagged/")[1]
+
 
     return filters
 
@@ -88,7 +127,10 @@ def add(cls_orm, **params):
         obj_orm = cls_orm.objects.get(**params)
     except cls_orm.DoesNotExist:
         obj_orm = cls_orm(**params)
-        obj_orm.save()
+        try:
+            obj_orm.save()
+        except django.db.utils.IntegrityError:
+            print("Can't add", params)
 
     return obj_orm
 
@@ -105,6 +147,8 @@ def load_projects(projects_file, organization):
     add(Organization, **{"name": organization})
 
     projects = None
+    nprojects = 0
+    nrepos = 0
 
     with open(projects_file) as pfile:
         projects = json.load(pfile)
@@ -112,6 +156,7 @@ def load_projects(projects_file, organization):
     for project in projects.keys():
 
         add(Project, **{"name": project})
+        nprojects += 1
 
         for data_source in projects[project]:
             if data_source in no_ds:
@@ -126,9 +171,11 @@ def load_projects(projects_file, organization):
                     continue
 
                 repo_obj = add(Repository, **{"name": repo, "data_source": ds_obj})
+                nrepos += 1
                 repo_filters = find_filters(repo_view_str, data_source)
                 add(RepositoryView, **{"filters": repo_filters, "rep": repo_obj})
 
+    return (nprojects, nrepos)
 
 if __name__ == '__main__':
 
@@ -144,6 +191,8 @@ if __name__ == '__main__':
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
 
-    load_projects(args.file, args.organization)
+    (nprojects, nrepos) = load_projects(args.file, args.organization)
 
     logging.debug("Total loading time ... %.2f sec", time() - task_init)
+    print("Projects loaded", nprojects)
+    print("Repositories loaded", nrepos)
