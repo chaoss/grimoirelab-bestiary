@@ -49,7 +49,7 @@ def get_params():
     return parser.parse_args()
 
 
-def find_repo(repo_view_str, data_source):
+def find_repo_name(repo_view_str, data_source):
     """ Given a repo_view and its data source extract the repository """
 
     repo = None
@@ -71,11 +71,10 @@ def find_repo(repo_view_str, data_source):
         tokens = repo_view_str.split("_")
         repo = tokens[0]
     elif data_source in ['mbox']:
-        tokens = repo_view_str.split(" ")[0]
+        tokens = repo_view_str.split(" ")
         repo = tokens[0] + " " + tokens[1]
     elif data_source in ['stackexchange']:
         repo = repo_view_str.split("questions")[0]
-
 
     return repo
 
@@ -114,7 +113,6 @@ def find_filters(repo_view_str, data_source):
     elif data_source in ['stackexchange']:
         filters = repo_view_str.split("tagged/")[1]
 
-
     return filters
 
 
@@ -125,6 +123,7 @@ def add(cls_orm, **params):
 
     try:
         obj_orm = cls_orm.objects.get(**params)
+        logging.debug('Already exists %s', params)
     except cls_orm.DoesNotExist:
         obj_orm = cls_orm(**params)
         try:
@@ -136,7 +135,7 @@ def add(cls_orm, **params):
 
 
 def list_not_ds_fields():
-    return ['meta', 'git1']
+    return ['meta']
 
 
 def load_projects(projects_file, organization):
@@ -165,17 +164,18 @@ def load_projects(projects_file, organization):
             ds_obj = add(DataSource, **{"name": data_source})
 
             for repo_view_str in projects[project][data_source]:
-                repo = find_repo(repo_view_str, data_source)
-                if repo is None:
+                repo_name = find_repo_name(repo_view_str, data_source)
+                if repo_name is None:
                     logging.error('Can not find repository for %s %s', data_source, repo_view_str)
                     continue
 
-                repo_obj = add(Repository, **{"name": repo, "data_source": ds_obj})
+                repo_obj = add(Repository, **{"name": repo_name, "data_source": ds_obj})
                 nrepos += 1
                 repo_filters = find_filters(repo_view_str, data_source)
                 add(RepositoryView, **{"filters": repo_filters, "rep": repo_obj})
 
     return (nprojects, nrepos)
+
 
 if __name__ == '__main__':
 
