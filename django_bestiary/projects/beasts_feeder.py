@@ -143,7 +143,7 @@ def load_projects(projects_file, organization):
     # fields in project that are not a data source
     no_ds = list_not_ds_fields()
 
-    add(Organization, **{"name": organization})
+    org_orm = add(Organization, **{"name": organization})
 
     projects = None
     nprojects = 0
@@ -153,8 +153,9 @@ def load_projects(projects_file, organization):
         projects = json.load(pfile)
 
     for project in projects.keys():
+        project_orm = add(Project, **{"name": project})
+        org_orm.projects.add(project_orm)
 
-        add(Project, **{"name": project})
         nprojects += 1
 
         for data_source in projects[project]:
@@ -172,7 +173,14 @@ def load_projects(projects_file, organization):
                 repo_obj = add(Repository, **{"name": repo_name, "data_source": ds_obj})
                 nrepos += 1
                 repo_filters = find_filters(repo_view_str, data_source)
-                add(RepositoryView, **{"filters": repo_filters, "rep": repo_obj})
+                rview_orm = add(RepositoryView, **{"filters": repo_filters, "rep": repo_obj})
+                project_orm.rep_views.add(rview_orm)
+
+        # Register all the repo views added
+        project_orm.save()
+
+    # Register all the projects added
+    org_orm.save()
 
     return (nprojects, nrepos)
 
