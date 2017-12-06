@@ -31,6 +31,7 @@ from django.test import TestCase
 from .models import Organization, Project, Repository, RepositoryView, DataSource
 
 from .beasts_feeder import load_projects, list_not_ds_fields, find_repo_name
+from .beasts_exporter import export_projects
 
 
 class BeastFeederTests(TestCase):
@@ -82,3 +83,21 @@ class BeastFeederTests(TestCase):
         self.assertEqual(total_data_sources, read_data_sources)
         self.assertEqual(total_repos, read_repos)
         self.assertEqual(total_repos_views, read_repos_views)
+
+    def test_import_export(self):
+        pfile = 'projects/projects-release.json'
+        pfile_export = '/tmp/projects-release.json'
+
+        print('Loading projects')
+        load_projects(pfile, "Test Org")
+        print('Exporting projects')
+        export_projects(pfile_export, "Test Org")
+
+        with open(pfile) as orig:
+            orig_json = json.load(orig)
+            with open(pfile_export) as exported:
+                exported_json = json.load(exported)
+
+                self.maxDiff = 1000000
+                print("Comparing projects contents between imported and exported")
+                self.assertDictEqual(orig_json, exported_json)
