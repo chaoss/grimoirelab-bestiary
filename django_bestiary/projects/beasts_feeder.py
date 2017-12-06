@@ -53,9 +53,9 @@ def find_repo_name(repo_view_str, data_source):
     """ Given a repo_view and its data source extract the repository """
 
     repo = None
-    if data_source in ['askbot', 'hyperkitty', 'jenkins', 'mediawiki',
+    if data_source in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
                        'mozillaclub', 'phabricator', 'pipermail',
-                       'redmine', 'rss']:
+                       'redmine', 'remo', 'rss']:
         repo = repo_view_str
     elif data_source in ['bugzilla', 'bugzillarest']:
         tokens = repo_view_str.split("?", 1)
@@ -63,8 +63,8 @@ def find_repo_name(repo_view_str, data_source):
     elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
                          'supybot', 'nntp']:
         repo = repo_view_str.split(" ")[0]
-    elif data_source in ['crates', 'dockerhub', 'functest', 'google_hits',
-                         'meetup', 'puppetforge', 'remo', 'slack', 'telegram',
+    elif data_source in ['crates', 'dockerhub', 'google_hits',
+                         'meetup', 'puppetforge', 'slack', 'telegram',
                          'twitter']:
         repo = ''  # not needed because it is always the same
     elif data_source in ['gerrit']:
@@ -153,7 +153,10 @@ def load_projects(projects_file, organization):
         projects = json.load(pfile)
 
     for project in projects.keys():
-        project_orm = add(Project, **{"name": project})
+        pparams = {"name": project}
+        if 'meta' in projects[project].keys():
+            pparams.update({"meta": projects[project]['meta']})
+        project_orm = add(Project, **pparams)
         org_orm.projects.add(project_orm)
 
         nprojects += 1
