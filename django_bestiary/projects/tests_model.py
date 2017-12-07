@@ -53,7 +53,10 @@ class OrganizationModelTests(TestCase):
 class ProjectModelTests(TestCase):
 
     def test_init(self):
-        project = Project()
+        # All projects are related to a organization
+        org = Organization()
+        org.save()
+        project = Project(org=org)
         self.assertIsNot(project, None)
         project.save()
 

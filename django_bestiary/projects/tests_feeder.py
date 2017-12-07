@@ -25,6 +25,7 @@
 
 
 import json
+import tempfile
 
 from django.test import TestCase
 
@@ -90,14 +91,17 @@ class BeastFeederTests(TestCase):
 
         print('Loading projects')
         load_projects(pfile, "Test Org")
-        print('Exporting projects')
-        export_projects(pfile_export, "Test Org")
 
-        with open(pfile) as orig:
-            orig_json = json.load(orig)
+        with tempfile.NamedTemporaryFile() as temp:
+            pfile_export = temp.name
+            print('Exporting projects')
+            export_projects(pfile_export, "Test Org")
             with open(pfile_export) as exported:
                 exported_json = json.load(exported)
 
-                self.maxDiff = 1000000
-                print("Comparing projects contents between imported and exported")
-                self.assertDictEqual(orig_json, exported_json)
+        with open(pfile) as orig:
+            orig_json = json.load(orig)
+
+            self.maxDiff = 1000000
+            print("Comparing projects contents between imported and exported")
+            self.assertDictEqual(orig_json, exported_json)
