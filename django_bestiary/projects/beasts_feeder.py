@@ -27,9 +27,12 @@ import argparse
 import json
 import logging
 import os
+import tempfile
 
 from time import time
 
+
+from django.test import TestCase
 
 import django
 # settings.configure()
@@ -37,6 +40,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'django_bestiary.settings'
 django.setup()
 
 from projects.models import Organization, Project, Repository, RepositoryView, DataSource
+from projects.beasts_exporter import export_projects
 
 
 def get_params():
@@ -44,7 +48,10 @@ def get_params():
                                      description="Feed beastiary with projects")
     parser.add_argument("-f", "--file", required=True, help="JSON projects file")
     parser.add_argument('-g', '--debug', action='store_true')
-    parser.add_argument('-o', '--organization', required='True', help='Organization for the projects')
+    parser.add_argument('-o', '--organization', required='True',
+                        help='Organization for the projects')
+    parser.add_argument('-c', '--check', action='store_true',
+                        help='Export the data and compare it with the imported')
 
     return parser.parse_args()
 
@@ -123,13 +130,14 @@ def add(cls_orm, **params):
 
     try:
         obj_orm = cls_orm.objects.get(**params)
-        logging.debug('Already exists %s', params)
+        # logging.debug('Already exists %s: %s', cls_orm.__name__, params)
     except cls_orm.DoesNotExist:
         obj_orm = cls_orm(**params)
         try:
             obj_orm.save()
+            logging.debug('Added %s: %s', cls_orm.__name__, params)
         except django.db.utils.IntegrityError:
-            print("Can't add", params)
+            logging.error("Can't add %s: %s", cls_orm.__name__, params)
 
     return obj_orm
 
@@ -155,7 +163,7 @@ def load_projects(projects_file, organization):
     for project in projects.keys():
         pparams = {"name": project}
         if 'meta' in projects[project].keys():
-            pparams.update({"meta": projects[project]['meta']})
+            pparams.update({"meta_title": projects[project]['meta']['title']})
         project_orm = add(Project, **pparams)
         org_orm.projects.add(project_orm)
 
@@ -188,6 +196,16 @@ def load_projects(projects_file, organization):
     return (nprojects, nrepos)
 
 
+def compare_projects_files(orig_file, new_file):
+    with open(orig_file) as orig:
+        orig_json = json.load(orig)
+        with open(new_file) as exported:
+            exported_json = json.load(exported)
+            test = TestCase()
+            test.maxDiff = None
+            test.assertDictEqual(orig_json, exported_json)
+
+
 if __name__ == '__main__':
 
     task_init = time()
@@ -207,3 +225,9 @@ if __name__ == '__main__':
     logging.debug("Total loading time ... %.2f sec", time() - task_init)
     print("Projects loaded", nprojects)
     print("Repositories loaded", nrepos)
+
+    if args.check:
+        logging.info('Checking data ...')
+        with tempfile.NamedTemporaryFile() as temp:
+            export_projects(temp.name, args.organization)
+            compare_projects_files(args.file, temp.name)
