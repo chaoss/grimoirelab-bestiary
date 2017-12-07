@@ -148,9 +148,9 @@ def export_projects(projects_file, organization):
     nrepos_views = 0
 
     for project in projects_orm:
-        beasts.update({project.name: {}})
-        if project.meta:
-            beasts[project.name].update({"meta": project.meta})
+        beasts[project.name] = {}
+        if project.meta_title:
+            beasts[project.name]["meta"] = {"title": project.meta_title}
         nprojects += 1
 
         for repo_view_orm in project.rep_views.all():
