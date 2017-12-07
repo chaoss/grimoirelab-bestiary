@@ -136,8 +136,9 @@ def add(cls_orm, **params):
         try:
             obj_orm.save()
             logging.debug('Added %s: %s', cls_orm.__name__, params)
-        except django.db.utils.IntegrityError:
+        except django.db.utils.IntegrityError as ex:
             logging.error("Can't add %s: %s", cls_orm.__name__, params)
+            logging.error(ex)
 
     return obj_orm
 
@@ -161,7 +162,7 @@ def load_projects(projects_file, organization):
         projects = json.load(pfile)
 
     for project in projects.keys():
-        pparams = {"name": project}
+        pparams = {"name": project, "org": org_orm}
         if 'meta' in projects[project].keys():
             pparams.update({"meta_title": projects[project]['meta']['title']})
         project_orm = add(Project, **pparams)
