@@ -37,7 +37,7 @@ class RepositoryView(models.Model):
 
 class Project(models.Model):
     name = models.CharField(max_length=200, unique=True)
-    meta = models.CharField(max_length=200, default='')
+    meta_title = models.CharField(max_length=200)
     # creation_date = models.DateTimeField('date creation')
     # update_date = models.DateTimeField('date update')
     # Relations
