@@ -22,16 +22,14 @@
 #   Alvaro del Castillo San Felix <acs@bitergia.com>
 #
 
-import json
 import logging
-import subprocess
 
-import requests
 
 from .repositories import Repos
 from fetch.gerrit import GerritFetcher
 
 logger = logging.getLogger(__name__)
+
 
 class ReposGerrit(Repos):
     """ Get the list of repositories from Gerrit """

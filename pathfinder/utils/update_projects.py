@@ -34,6 +34,7 @@ from projects import Projects
 
 logger = logging.getLogger(__name__)
 
+
 def config_logging(debug):
     if debug:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
@@ -42,6 +43,7 @@ def config_logging(debug):
         logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 def get_params():
     """Parse command line arguments"""

@@ -32,6 +32,7 @@ from repositories.gerrit import ReposGerrit
 GERRIT_USER = 'adelcastillo'
 GERRIT_HOST = 'git.eclipse.org'
 
+
 class ReposEclipseTest(unittest.TestCase):
 
     def test_initialization(self):
@@ -49,22 +50,6 @@ class ReposEclipseTest(unittest.TestCase):
         repos_list = repos.get_repos()
         print(repos_list)
         self.assertEqual(len(repos_list), 926)
-
-    def test_get_ids(self):
-        return
-        for ds in self.repos_ds:
-            repos = ReposEclipse(ds)
-            repos_ids_list = repos.get_ids()
-            self.assertEqual(len(repos_ids_list), self.repos_ds[ds])
-
-    def test_get_projects(self):
-        return
-        for ds in self.repos_ds:
-            repos = ReposEclipse(ds)
-            projects = repos.get_projects()
-            self.assertEqual(len(projects), 301)
-            repos_ds = repos.get_project_repos_id(self.test_project)
-            self.assertEqual(len(repos_ds), self.repos_ds_webtools[ds])
 
 
 if __name__ == "__main__":
