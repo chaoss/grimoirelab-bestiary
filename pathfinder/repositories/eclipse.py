@@ -50,7 +50,7 @@ class ReposEclipse(Repos):
         super().__init__(None, data_source=self.data_source)
 
         if self.data_source not in self.ECLIPSE_DATA_SOURCES:
-            raise RuntimeError("Data source %s does not exists in Eclipse", data_source)
+            raise RuntimeError("Data source does not exists in Eclipse", data_source)
 
         self.eclipse_projects = EclipseFetcher().fetch()
 
