@@ -32,6 +32,8 @@ from repositories.gerrit import ReposGerrit
 GERRIT_USER = 'adelcastillo'
 GERRIT_HOST = 'git.eclipse.org'
 
+TOTAL_REPOS = 1053
+
 
 class ReposEclipseTest(unittest.TestCase):
 
@@ -49,7 +51,8 @@ class ReposEclipseTest(unittest.TestCase):
         repos = ReposGerrit(GERRIT_HOST, GERRIT_USER)
         repos_list = repos.get_repos()
         print(repos_list)
-        self.assertEqual(len(repos_list), 926)
+        # This number changes. We must read from a cache
+        self.assertEqual(len(repos_list), TOTAL_REPOS)
 
 
 if __name__ == "__main__":
