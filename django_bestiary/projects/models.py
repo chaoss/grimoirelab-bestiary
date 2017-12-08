@@ -36,6 +36,9 @@ class RepositoryView(models.Model):
     # Base Repository from which to create the View
     rep = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
+    class Meta:
+        unique_together = ('rep', 'filters')
+
     def __str__(self):
         return self.rep.name + " " + self.filters
 
