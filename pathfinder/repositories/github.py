@@ -24,22 +24,18 @@
 
 import logging
 
-from datetime import datetime
-from time import sleep
-
-import requests
 
 from .repositories import Repos
 from fetch.github import GitHubFetcher
 
 logger = logging.getLogger(__name__)
 
+
 class ReposGitHub(Repos):
     """ Get the list of repositories from a GitHub owner """
 
     def __init__(self, host, owner, api_token):
         super().__init__(host, user=owner, api_token=api_token)
-
 
     def get_ids(self):
         repo_list = self.get_repos()

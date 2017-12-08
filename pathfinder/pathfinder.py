@@ -40,6 +40,7 @@ from projects.models import DataSource, Project, Repository, RepositoryView
 
 logger = logging.getLogger(__name__)
 
+
 def config_logging(debug):
     if debug:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
@@ -48,6 +49,7 @@ def config_logging(debug):
         logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 def get_params():
     """Parse command line arguments"""
@@ -79,7 +81,6 @@ def get_params():
     if args.backend == 'gerrit' and (not args.host or not args.user):
         parser.error("gerrit backend needs host and user.")
         sys.exit(1)
-
 
     return args
 
@@ -132,7 +133,7 @@ if __name__ == '__main__':
                 # Don't support filters yet
                 rep_view = RepositoryView(rep=rep, filters='')
                 rep_view.save()
-            except:
+            except django.db.utils.IntegrityError:
                 logger.debug('Repository View already exists %s', repo)
                 rep_view = RepositoryView.objects.get(rep=rep, filters='')
 

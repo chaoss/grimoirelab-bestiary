@@ -22,10 +22,8 @@
 #   Alvaro del Castillo San Felix <acs@bitergia.com>
 #
 
-import json
 import logging
 
-import requests
 
 from VizGrimoireUtils.eclipse.eclipse_projects_lib import (
     get_repos_list,
@@ -36,12 +34,12 @@ from fetch.eclipse import EclipseFetcher
 
 logger = logging.getLogger(__name__)
 
+
 class ReposEclipse(Repos):
     """ Get the list of repositories from Eclipse projects remote JSON file """
 
     ECLIPSE_PROJECTS_URL = "http://projects.eclipse.org/json/projects/all"
     ECLIPSE_DATA_SOURCES = ['its', 'mls', 'scm', 'scr']
-
 
     def __init__(self, data_source='git'):
         self.data_source = data_source

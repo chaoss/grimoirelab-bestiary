@@ -24,7 +24,6 @@ import sys
 import unittest
 
 import httpretty
-import requests
 
 # Hack to make sure that tests import the right packages
 # due to setuptools behaviour
@@ -36,14 +35,16 @@ from repositories.github import ReposGitHub
 OWNER_ORG = 'grimoirelab'
 OWNER_USER = 'acs'
 GITHUB_API_URL = "https://api.github.com"
-GITHUB_ORG_URL = GITHUB_API_URL+"/orgs/"+OWNER_ORG+"/repos"
-GITHUB_BAD_ORG_URL = GITHUB_API_URL+"/orgs/"+OWNER_USER+"/repos"
-GITHUB_USER_URL = GITHUB_API_URL+"/users/"+OWNER_USER+"/repos"
+GITHUB_ORG_URL = GITHUB_API_URL + "/orgs/" + OWNER_ORG + "/repos"
+GITHUB_BAD_ORG_URL = GITHUB_API_URL + "/orgs/" + OWNER_USER + "/repos"
+GITHUB_USER_URL = GITHUB_API_URL + "/users/" + OWNER_USER + "/repos"
+
 
 def read_file(filename, mode='r'):
     with open(filename, mode) as f:
         content = f.read()
     return content
+
 
 def setup_http_server():
     org_repos = read_file('data/org_repos.json')
@@ -55,7 +56,6 @@ def setup_http_server():
         headers["X-RateLimit-Remaining"] = 500
         headers["X-RateLimit-Reset"] = 3600
         return (404, headers, '')
-
 
     def request_callback(method, uri, headers):
         last_request = httpretty.last_request()
@@ -89,8 +89,8 @@ def setup_http_server():
                                httpretty.Response(body=not_found_callback)
                            ])
 
-
     return http_requests
+
 
 class ReposGitHubTest(unittest.TestCase):
     """ReposGitHub tests"""
@@ -119,6 +119,7 @@ class ReposGitHubTest(unittest.TestCase):
         repos = ReposGitHub(self.host, owner=self.owner, api_token=self.api_token)
         repos_list = repos.get_repos()
         self.assertEqual(len(repos_list), total_repos)
+
 
 if __name__ == "__main__":
     unittest.main(warnings='ignore')

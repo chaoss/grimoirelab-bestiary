@@ -28,6 +28,7 @@ import shutil
 
 logger = logging.getLogger(__name__)
 
+
 class Projects():
     def __init__(self, projects_file):
         self.projects_file = projects_file

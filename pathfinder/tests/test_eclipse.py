@@ -24,7 +24,6 @@ import sys
 import unittest
 
 import httpretty
-import requests
 
 # Hack to make sure that tests import the right packages
 # due to setuptools behaviour
@@ -41,6 +40,7 @@ def read_file(filename, mode='r'):
     with open(filename, mode) as f:
         content = f.read()
     return content
+
 
 def setup_http_server():
     eclipse_projects = read_file(ECLIPSE_PROJECTS_FILE)
@@ -83,7 +83,6 @@ class ReposEclipseTest(unittest.TestCase):
         "scr": 23,
         "mls": 5
     }
-
 
     @httpretty.activate
     def test_initialization(self):

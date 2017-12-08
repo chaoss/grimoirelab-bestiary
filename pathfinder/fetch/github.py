@@ -46,7 +46,7 @@ class GitHubFetcher(Fetcher):
     def __fetch(self, owner):
         headers = {'Authorization': 'token ' + self.api_token}
         params = {
-            'per_page': 100 # Maximum limit by the API
+            'per_page': 100  # Maximum limit by the API
         }
 
         url = self.__get_owner_repos_url(owner, headers, params)
@@ -61,13 +61,12 @@ class GitHubFetcher(Fetcher):
             else:
                 break
 
-
     def __get_owner_repos_url(self, owner, headers, params):
         """ The owner could be a org or a user.
             It waits if need to have rate limit.
         """
-        url_org = self.GITHUB_API_URL+"/orgs/"+owner+"/repos"
-        url_user = self.GITHUB_API_URL+"/users/"+owner+"/repos"
+        url_org = self.GITHUB_API_URL + "/orgs/" + owner + "/repos"
+        url_user = self.GITHUB_API_URL + "/users/" + owner + "/repos"
 
         url_owner = url_org  # Use org by default
 
