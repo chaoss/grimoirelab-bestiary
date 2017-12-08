@@ -118,9 +118,9 @@ if __name__ == '__main__':
             print(repo)
         else:
             try:
-                ds_orm = DataSource.objects.get(name=args.backend)
+                ds_orm = DataSource.objects.get(name=args.data_source)
             except DataSource.DoesNotExist:
-                logger.error("The data source %s does not exists in Bestiary", args.backend)
+                logger.error("The data source %s does not exists in Bestiary", args.data_source)
                 sys.exit(1)
             try:
                 rep = Repository(name=repo, data_source=ds_orm)
