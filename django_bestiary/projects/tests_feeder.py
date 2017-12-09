@@ -29,7 +29,7 @@ import tempfile
 
 from django.test import TestCase
 
-from .models import Organization, Project, Repository, RepositoryView, DataSource
+from .models import Organization, Project, Repository, DataSource, DataSourceType
 
 from .beasts_feeder import load_projects, list_not_ds_fields, find_repo_name
 from .beasts_exporter import export_projects
@@ -48,23 +48,23 @@ class BeastFeederTests(TestCase):
             projects = json.load(pfile)
 
         read_projects = len(projects.keys())
-        read_data_sources = 0
+        read_data_sources_types = 0
         read_orgs = 1
         read_repos = 0
         dup_repos = 2  # repos duplicated in projects-release.json
         repos_already = []
-        read_repos_views = 0
+        read_data_sources = 0
 
         for project in projects.keys():
-            for data_source in projects[project]:
-                if data_source in no_ds:
+            for data_source_type in projects[project]:
+                if data_source_type in no_ds:
                     continue
-                read_data_sources += 1
-                for repo_view_str in projects[project][data_source]:
-                    repo = find_repo_name(repo_view_str, data_source)
+                read_data_sources_types += 1
+                for data_source_str in projects[project][data_source_type]:
+                    repo = find_repo_name(data_source_str, data_source_type)
                     if repo is None:
                         continue
-                    read_repos_views += 1
+                    read_data_sources += 1
                     if repo != '' and repo in repos_already:
                         # stackexchange has three repos view for the same repo
                         continue
@@ -75,15 +75,15 @@ class BeastFeederTests(TestCase):
 
         total_orgs = Organization.objects.all().count()
         total_projects = Project.objects.all().count()
-        total_data_sources = DataSource.objects.all().count()
+        total_data_sources_types = DataSourceType.objects.all().count()
         total_repos = Repository.objects.all().count()
-        total_repos_views = RepositoryView.objects.all().count()
+        total_data_sources = DataSource.objects.all().count()
 
         self.assertEqual(total_orgs, read_orgs)
         self.assertEqual(total_projects, read_projects)
-        self.assertEqual(total_data_sources, read_data_sources)
+        self.assertEqual(total_data_sources_types, read_data_sources_types)
         self.assertEqual(total_repos, read_repos)
-        self.assertEqual(total_repos_views, read_repos_views)
+        self.assertEqual(total_data_sources, read_data_sources)
 
     def test_import_export(self):
         pfile = 'projects/projects-release.json'

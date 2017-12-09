@@ -28,7 +28,7 @@ import django
 from django.db import transaction
 from django.test import TestCase
 
-from .models import Organization, Project, Repository, RepositoryView, DataSource
+from .models import Organization, Project, Repository, DataSource, DataSourceType
 
 
 class OrganizationModelTests(TestCase):
@@ -70,43 +70,43 @@ class RepositoryModelTest(TestCase):
             # The exception tested breaks the test transaction
             with transaction.atomic():
                 rep.save()
-        ds = DataSource(name='git')
-        ds.save()
-        rep = Repository(data_source=ds)
+        ds_type = DataSourceType(name='git')
+        ds_type.save()
+        rep = Repository(data_source_type=ds_type)
         rep.save()
-
-
-class RepositoryViewModelTests(TestCase):
-
-    def test_init(self):
-        rview = RepositoryView()
-        self.assertIsNot(rview, None)
-        with self.assertRaises(django.db.utils.IntegrityError):
-            # The exception tested breaks the test transaction
-            with transaction.atomic():
-                rview.save()
-
-        ds = DataSource(name='git')
-        ds.save()
-        rep = Repository(data_source=ds, name='test')
-        rview = RepositoryView(rep=rep)
-        # rep must be saved before using it in rview above
-        # it is saved before rview but it fails because of that
-        rep.save()
-        with self.assertRaises(django.db.utils.IntegrityError):
-            with transaction.atomic():
-                rview.save()
-
-        # rep is saved already so we can now use it
-        rview = RepositoryView(rep=rep)
-        rview.save()
-
-        return
 
 
 class DataSourceModelTests(TestCase):
 
     def test_init(self):
-        ds = DataSource()
-        self.assertIsNot(ds, None)
-        ds.save()
+        data_source = DataSource()
+        self.assertIsNot(data_source, None)
+        with self.assertRaises(django.db.utils.IntegrityError):
+            # The exception tested breaks the test transaction
+            with transaction.atomic():
+                data_source.save()
+
+        ds_type = DataSourceType(name='git')
+        ds_type.save()
+        rep = Repository(data_source_type=ds_type, name='test')
+        data_source = DataSource(rep=rep)
+        # rep must be saved before using it in data_source above
+        # it is saved before data_source but it fails because of that
+        rep.save()
+        with self.assertRaises(django.db.utils.IntegrityError):
+            with transaction.atomic():
+                data_source.save()
+
+        # rep is saved already so we can now use it
+        data_source = DataSource(rep=rep)
+        data_source.save()
+
+        return
+
+
+class DataSourceTypeModelTests(TestCase):
+
+    def test_init(self):
+        ds_type = DataSourceType()
+        self.assertIsNot(ds_type, None)
+        ds_type.save()

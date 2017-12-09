@@ -39,7 +39,7 @@ import django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'django_bestiary.settings'
 django.setup()
 
-from projects.models import Organization, Project, Repository, RepositoryView, DataSource
+from projects.models import Organization, Project, Repository, DataSource, DataSourceType
 from projects.beasts_exporter import export_projects
 
 
@@ -56,71 +56,71 @@ def get_params():
     return parser.parse_args()
 
 
-def find_repo_name(repo_view_str, data_source):
-    """ Given a repo_view and its data source extract the repository """
+def find_repo_name(data_source_str, data_source_type):
+    """ Given a data_source and its type extract the repository """
 
     repo = None
-    if data_source in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
-                       'mozillaclub', 'phabricator', 'pipermail',
-                       'redmine', 'remo', 'rss']:
-        repo = repo_view_str
-    elif data_source in ['bugzilla', 'bugzillarest']:
-        tokens = repo_view_str.split("?", 1)
+    if data_source_type in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
+                            'mozillaclub', 'phabricator', 'pipermail',
+                            'redmine', 'remo', 'rss']:
+        repo = data_source_str
+    elif data_source_type in ['bugzilla', 'bugzillarest']:
+        tokens = data_source_str.split("?", 1)
         repo = tokens[0].replace('/bugs/buglist.cgi', '')
-    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
-                         'supybot', 'nntp']:
-        repo = repo_view_str.split(" ")[0]
-    elif data_source in ['crates', 'dockerhub', 'google_hits',
-                         'meetup', 'puppetforge', 'slack', 'telegram',
-                         'twitter']:
+    elif data_source_type in ['confluence', 'discourse', 'git', 'github', 'jira',
+                              'supybot', 'nntp']:
+        repo = data_source_str.split(" ")[0]
+    elif data_source_type in ['crates', 'dockerhub', 'google_hits',
+                              'meetup', 'puppetforge', 'slack', 'telegram',
+                              'twitter']:
         repo = ''  # not needed because it is always the same
-    elif data_source in ['gerrit']:
-        tokens = repo_view_str.split("_")
+    elif data_source_type in ['gerrit']:
+        tokens = data_source_str.split("_")
         repo = tokens[0]
-    elif data_source in ['mbox']:
-        tokens = repo_view_str.split(" ")
+    elif data_source_type in ['mbox']:
+        tokens = data_source_str.split(" ")
         repo = tokens[0] + " " + tokens[1]
-    elif data_source in ['stackexchange']:
-        repo = repo_view_str.split("questions")[0]
+    elif data_source_type in ['stackexchange']:
+        repo = data_source_str.split("questions")[0]
 
     return repo
 
 
-def find_filters(repo_view_str, data_source):
-    """ Given a repo_view and its data source extract the repository """
+def find_params(data_source_str, data_source_type):
+    """ Given a data_source and its type extract the params for the repository """
 
-    filters = ''
+    params = ''
 
-    if data_source in ['askbot', 'crates', 'functest',
-                       'hyperkitty', 'jenkins', 'mediawiki', 'mozillaclub',
-                       'phabricator', 'pipermail', 'puppetforge', 'redmine',
-                       'remo', 'rss']:
+    if data_source_type in ['askbot', 'crates', 'functest',
+                            'hyperkitty', 'jenkins', 'mediawiki', 'mozillaclub',
+                            'phabricator', 'pipermail', 'puppetforge', 'redmine',
+                            'remo', 'rss']:
         # THese data sources does not support filtering
-        filters = ''
-    elif data_source in ['bugzilla', 'bugzillarest']:
-        tokens = repo_view_str.split("?", 1)
+        params = ''
+    elif data_source_type in ['bugzilla', 'bugzillarest']:
+        tokens = data_source_str.split("?", 1)
         if len(tokens) > 1:
-            filters = tokens[1]
-    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
-                         'supybot', 'nntp']:
-        tokens = repo_view_str.split(" ", 1)
+            params = tokens[1]
+    elif data_source_type in ['confluence', 'discourse', 'git', 'github', 'jira',
+                              'supybot', 'nntp']:
+        tokens = data_source_str.split(" ", 1)
         if len(tokens) > 1:
-            filters = tokens[1]
-    elif data_source in ['dockerhub', 'google_hits', 'meetup', 'slack',
-                         'telegram', 'twitter']:
-        filters = repo_view_str
-    elif data_source in ['gerrit']:
-        tokens = repo_view_str.split("_", 1)
+            params = tokens[1]
+    elif data_source_type in ['dockerhub', 'google_hits', 'meetup', 'slack',
+                              'telegram', 'twitter']:
+        params = data_source_str
+    elif data_source_type in ['gerrit']:
+        tokens = data_source_str.split("_", 1)
         if len(tokens) > 1:
-            filters = tokens[1]
-    elif data_source in ['mbox']:
-        tokens = repo_view_str.split(" ", 2)
+            params = tokens[1]
+    elif data_source_type in ['mbox']:
+        tokens = data_source_str.split(" ", 2)
         if len(tokens) > 2:
-            filters = tokens[2]
-    elif data_source in ['stackexchange']:
-        filters = repo_view_str.split("tagged/")[1]
+            params = tokens[2]
+    elif data_source_type in ['stackexchange']:
+        params = data_source_str.split("tagged/")[1]
 
-    return filters
+    return params
 
 
 def add(cls_orm, **params):
@@ -170,23 +170,23 @@ def load_projects(projects_file, organization):
 
         nprojects += 1
 
-        for data_source in projects[project]:
-            if data_source in no_ds:
+        for data_source_type in projects[project]:
+            if data_source_type in no_ds:
                 continue
 
-            ds_obj = add(DataSource, **{"name": data_source})
+            ds_type_obj = add(DataSourceType, **{"name": data_source_type})
 
-            for repo_view_str in projects[project][data_source]:
-                repo_name = find_repo_name(repo_view_str, data_source)
+            for data_source_str in projects[project][data_source_type]:
+                repo_name = find_repo_name(data_source_str, data_source_type)
                 if repo_name is None:
-                    logging.error('Can not find repository for %s %s', data_source, repo_view_str)
+                    logging.error('Can not find repository for %s %s', data_source_type, data_source_str)
                     continue
 
-                repo_obj = add(Repository, **{"name": repo_name, "data_source": ds_obj})
+                repo_obj = add(Repository, **{"name": repo_name, "data_source_type": ds_type_obj})
                 nrepos += 1
-                repo_filters = find_filters(repo_view_str, data_source)
-                rview_orm = add(RepositoryView, **{"filters": repo_filters, "rep": repo_obj})
-                project_orm.rep_views.add(rview_orm)
+                repo_params = find_params(data_source_str, data_source_type)
+                data_source_orm = add(DataSource, **{"params": repo_params, "rep": repo_obj})
+                project_orm.data_sources.add(data_source_orm)
 
         # Register all the repo views added
         project_orm.save()
