@@ -22,9 +22,6 @@ class DataSourceType(BeastModel):
 
 
 class Repository(BeastModel):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     name = models.CharField(max_length=200)
     # Relations
     data_source_type = models.ForeignKey(DataSourceType, on_delete=models.CASCADE)
@@ -37,9 +34,6 @@ class Repository(BeastModel):
 
 
 class DataSource(BeastModel):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     params = models.CharField(max_length=400)
     # Relations
     # Base Repository from which to create the View
@@ -53,9 +47,6 @@ class DataSource(BeastModel):
 
 
 class Project(BeastModel):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     name = models.CharField(max_length=200)
     meta_title = models.CharField(max_length=200)
     # Relations
@@ -72,9 +63,6 @@ class Project(BeastModel):
 
 
 class Organization(BeastModel):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     name = models.CharField(max_length=200, unique=True)
     # Relations
     projects = models.ManyToManyField(Project)
