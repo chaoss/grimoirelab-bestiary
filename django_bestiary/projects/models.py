@@ -1,18 +1,27 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
-# Create your models here.
-class DataSource(models.Model):
+class BeastModel(models.Model):
+    """ Basic metadata for Bestiary objects """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    created_by = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+# Create your models here.
+class DataSource(BeastModel):
     name = models.CharField(max_length=200, unique=True)
 
     def __str__(self):
         return self.name
 
 
-class Repository(models.Model):
+class Repository(BeastModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -27,7 +36,7 @@ class Repository(models.Model):
         return "%s (%s)" % (self.name, self.data_source)
 
 
-class RepositoryView(models.Model):
+class RepositoryView(BeastModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -43,7 +52,7 @@ class RepositoryView(models.Model):
         return self.rep.name + " " + self.filters
 
 
-class Project(models.Model):
+class Project(BeastModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -62,7 +71,7 @@ class Project(models.Model):
         return self.name
 
 
-class Organization(models.Model):
+class Organization(BeastModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
