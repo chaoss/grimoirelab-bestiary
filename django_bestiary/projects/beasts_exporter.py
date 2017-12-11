@@ -37,7 +37,7 @@ import django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'django_bestiary.settings'
 django.setup()
 
-from projects.models import Organization
+from projects.models import Ecosystem
 
 
 def get_params():
@@ -45,8 +45,8 @@ def get_params():
                                      description="Export beastiary to a JSON file")
     parser.add_argument("-f", "--file", required=True, help="JSON projects file to be exported")
     parser.add_argument('-g', '--debug', action='store_true')
-    parser.add_argument('-o', '--organization', required=True,
-                        help='Organization to be exported. ')
+    parser.add_argument('-o', '--ecosystem', required=True,
+                        help='Ecosystem to be exported. ')
 
     return parser.parse_args()
 
@@ -134,14 +134,14 @@ def build_project_data_source(data_source):
     return repo_line
 
 
-def export_projects(projects_file, organization):
+def export_projects(projects_file, ecosystem):
 
     try:
-        org_orm = Organization.objects.get(name=organization)
-    except Organization.DoesNotExist:
-        logging.error("Can not find organization %s", organization)
+        eco_orm = Ecosystem.objects.get(name=ecosystem)
+    except Ecosystem.DoesNotExist:
+        logging.error("Can not find ecosystem %s", ecosystem)
         sys.exit(1)
-    projects_orm = org_orm.projects.all()
+    projects_orm = eco_orm.projects.all()
 
     beasts = {}
     nprojects = 0
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
 
-    (nprojects, nrepos) = export_projects(args.file, args.organization)
+    (nprojects, nrepos) = export_projects(args.file, args.ecosystem)
 
     logging.debug("Total exporting time ... %.2f sec", time() - task_init)
     print("Projects exported", nprojects)

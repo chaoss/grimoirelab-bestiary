@@ -53,20 +53,20 @@ class Project(BeastModel):
     data_sources = models.ManyToManyField(DataSource)
     # https://docs.djangoproject.com/en/1.11/ref/models/fields/#foreignkey
     subprojects = models.ManyToManyField("Project")
-    org = models.ForeignKey("Organization", on_delete=models.CASCADE)
+    eco = models.ForeignKey("Ecosystem", on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('name', 'org')
+        unique_together = ('name', 'eco')
 
     def __str__(self):
         return self.name
 
 
-class Organization(BeastModel):
+class Ecosystem(BeastModel):
     name = models.CharField(max_length=200, unique=True)
     # Relations
     projects = models.ManyToManyField(Project)
-    suborgs = models.ManyToManyField("Organization")
+    subecos = models.ManyToManyField("Ecosystem")
 
     def __str__(self):
         return self.name

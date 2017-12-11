@@ -39,7 +39,7 @@ import django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'django_bestiary.settings'
 django.setup()
 
-from projects.models import Organization, Project, Repository, DataSource, DataSourceType
+from projects.models import Ecosystem, Project, Repository, DataSource, DataSourceType
 from projects.beasts_exporter import export_projects
 
 
@@ -48,8 +48,8 @@ def get_params():
                                      description="Feed beastiary with projects")
     parser.add_argument("-f", "--file", required=True, help="JSON projects file")
     parser.add_argument('-g', '--debug', action='store_true')
-    parser.add_argument('-o', '--organization', required='True',
-                        help='Organization for the projects')
+    parser.add_argument('-o', '--ecosystem', required='True',
+                        help='Ecosystem for the projects')
     parser.add_argument('-c', '--check', action='store_true',
                         help='Export the data and compare it with the imported')
 
@@ -147,12 +147,12 @@ def list_not_ds_fields():
     return ['meta']
 
 
-def load_projects(projects_file, organization):
+def load_projects(projects_file, ecosystem):
 
     # fields in project that are not a data source
     no_ds = list_not_ds_fields()
 
-    org_orm = add(Organization, **{"name": organization})
+    eco_orm = add(Ecosystem, **{"name": ecosystem})
 
     projects = None
     nprojects = 0
@@ -162,11 +162,11 @@ def load_projects(projects_file, organization):
         projects = json.load(pfile)
 
     for project in projects.keys():
-        pparams = {"name": project, "org": org_orm}
+        pparams = {"name": project, "eco": eco_orm}
         if 'meta' in projects[project].keys():
             pparams.update({"meta_title": projects[project]['meta']['title']})
         project_orm = add(Project, **pparams)
-        org_orm.projects.add(project_orm)
+        eco_orm.projects.add(project_orm)
 
         nprojects += 1
 
@@ -192,7 +192,7 @@ def load_projects(projects_file, organization):
         project_orm.save()
 
     # Register all the projects added
-    org_orm.save()
+    eco_orm.save()
 
     return (nprojects, nrepos)
 
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
 
-    (nprojects, nrepos) = load_projects(args.file, args.organization)
+    (nprojects, nrepos) = load_projects(args.file, args.ecosystem)
 
     logging.debug("Total loading time ... %.2f sec", time() - task_init)
     print("Projects loaded", nprojects)
@@ -230,5 +230,5 @@ if __name__ == '__main__':
     if args.check:
         logging.info('Checking data ...')
         with tempfile.NamedTemporaryFile() as temp:
-            export_projects(temp.name, args.organization)
+            export_projects(temp.name, args.ecosystem)
             compare_projects_files(args.file, temp.name)
