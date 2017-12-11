@@ -1,15 +1,19 @@
 from django.http import HttpResponse
 from django.template import loader
 
-from projects.models import Project
-
-# from django.shortcuts import render
+from projects.models import Ecosystem, Project
 
 
 def index(request):
 
     template = loader.get_template('projects/project.html')
-    context = find_data_sources("grimoire")
+    project = 'grimoire'  # debug value just during testing
+    if (request.GET.get('project')):
+        project = request.GET.get('project')
+    context = find_data_sources(project)
+    context.update(find_projects())
+    context.update(find_data_sources_types(project))
+    context['project_selected'] = project
     render_index = template.render(context, request)
     return HttpResponse(render_index)
 
@@ -30,5 +34,46 @@ def find_data_sources(project):
             })
     except Project.DoesNotExist:
         print('Can not find project', project)
+
+    return data
+
+
+def find_data_sources_types(project):
+    data = {"data_sources_types": []}
+    already_add_ds_tpes = []
+
+    try:
+        project_orm = Project.objects.get(name=project)
+        data_sources_orm = project_orm.data_sources.all()
+        for ds in data_sources_orm:
+            if ds.rep.data_source_type.id in already_add_ds_tpes:
+                continue
+            already_add_ds_tpes.append(ds.rep.data_source_type.id)
+            data['data_sources_types'].append({
+                "id": ds.rep.data_source_type.id,
+                "name": ds.rep.data_source_type.name
+            })
+    except Project.DoesNotExist:
+        print('Can not find project', project)
+
+    return data
+
+
+def find_projects(ecosystem=None):
+    data = {"projects": []}
+
+    try:
+        if ecosystem:
+            ecosystem_orm = Ecosystem.objects.get(name=ecosystem)
+            projects_orm = ecosystem_orm.projects.all()
+        else:
+            projects_orm = Project.objects.all()
+        for project in projects_orm:
+            data['projects'].append({
+                "id": project.id,
+                "name": project.name
+            })
+    except Ecosystem.DoesNotExist:
+        print('Can not find ecosystem', ecosystem)
 
     return data
