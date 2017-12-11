@@ -28,35 +28,35 @@ import django
 from django.db import transaction
 from django.test import TestCase
 
-from .models import Organization, Project, Repository, DataSource, DataSourceType
+from .models import Ecosystem, Project, Repository, DataSource, DataSourceType
 
 
-class OrganizationModelTests(TestCase):
+class EcosystemModelTests(TestCase):
 
     def test_init(self):
         # The CharField name is filled as en empty string by default, not None
-        org = Organization()
-        self.assertIsNot(org, None)
-        org.save()
+        eco = Ecosystem()
+        self.assertIsNot(eco, None)
+        eco.save()
 
-        org = Organization(name=None)
+        eco = Ecosystem(name=None)
         with self.assertRaises(django.db.utils.IntegrityError):
             # The exception tested breaks the test transaction
             with transaction.atomic():
-                org.save()
+                eco.save()
 
         # Strange that in a CharField you can store dicts!
-        org = Organization(name={'trash': 90})
-        org.save()
+        eco = Ecosystem(name={'trash': 90})
+        eco.save()
 
 
 class ProjectModelTests(TestCase):
 
     def test_init(self):
-        # All projects are related to a organization
-        org = Organization()
-        org.save()
-        project = Project(org=org)
+        # All projects are related to a ecosystem
+        eco = Ecosystem()
+        eco.save()
+        project = Project(eco=eco)
         self.assertIsNot(project, None)
         project.save()
 

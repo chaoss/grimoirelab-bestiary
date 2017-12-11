@@ -9,7 +9,7 @@ class RepositoryAdmin(admin.ModelAdmin):
 # Register your models here.
 
 
-admin.site.register(models.Organization)
+admin.site.register(models.Ecosystem)
 admin.site.register(models.Project)
 admin.site.register(models.Repository, RepositoryAdmin)
 admin.site.register(models.DataSource)

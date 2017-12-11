@@ -29,7 +29,7 @@ import tempfile
 
 from django.test import TestCase
 
-from .models import Organization, Project, Repository, DataSource, DataSourceType
+from .models import Ecosystem, Project, Repository, DataSource, DataSourceType
 
 from .beasts_feeder import load_projects, list_not_ds_fields, find_repo_name
 from .beasts_exporter import export_projects
@@ -73,7 +73,7 @@ class BeastFeederTests(TestCase):
 
         load_projects(projects_file, "Test Org")
 
-        total_orgs = Organization.objects.all().count()
+        total_orgs = Ecosystem.objects.all().count()
         total_projects = Project.objects.all().count()
         total_data_sources_types = DataSourceType.objects.all().count()
         total_repos = Repository.objects.all().count()
