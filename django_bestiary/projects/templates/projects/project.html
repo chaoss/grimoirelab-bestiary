@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% with active_page="project" %}
+
+{% block title %}Project{% endblock %}
+
+{% block head %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $('#myTable').DataTable();
+        });
+    </script>
+{% endblock %}
+
+{% block body %}
+
+<!-- LEFT COLUMN -->
+<div style="float:left; width:70%; margin-right: 10px; height:90%;">
+
+<h1 style='display:inline'>Scope</h1>
+<input type="submit" value="Add Data Source" class="btn btn-success" style="float: right;">
+
+<br><br>
+<form action="/profiles" method="POST">
+    <table class="table table-striped" id="myTable">
+        <thead class="thead-dark">
+          <tr>
+              <td colspan="4" align="right">
+              </td>
+          </tr>
+            <tr>
+                <th></th>
+                <th>Type</th>
+                <th>Repository</th>
+                <th>Params</th>
+            </tr>
+        </thead>
+        <tfoot>
+        </tfoot>
+        <tbody>
+            {% for ds in data_sources %}
+            <tr>
+                <td>
+                    <input type="checkbox" name="ds_id" value="{{ds.id}}">
+                </td>
+                <td>{{ds.type}}</a></td>
+                <td style="max-width: 300px;">{{ds.name}}</a></td>
+                <td>{{ds.params}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</form>
+</div>
+<!-- END LEFT COLUMN -->
+
+<!-- RIGHT COLUMN -->
+<div>
+    <div class="form-group">
+      <select style="width:20%;" multiple class="form-control" rows="4" id="projectSelect">
+        <option>grimoire</option>
+      </select>
+    </div>
+    <div style="height:100px"></div>
+    Scope<br><br>
+    Projects: 1<br>
+    Data Sources: {{data_sources|length}}
+    <div style="height:100px"></div>
+    <input value="Export Projects File" class="btn btn-success">
+    <div style="height:10px"></div>
+    <input value="Import Projects File" class="btn btn-success">
+
+</div>
+<!-- END RIGHT COLUMN -->
+{% endblock %}
+{% endwith  %}
