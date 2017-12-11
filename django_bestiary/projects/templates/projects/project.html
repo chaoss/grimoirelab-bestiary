@@ -57,14 +57,24 @@
 <!-- RIGHT COLUMN -->
 <div>
     <div class="form-group">
-      <select style="width:20%;" multiple class="form-control" rows="4" id="projectSelect">
-        <option>grimoire</option>
-      </select>
+      <form>
+        <select style="width:20%;" name="project" multiple class="form-control"
+        rows="4" onchange="submit()">
+          {% for project in projects %}
+            {% if project.name == project_selected %}
+              <option selected>{{project.name}}</option>
+            {% else %}
+              <option>{{project.name}}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </form>
     </div>
     <div style="height:100px"></div>
     Scope<br><br>
     Projects: 1<br>
-    Data Sources: {{data_sources|length}}
+    Data Sources: {{data_sources|length}}<br>
+    Data Sources Type: {{data_sources_types|length}}<br>
     <div style="height:100px"></div>
     <input value="Export Projects File" class="btn btn-success">
     <div style="height:10px"></div>
