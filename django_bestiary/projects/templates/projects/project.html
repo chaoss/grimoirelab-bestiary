@@ -18,7 +18,7 @@
 <div style="float:left; width:70%; margin-right: 10px; height:90%; min-height: 600px;">
 
 <h1 style='display:inline'>Scope</h1>
-<input type="submit" value="Add Data Source" class="btn btn-success" style="float: right;">
+<button disabled type="button" class="btn btn-success" style="float: right;">Add Data Source</button>
 
 <br><br>
 <form action="/profiles" method="POST">
@@ -76,10 +76,9 @@
     Data Sources: {{data_sources|length}}<br>
     Data Sources Type: {{data_sources_types|length}}<br>
     <div style="height:100px"></div>
-    <input value="Export Projects File" class="btn btn-success">
+    <a href="?project={{project_selected}}&export_file=project.json" class="btn btn-success" role="button">Export Projects File</a>
     <div style="height:10px"></div>
-    <input value="Import Projects File" class="btn btn-success">
-
+    <a href="?project={{project_selected}}&import_file=project.json" class="btn btn-success" role="button">Import Projects File</a>
 </div>
 <!-- END RIGHT COLUMN -->
 {% endblock %}
