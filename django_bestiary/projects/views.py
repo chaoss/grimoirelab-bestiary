@@ -1,7 +1,10 @@
 from django.http import HttpResponse
 from django.template import loader
 
-from projects.models import Ecosystem, Project
+from rest_framework import viewsets
+
+from projects.models import DataSource, Ecosystem, Project, Repository
+from projects.serializers import ProjectSerializer, DataSourceSerializer, RepositorySerializer
 
 
 def index(request):
@@ -77,3 +80,31 @@ def find_projects(ecosystem=None):
         print('Can not find ecosystem', ecosystem)
 
     return data
+
+#
+# REST views
+#
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows projects to be viewed or edited.
+    """
+    queryset = Project.objects.all().order_by('-created_at')
+    serializer_class = ProjectSerializer
+
+
+class DataSourceViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows data sources to be viewed or edited.
+    """
+    queryset = DataSource.objects.all()
+    serializer_class = DataSourceSerializer
+
+
+class RepositoryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows repositories to be viewed or edited.
+    """
+    queryset = Repository.objects.all()
+    serializer_class = RepositorySerializer
