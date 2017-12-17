@@ -40,7 +40,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'django_bestiary.settings'
 django.setup()
 
 from projects.models import Ecosystem, Project, Repository, DataSource, DataSourceType
-from projects.beasts_exporter import export_projects
+from projects.bestiary_export import export_projects
 
 
 def get_params():

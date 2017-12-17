@@ -31,8 +31,8 @@ from django.test import TestCase
 
 from .models import Ecosystem, Project, Repository, DataSource, DataSourceType
 
-from .beasts_feeder import load_projects, list_not_ds_fields, find_repo_name
-from .beasts_exporter import export_projects
+from .bestiary_import import load_projects, list_not_ds_fields, find_repo_name
+from .bestiary_export import export_projects
 
 
 class BeastFeederTests(TestCase):
