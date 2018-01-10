@@ -40,6 +40,7 @@ ENV LANG C.UTF-8
 
 # Install pip packages needed
 RUN pip3 install django
+RUN pip3 install gunicorn
 
 ADD stage ${DEPLOY_USER_DIR}/stage
 RUN chmod 755 ${DEPLOY_USER_DIR}/stage
