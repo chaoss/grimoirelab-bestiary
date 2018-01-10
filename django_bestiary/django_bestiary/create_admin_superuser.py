@@ -32,7 +32,7 @@ django.setup()
 
 from django.contrib.auth.management.commands.createsuperuser import get_user_model
 
-from django_meditor.settings import DATABASES
+from django_bestiary.settings import DATABASES
 
 admin_db = list(DATABASES.keys())[0]
 admin_user = 'admin'
