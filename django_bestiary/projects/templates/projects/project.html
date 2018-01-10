@@ -57,7 +57,7 @@
 <!-- RIGHT COLUMN -->
 <div>
     <div class="form-group">
-      <form>
+      <form action=/projects/>
         <select style="width:20%;" name="project" multiple class="form-control"
         rows="4" onchange="submit()">
           {% for project in projects %}
@@ -76,10 +76,15 @@
     Data Sources: {{data_sources|length}}<br>
     Data Sources Type: {{data_sources_types|length}}<br>
     <div style="height:100px"></div>
-    <a href="?project={{project_selected}}&export_file=project.json" class="btn btn-success" role="button">Export Projects File</a>
+    <form method="POST" action="/projects/import/" enctype="multipart/form-data">{% csrf_token %}
+        <input type="file" name="imported_file" accept="application/json" required=True><br>
+        <input type="text" name="ecosystem" placeholder="Ecosystem name" required=True><br>
+        <button type="submit" class="btn btn-success">Import Projects File</button>
+    </form>
+    </div>
     <div style="height:10px"></div>
-    <a href="?project={{project_selected}}&import_file=project.json" class="btn btn-success" role="button">Import Projects File</a>
-</div>
+    <a href="?project={{project_selected}}&export_file=project.json" class="btn btn-success" role="button">Export Projects File</a>
+    </div>
 <!-- END RIGHT COLUMN -->
 {% endblock %}
 {% endwith  %}

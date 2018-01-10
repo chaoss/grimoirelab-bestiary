@@ -1,6 +1,14 @@
+from datetime import datetime
+from time import time
+
+
 from django.http import HttpResponse
 from django.template import loader
 
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+
+from projects.bestiary_import import load_projects
 from projects.models import Ecosystem, Project
 
 
@@ -77,3 +85,23 @@ def find_projects(ecosystem=None):
         print('Can not find ecosystem', ecosystem)
 
     return data
+
+
+def import_from_file(request):
+
+    if request.method == "POST":
+        myfile = request.FILES["imported_file"]
+        ecosystem = request.POST["ecosystem"]
+        cur_dt = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        file_name = "%s_%s.json" % (ecosystem, cur_dt)
+        fpath = '.imported/' + file_name  # FIXME Define path where all these files must be saved
+        save_path = default_storage.save(fpath, ContentFile(myfile.read()))
+
+        task_init = time()
+        (nprojects, nrepos) = load_projects(save_path, ecosystem)
+
+        print("Total loading time ... %.2f sec", time() - task_init)
+        print("Projects loaded", nprojects)
+        print("Repositories loaded", nrepos)
+
+    return index(request)
