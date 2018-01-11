@@ -29,6 +29,14 @@ def index(request):
     return HttpResponse(render_index)
 
 
+def editor(request):
+    """ Shows the Bestiary Editor """
+    template = loader.get_template('projects/editor.html')
+    context = {}
+    render_index = template.render(context, request)
+    return HttpResponse(render_index)
+
+
 def find_project_views(project):
 
     data = {"repo_views": []}

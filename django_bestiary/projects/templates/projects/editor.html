@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% with active_page="editor" %}
+
+{% block title %}Bestiary Editor{% endblock %}
+
+{% block head %}
+    {{ block.super }}
+    <style type="text/css">
+      .four-column {float: left; width: 20%; margin-right: 10px;
+                    height: 90%; min-height: 600px;}
+    </style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Upper row -->
+<div><h1>Bestiary Editor</h1></div>
+<div style="width: 40%; margin: 10px">
+  <form>
+    <div class="form-group">
+      <select class="form-control">
+        <option>Ecosystem1</option>
+        <option>Ecosystem2</option>
+        <option>Ecosystem3</option>
+        <option>Ecosystem4</option>
+      </select>
+    </div>
+  </form>
+</div>
+<div style="clear:both; width:90%;"></div>
+
+<!-- Four columns -->
+
+<div class="four-column">
+  <form>
+    <div class="form-group">
+      <select multiple="10" class="form-control">
+        <option>Project1</option>
+        <option>Project2</option>
+        <option>Project3</option>
+        <option>Project4</option>
+      </select>
+    </div>
+    <div class="form-group row">
+      <div class="col-sm-7"><input type="text" name="project_name_add" placeholder="name" class="form-control"></div>
+      <div class="col-sm-5"><input type="button" value="Add project" class="form-control"></div>
+    </div>
+    <div class="form-group">
+      <input type="button" value="Remove project" class="form-control">
+    </div>
+  </form>
+</div>
+
+<div class="four-column">
+  <form>
+    <div class="form-group">
+      <select multiple="10" class="form-control">
+        <option>git</option>
+        <option>jenkins</option>
+        <option>jira</option>
+        <option>github</option>
+      </select>
+    </div>
+    <div class="form-group row">
+      <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
+      <div class="col-sm-5"><input type="button" value="Add data source" class="form-control"></div>
+    </div>
+    <div class="form-group">
+      <input type="button" value="Remove data source" class="form-control">
+    </div>
+  </form>
+</div>
+
+<div class="four-column">
+  <form>
+    <div class="form-group">
+      <select multiple="10" class="form-control">
+        <option>repo1</option>
+        <option>repo2</option>
+        <option>repo3</option>
+        <option>repo4</option>
+      </select>
+    </div>
+    <div class="form-group row">
+      <div class="col-sm-7"><input type="text" name="repository_name_add" placeholder="name" class="form-control"></div>
+      <div class="col-sm-5"><input type="button" value="Add repository" class="form-control"></div>
+    </div>
+    <div class="form-group">
+      <input type="button" value="Remove repository" class="form-control">
+    </div>
+  </form>
+</div>
+
+<div class="four-column">
+  <form>
+    <div class="form-group row">
+      <label class="col-sm-4 col-form-label">Repository</label>
+      <div class="col-sm-8"><input type="text" class="form-control"></div>
+    </div>
+    <div class="form-group row">
+      <label class="col-sm-4 col-form-label">Params</label>
+      <div class="col-sm-8"><input type="text" class="form-control"></div>
+    </div>
+    <div class="form-group row">
+      <label class="col-sm-4 col-form-label">Filters</label>
+      <div class="col-sm-8"><input type="text" class="form-control"></div>
+    </div>
+
+    <div class="form-group row">
+      <div class="col-sm-12">
+        <input type="button" value="Update repository" class="form-control">
+      </div>
+    </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+{% endwith  %}
