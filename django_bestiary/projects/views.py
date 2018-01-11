@@ -1,6 +1,7 @@
+import os
+
 from datetime import datetime
 from time import time
-
 
 from django.http import HttpResponse
 from django.template import loader
@@ -8,6 +9,7 @@ from django.template import loader
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
+from projects.bestiary_export import export_projects
 from projects.bestiary_import import load_projects
 from projects.models import Ecosystem, Project
 
@@ -103,5 +105,32 @@ def import_from_file(request):
         print("Total loading time ... %.2f sec", time() - task_init)
         print("Projects loaded", nprojects)
         print("Repositories loaded", nrepos)
+
+    return index(request)
+
+
+def export_to_file(request):
+
+    if not os.path.exists('.exported'):
+        os.mkdir(".exported")
+
+    if request.method == "POST":
+        ecosystem = request.POST["ecosystem"]
+        file_name = "projects_%s.json" % ecosystem
+        file_path = os.path.abspath(os.path.curdir) + "/.exported/" + file_name
+
+        task_init = time()
+        (nprojects, nrepos) = export_projects(file_path, ecosystem)
+
+        print("Total loading time ... %.2f sec", time() - task_init)
+        print("Projects loaded", nprojects)
+        print("Repositories loaded", nrepos)
+
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as fexport:
+                response = HttpResponse(fexport.read(), content_type="application/json")
+                response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                return response
+        return HttpResponse(status=503)
 
     return index(request)
