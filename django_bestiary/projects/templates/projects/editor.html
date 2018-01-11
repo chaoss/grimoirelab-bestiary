@@ -15,31 +15,33 @@
 
 <!-- Upper row -->
 <div><h1>Bestiary Editor</h1></div>
+
+<!-- Testing Django Forms capabilities -->
 <div style="width: 40%; margin: 10px">
-  <form>
-    <div class="form-group">
-      <select class="form-control">
-        <option>Ecosystem1</option>
-        <option>Ecosystem2</option>
-        <option>Ecosystem3</option>
-        <option>Ecosystem4</option>
-      </select>
+  <form action="/edit_ecosystem/" method="post">
+    {% csrf_token %}
+    {{ ecosystem_form.name.errors }}
+    <div class="form-group row">
+      <div class="col-sm-7">
+        {{ ecosystem_form.name }}
+      </div>
+      <div class="col-sm-5">
+        <button type="submit" class="btn btn-primary">Select Ecosystem</button>
+      </div>
     </div>
   </form>
 </div>
+
 <div style="clear:both; width:90%;"></div>
 
 <!-- Four columns -->
 
 <div class="four-column">
-  <form>
+  <form action="/edit_project" method="post">
+    {% csrf_token %}
+    {{ projects_form.name.errors }}
     <div class="form-group">
-      <select multiple="10" class="form-control">
-        <option>Project1</option>
-        <option>Project2</option>
-        <option>Project3</option>
-        <option>Project4</option>
-      </select>
+      {{ projects_form.name }}
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="project_name_add" placeholder="name" class="form-control"></div>
@@ -52,14 +54,11 @@
 </div>
 
 <div class="four-column">
-  <form>
+  <form action="/edit_data_source_type">
+    {% csrf_token %}
+    {{ data_source_types_form.name.errors }}
     <div class="form-group">
-      <select multiple="10" class="form-control">
-        <option>git</option>
-        <option>jenkins</option>
-        <option>jira</option>
-        <option>github</option>
-      </select>
+      {{ data_source_types_form.name }}
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
@@ -72,14 +71,11 @@
 </div>
 
 <div class="four-column">
-  <form>
+  <form action="/edit_data_source">
+    {% csrf_token %}
+    {{ data_sources_types_form.name.errors }}
     <div class="form-group">
-      <select multiple="10" class="form-control">
-        <option>repo1</option>
-        <option>repo2</option>
-        <option>repo3</option>
-        <option>repo4</option>
-      </select>
+      {{ data_sources_form.name }}
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="repository_name_add" placeholder="name" class="form-control"></div>
@@ -92,7 +88,7 @@
 </div>
 
 <div class="four-column">
-  <form>
+  <form action="/edit_repository">
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Repository</label>
       <div class="col-sm-8"><input type="text" class="form-control"></div>
