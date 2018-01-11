@@ -129,7 +129,7 @@ def export_to_file(request):
         if os.path.exists(file_path):
             with open(file_path, 'rb') as fexport:
                 response = HttpResponse(fexport.read(), content_type="application/json")
-                response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
                 return response
         return HttpResponse(status=503)
 
