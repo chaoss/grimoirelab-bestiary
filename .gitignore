@@ -4,6 +4,7 @@ build
 dist
 bestiary.egg-info
 __pycache__
+.imported
 
 # Eclipse's files and directories
 .project
