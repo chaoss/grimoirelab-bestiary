@@ -4,15 +4,22 @@ import os
 from datetime import datetime
 from time import time
 
-from django.http import HttpResponse
+from django import forms
+
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 from projects.bestiary_export import fetch_projects
+
+from django import shortcuts
+
 from projects.bestiary_import import load_projects
-from projects.models import Ecosystem, Project
+from projects.models import DataSource, DataSourceType, Ecosystem, Project
+
+SELECT_LINES = 20
 
 
 def index(request):
@@ -29,10 +36,78 @@ def index(request):
     return HttpResponse(render_index)
 
 
+class EcosystemForm(forms.Form):
+    widget = forms.Select(attrs={'class': 'form-control'})
+
+    CHOICES = ()
+
+    for eco in Ecosystem.objects.all():
+        CHOICES += ((eco.name, eco.name),)
+
+    name = forms.ChoiceField(label='Ecosystems', widget=widget, choices=CHOICES)
+
+
+class ProjectsForm(forms.Form):
+    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+
+    CHOICES = ()
+
+    for project in Project.objects.all():
+        CHOICES += ((project.name, project.name),)
+
+    name = forms.ChoiceField(label='Projects', widget=widget, choices=CHOICES)
+
+
+class DataSourceTypeForm(forms.Form):
+    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+
+    CHOICES = ()
+
+    for ds_type in DataSourceType.objects.all():
+        CHOICES += ((ds_type.name, ds_type.name),)
+
+    name = forms.ChoiceField(label='DataSourceTypes', widget=widget, choices=CHOICES)
+
+
+class DataSourcesForm(forms.Form):
+    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+
+    CHOICES = ()
+
+    for ds in DataSource.objects.all():
+        CHOICES += ((ds.rep.name, ds.rep.name),)
+
+    name = forms.ChoiceField(label='DataSources', widget=widget, choices=CHOICES)
+
+
+def edit_ecosystem(request):
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = EcosystemForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            return HttpResponseRedirect('/thanks/')
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = EcosystemForm()
+
+    return shortcuts.render(request, 'projects/editor.html', {'form': form})
+
+
 def editor(request):
     """ Shows the Bestiary Editor """
+
     template = loader.get_template('projects/editor.html')
-    context = {}
+    context = {"ecosystem_form": EcosystemForm(),
+               "projects_form": ProjectsForm(),
+               "data_source_types_form": DataSourceTypeForm(),
+               "data_sources_form": DataSourcesForm()
+               }
     render_index = template.render(context, request)
     return HttpResponse(render_index)
 
