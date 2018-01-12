@@ -4,9 +4,7 @@ import os
 from datetime import datetime
 from time import time
 
-from django import forms
-
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.template import loader
 
 from django.core.files.storage import default_storage
@@ -19,7 +17,7 @@ from django import shortcuts
 from projects.bestiary_import import load_projects
 from projects.models import DataSource, DataSourceType, Ecosystem, Project
 
-SELECT_LINES = 20
+from . import forms
 
 
 def index(request):
@@ -36,80 +34,62 @@ def index(request):
     return HttpResponse(render_index)
 
 
-class EcosystemForm(forms.Form):
-    widget = forms.Select(attrs={'class': 'form-control'})
 
-    CHOICES = ()
+def build_forms_context(eco_name=None, project_name=None):
+    """ Get all forms to be shown in the editor """
 
-    for eco in Ecosystem.objects.all():
-        CHOICES += ((eco.name, eco.name),)
+    project_names = None
+    if project_name:
+        project_names = [project_name]
 
-    name = forms.ChoiceField(label='Ecosystems', widget=widget, choices=CHOICES)
+    context = {"ecosystem_form": forms.EcosystemForm(initial={'name': eco_name}),
+               "projects_form": forms.ProjectsForm(eco_name=eco_name,
+                                                   initial={'name': project_name}),
+               "data_source_types_form": forms.DataSourceTypeForm(),
+               "data_sources_form": forms.DataSourcesForm(project_names=project_names)
+              }
 
-
-class ProjectsForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
-
-    CHOICES = ()
-
-    for project in Project.objects.all():
-        CHOICES += ((project.name, project.name),)
-
-    name = forms.ChoiceField(label='Projects', widget=widget, choices=CHOICES)
+    return context
 
 
-class DataSourceTypeForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
-
-    CHOICES = ()
-
-    for ds_type in DataSourceType.objects.all():
-        CHOICES += ((ds_type.name, ds_type.name),)
-
-    name = forms.ChoiceField(label='DataSourceTypes', widget=widget, choices=CHOICES)
-
-
-class DataSourcesForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
-
-    CHOICES = ()
-
-    for ds in DataSource.objects.all():
-        CHOICES += ((ds.rep.name, ds.rep.name),)
-
-    name = forms.ChoiceField(label='DataSources', widget=widget, choices=CHOICES)
+def edit_project(request):
+    if request.method == 'POST':
+        form = forms.ProjectsForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(project_name=name))
+        else:
+            # TODO: Show error
+            pass
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
 def edit_ecosystem(request):
-    # if this is a POST request we need to process the form data
     if request.method == 'POST':
-        # create a form instance and populate it with data from the request:
-        form = EcosystemForm(request.POST)
-        # check whether it's valid:
+        form = forms.EcosystemForm(request.POST)
         if form.is_valid():
-            # process the data in form.cleaned_data as required
-            # ...
-            # redirect to a new URL:
-            return HttpResponseRedirect('/thanks/')
-
+            name = form.cleaned_data['name']
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(eco_name=name))
+        else:
+            # TODO: Show error
+            pass
     # if a GET (or any other method) we'll create a blank form
     else:
-        form = EcosystemForm()
-
-    return shortcuts.render(request, 'projects/editor.html', {'form': form})
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
 def editor(request):
     """ Shows the Bestiary Editor """
 
-    template = loader.get_template('projects/editor.html')
-    context = {"ecosystem_form": EcosystemForm(),
-               "projects_form": ProjectsForm(),
-               "data_source_types_form": DataSourceTypeForm(),
-               "data_sources_form": DataSourcesForm()
-               }
-    render_index = template.render(context, request)
-    return HttpResponse(render_index)
+    context = build_forms_context()
+
+    return shortcuts.render(request, 'projects/editor.html', context)
 
 
 def find_project_views(project):
