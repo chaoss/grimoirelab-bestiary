@@ -4,15 +4,30 @@ from projects.models import DataSource, DataSourceType, Ecosystem, Project
 
 SELECT_LINES = 20
 
+class BestiaryForm(forms.Form):
 
-class EcosystemForm(forms.Form):
+    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+
+    def populate_state(self, kwargs):
+        self.eco_name = kwargs.pop('eco_name') if 'eco_name' in kwargs else None
+        self.projects = kwargs.pop('projects') if 'projects' in kwargs else None
+        self.data_sources = kwargs.pop('data_sources') if 'data_sources' in kwargs else None
+        self.data_source_types = kwargs.pop('data_source_types') if 'data_source_types' in kwargs else None
+
+    def is_empty_state(self):
+        return not (self.eco_name or self.projects or self.data_source_types or
+                    self.data_sources)
+
+    def __init__(self, *args, **kwargs):
+        self.populate_state(kwargs)
+        super(BestiaryForm, self).__init__(*args, **kwargs)
+
+
+class EcosystemForm(BestiaryForm):
 
     widget = forms.Select(attrs={'class': 'form-control'})
 
     def __init__(self, *args, **kwargs):
-        self.eco_name = None
-        if 'eco_name' in kwargs:
-            self.eco_name = kwargs.pop('eco_name')
         super(EcosystemForm, self).__init__(*args, **kwargs)
 
         choices = ()
@@ -24,21 +39,14 @@ class EcosystemForm(forms.Form):
                                                 widget=self.widget, choices=choices)
 
 
-class ProjectsForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+class ProjectsForm(BestiaryForm):
 
     def __init__(self, *args, **kwargs):
-        self.eco_name = None
-        self.projects = None
-        if 'eco_name' in kwargs:
-            self.eco_name = kwargs.pop('eco_name')
-        if 'projects' in kwargs:
-            self.projects = kwargs.pop('projects')
         super(ProjectsForm, self).__init__(*args, **kwargs)
 
         choices = ()
 
-        if not (self.eco_name or self.projects):
+        if self.is_empty_state():
             for project in Project.objects.all():
                 choices += ((project.name, project.name),)
         else:
@@ -50,35 +58,45 @@ class ProjectsForm(forms.Form):
                 for project in Project.objects.all():
                     if project.name in self.projects:
                         choices += ((project.name, project.name),)
+            if self.data_sources:
+                for project_orm in Project.objects.all():
+                    for ds in project_orm.data_sources.all():
+                        if ds.id in self.data_sources:
+                            if (project_orm.name, project_orm.name) not in choices:
+                                choices += ((project_orm.name, project_orm.name),)
+                            break
+            if self.data_source_types:
+                for project_orm in Project.objects.all():
+                    for ds in project_orm.data_sources.all():
+                        ds_type = ds.rep.data_source_type.name
+                        if ds_type in self.data_source_types:
+                            if (project_orm.name, project_orm.name) not in choices:
+                                choices += ((project_orm.name, project_orm.name),)
+                            break
+
 
         self.fields['name'] = forms.ChoiceField(label='Projects',
                                                 widget=self.widget, choices=choices)
 
 
-class DataSourceTypeForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
+class DataSourceTypeForm(BestiaryForm):
 
     def __init__(self, *args, **kwargs):
-        self.types = None
-        self.projects = None
-        self.data_sources = None
-        if 'types' in kwargs:
-            self.types = kwargs.pop('types')
-        if 'projects' in kwargs:
-            self.projects = kwargs.pop('projects')
-        if 'data_sources' in kwargs:
-            self.data_sources = kwargs.pop('data_sources')
         super(DataSourceTypeForm, self).__init__(*args, **kwargs)
 
         choices = ()
 
-        if not (self.types or self.projects or self.data_sources):
+        if self.is_empty_state():
             for ds_type in DataSourceType.objects.all():
                 choices += ((ds_type.name, ds_type.name),)
         else:
-            if self.types:
-                for ds_type in self.types:
-                    choices += ((ds_type, ds_type),)
+            if self.eco_name:
+                eco_orm = Ecosystem.objects.get(name=self.eco_name)
+                for project_orm in eco_orm.projects.all():
+                    for ds in project_orm.data_sources.all():
+                        ds_type = ds.rep.data_source_type.name
+                        if (ds_type, ds_type) not in choices:
+                            choices += ((ds_type, ds_type),)
             if self.projects:
                 for pname in self.projects:
                     project_orm = Project.objects.get(name=pname)
@@ -86,6 +104,9 @@ class DataSourceTypeForm(forms.Form):
                         ds_type = ds.rep.data_source_type.name
                         if (ds_type, ds_type) not in choices:
                             choices += ((ds_type, ds_type),)
+            if self.data_source_types:
+                for ds_type in self.data_source_types:
+                    choices += ((ds_type, ds_type),)
             if self.data_sources:
                 for ds_id in self.data_sources:
                     ds_orm = DataSource.objects.get(id=ds_id)
@@ -97,36 +118,30 @@ class DataSourceTypeForm(forms.Form):
                                                 widget=self.widget, choices=choices)
 
 
-class DataSourcesForm(forms.Form):
-    widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
-
+class DataSourcesForm(BestiaryForm):
     def __init__(self, *args, **kwargs):
-        self.projects = None
-        self.data_source_types = None
-        self.data_sources = None
-        if 'projects' in kwargs:
-            self.projects = kwargs.pop('projects')
-        if 'data_source_types' in kwargs:
-            self.data_source_types = kwargs.pop('data_source_types')
-        if 'data_sources' in kwargs:
-            self.data_sources = kwargs.pop('data_sources')
         super(DataSourcesForm, self).__init__(*args, **kwargs)
 
         choices = ()
 
-        if not (self.projects or self.data_source_types or self.data_sources):
+        if self.is_empty_state():
             for ds in DataSource.objects.all():
                 choices += ((ds.id, ds),)
         else:
+            if self.eco_name:
+                eco_orm = Ecosystem.objects.get(name=self.eco_name)
+                for project_orm in eco_orm.projects.all():
+                    for ds in project_orm.data_sources.all():
+                        choices += ((ds.id, ds),)
             if self.projects is not None and self.projects:
                 for pname in self.projects:
                     project_orm = Project.objects.get(name=pname)
-                    for ds in project_orm.data_sources.all():
-                        choices += ((ds.id, ds),)
+                    for ds_orm in project_orm.data_sources.all():
+                        choices += ((ds_orm.id, ds_orm),)
             if self.data_source_types is not None and self.data_source_types:
-                for ds in DataSource.objects.all():
-                    if ds.rep.data_source_type.name in self.data_source_types:
-                        choices += ((ds.id, ds),)
+                for ds_orm in DataSource.objects.all():
+                    if ds_orm.rep.data_source_type.name in self.data_source_types:
+                        choices += ((ds_orm.id, ds_orm),)
             if self.data_sources:
                 for ds_id in self.data_sources:
                     ds_orm = DataSource.objects.get(id=ds_id)
