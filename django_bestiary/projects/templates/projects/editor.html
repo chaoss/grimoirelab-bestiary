@@ -18,7 +18,7 @@
 
 <!-- Testing Django Forms capabilities -->
 <div style="width: 40%; margin: 10px">
-  <form action="/edit_ecosystem/" method="post">
+  <form action="/edit_ecosystem" method="post">
     {% csrf_token %}
     {{ ecosystem_form.name.errors }}
     <div class="form-group row">
@@ -34,7 +34,7 @@
 
 <div style="clear:both; width:90%;"></div>
 
-<!-- Four columns -->
+<!-- Four columns: Change to BS layout! -->
 
 <div class="four-column">
   <form action="/edit_project" method="post">
@@ -42,6 +42,9 @@
     {{ projects_form.name.errors }}
     <div class="form-group">
       {{ projects_form.name }}
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Select Project</button>
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="project_name_add" placeholder="name" class="form-control"></div>
