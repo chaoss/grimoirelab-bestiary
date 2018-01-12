@@ -4,6 +4,7 @@ from projects.models import DataSource, DataSourceType, Ecosystem, Project
 
 SELECT_LINES = 20
 
+
 class BestiaryForm(forms.Form):
 
     widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
@@ -73,7 +74,6 @@ class ProjectsForm(BestiaryForm):
                             if (project_orm.name, project_orm.name) not in choices:
                                 choices += ((project_orm.name, project_orm.name),)
                             break
-
 
         self.fields['name'] = forms.ChoiceField(label='Projects',
                                                 widget=self.widget, choices=choices)
