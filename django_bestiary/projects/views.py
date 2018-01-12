@@ -44,12 +44,15 @@ def build_forms_context(eco_name=None, project_name=None,
 
     context = {"ecosystem_form": forms.EcosystemForm(initial={'name': eco_name}),
                "projects_form": forms.ProjectsForm(eco_name=eco_name, projects=projects,
+                                                   data_source_types=data_source_types,
+                                                   data_sources=data_sources,
                                                    initial={'name': project_name}),
-               "data_source_types_form": forms.DataSourceTypeForm(types=data_source_types,
+               "data_source_types_form": forms.DataSourceTypeForm(eco_name=eco_name,
+                                                                  data_source_types=data_source_types,
                                                                   projects=projects,
                                                                   data_sources=data_sources,
                                                                   initial={'name': data_source_type}),
-               "data_sources_form": forms.DataSourcesForm(projects=projects,
+               "data_sources_form": forms.DataSourcesForm(eco_name=eco_name, projects=projects,
                                                           data_source_types=data_source_types,
                                                           data_sources=data_sources),
                "data_source_form": forms.DataSourceForm(data_source_id=data_source_id)
@@ -86,7 +89,7 @@ def edit_data_source(request):
     if request.method == 'POST':
         form = forms.DataSourcesForm(request.POST)
         if form.is_valid():
-            data_source_id = form.cleaned_data['id']
+            data_source_id = int(form.cleaned_data['id'])
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(data_source_id=data_source_id))
         else:
