@@ -164,7 +164,11 @@ def load_projects(projects_file, ecosystem):
     for project in projects.keys():
         pparams = {"name": project, "eco": eco_orm}
         if 'meta' in projects[project].keys():
-            pparams.update({"meta_title": projects[project]['meta']['title']})
+            if isinstance(projects[project]['meta'], str):
+                # In Mozilla the meta is the title directly
+                pparams.update({"meta_title": projects[project]['meta']})
+            else:
+                pparams.update({"meta_title": projects[project]['meta']['title']})
         project_orm = add(Project, **pparams)
         eco_orm.projects.add(project_orm)
 
