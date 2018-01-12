@@ -15,7 +15,7 @@ from projects.bestiary_export import fetch_projects
 from django import shortcuts
 
 from projects.bestiary_import import load_projects
-from projects.models import DataSource, DataSourceType, Ecosystem, Project
+from projects.models import DataSource, Ecosystem, Project, Repository
 
 from . import forms
 
@@ -34,22 +34,84 @@ def index(request):
     return HttpResponse(render_index)
 
 
-
-def build_forms_context(eco_name=None, project_name=None):
+def build_forms_context(eco_name=None, project_name=None,
+                        data_source_type=None, data_source_id=None):
     """ Get all forms to be shown in the editor """
 
-    project_names = None
-    if project_name:
-        project_names = [project_name]
+    projects = [project_name] if project_name else None
+    data_source_types = [data_source_type] if data_source_type else None
+    data_sources = [data_source_id] if data_source_id else None
 
     context = {"ecosystem_form": forms.EcosystemForm(initial={'name': eco_name}),
-               "projects_form": forms.ProjectsForm(eco_name=eco_name,
+               "projects_form": forms.ProjectsForm(eco_name=eco_name, projects=projects,
                                                    initial={'name': project_name}),
-               "data_source_types_form": forms.DataSourceTypeForm(),
-               "data_sources_form": forms.DataSourcesForm(project_names=project_names)
-              }
+               "data_source_types_form": forms.DataSourceTypeForm(types=data_source_types,
+                                                                  projects=projects,
+                                                                  data_sources=data_sources,
+                                                                  initial={'name': data_source_type}),
+               "data_sources_form": forms.DataSourcesForm(projects=projects,
+                                                          data_source_types=data_source_types,
+                                                          data_sources=data_sources),
+               "data_source_form": forms.DataSourceForm(data_source_id=data_source_id)
+               }
 
     return context
+
+
+def update_data_source(request):
+    if request.method == 'POST':
+        form = forms.DataSourceForm(request.POST)
+        if form.is_valid():
+            data_source_id = form.cleaned_data['data_source_id']
+            repository = form.cleaned_data['repository']
+            params = form.cleaned_data['params']
+            filters = form.cleaned_data['filters']
+            ds_orm = DataSource.objects.get(id=data_source_id)
+            ds_orm.repo = Repository.objects.get(name=repository)
+            ds_orm.params = params
+            # TODO: filters not yet in the data models
+            ds_orm.save()
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(data_source_id=data_source_id))
+        else:
+            # TODO: Show error
+            pass
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def edit_data_source(request):
+    if request.method == 'POST':
+        form = forms.DataSourcesForm(request.POST)
+        if form.is_valid():
+            data_source_id = form.cleaned_data['id']
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(data_source_id=data_source_id))
+        else:
+            # TODO: Show error
+            pass
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def edit_data_source_type(request):
+    if request.method == 'POST':
+        form = forms.DataSourceTypeForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(data_source_type=name))
+        else:
+            # TODO: Show error
+            pass
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
 def edit_project(request):
