@@ -75,6 +75,7 @@ class ProjectsForm(BestiaryForm):
                                 choices += ((project_orm.name, project_orm.name),)
                             break
 
+        choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='Projects',
                                                 widget=self.widget, choices=choices)
 
@@ -114,6 +115,7 @@ class DataSourceTypeForm(BestiaryForm):
                     if (ds_type, ds_type) not in choices:
                         choices += ((ds_type, ds_type),)
 
+        choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='DataSourceTypes',
                                                 widget=self.widget, choices=choices)
 
