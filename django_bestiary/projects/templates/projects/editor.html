@@ -46,12 +46,18 @@
     <div class="form-group">
       <button type="submit" class="btn btn-primary">Select Project</button>
     </div>
+  </form>
+  <form action="/add_project" method="post">
+    {% csrf_token %}
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="project_name_add" placeholder="name" class="form-control"></div>
-      <div class="col-sm-5"><input type="button" value="Add project" class="form-control"></div>
+      <div class="col-sm-5"><button type="submit" class="form-control">Add project</a></div>
     </div>
+  </form>
+  <form action="/remove_project" method="post">
+    {% csrf_token %}
     <div class="form-group">
-      <input type="button" value="Remove project" class="form-control">
+      <button type="submit" class="form-control">Remove project</button>
     </div>
   </form>
 </div>
