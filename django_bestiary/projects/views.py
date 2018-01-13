@@ -1,3 +1,4 @@
+import json
 import os
 
 from datetime import datetime
@@ -9,7 +10,7 @@ from django.template import loader
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
-from projects.bestiary_export import export_projects
+from projects.bestiary_export import fetch_projects
 from projects.bestiary_import import load_projects
 from projects.models import Ecosystem, Project
 
@@ -116,21 +117,17 @@ def export_to_file(request):
 
     if request.method == "POST":
         ecosystem = request.POST["ecosystem"]
-        file_name = "projects_%s.json" % ecosystem
-        file_path = os.path.abspath(os.path.curdir) + "/.exported/" + file_name
-
         task_init = time()
-        (nprojects, nrepos) = export_projects(file_path, ecosystem)
+        projects = fetch_projects(ecosystem)
 
         print("Total loading time ... %.2f sec", time() - task_init)
-        print("Projects loaded", nprojects)
-        print("Repositories loaded", nrepos)
 
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as fexport:
-                response = HttpResponse(fexport.read(), content_type="application/json")
-                response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
-                return response
+        if projects:
+            projects_json = json.dumps(projects, indent=True, sort_keys=True)
+            file_name = "projects_%s.json" % ecosystem
+            response = HttpResponse(projects_json, content_type="application/json")
+            response['Content-Disposition'] = 'attachment; filename=' + file_name
+            return response
         return HttpResponse(status=503)
 
     return index(request)
