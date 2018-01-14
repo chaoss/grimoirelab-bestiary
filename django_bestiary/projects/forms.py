@@ -101,7 +101,7 @@ class DataSourceTypeForm(BestiaryEditorForm):
             for ds_type in DataSourceType.objects.all():
                 choices += ((ds_type.name, ds_type.name),)
         else:
-            if self.state.eco_name:
+            if self.state.eco_name and not self.state.projects:
                 eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 for project_orm in eco_orm.projects.all():
                     for ds in project_orm.data_sources.all():
@@ -109,8 +109,8 @@ class DataSourceTypeForm(BestiaryEditorForm):
                         if (ds_type, ds_type) not in choices:
                             choices += ((ds_type, ds_type),)
             if self.state.projects:
-                for pname in self.state.projects:
-                    project_orm = Project.objects.get(name=pname)
+                projects = Project.objects.filter(name__in=self.state.projects)
+                for project_orm in projects:
                     for ds in project_orm.data_sources.all():
                         ds_type = ds.rep.data_source_type.name
                         if (ds_type, ds_type) not in choices:
@@ -119,8 +119,8 @@ class DataSourceTypeForm(BestiaryEditorForm):
                 for ds_type in self.state.data_source_types:
                     choices += ((ds_type, ds_type),)
             if self.state.data_sources:
-                for ds_id in self.state.data_sources:
-                    ds_orm = DataSource.objects.get(id=ds_id)
+                data_sources = DataSource.objects.filter(id__in=self.state.data_sources)
+                for ds_orm in data_sources:
                     ds_type = ds_orm.rep.data_source_type.name
                     if (ds_type, ds_type) not in choices:
                         choices += ((ds_type, ds_type),)
@@ -140,14 +140,14 @@ class DataSourcesForm(BestiaryEditorForm):
             for ds in DataSource.objects.all():
                 choices += ((ds.id, ds),)
         else:
-            if self.state.eco_name:
+            if self.state.eco_name and not self.state.projects:
                 eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 for project_orm in eco_orm.projects.all():
                     for ds in project_orm.data_sources.all():
                         choices += ((ds.id, ds),)
             if self.state.projects:
-                for pname in self.state.projects:
-                    project_orm = Project.objects.get(name=pname)
+                projects = Project.objects.filter(name__in=self.state.projects)
+                for project_orm in projects:
                     for ds_orm in project_orm.data_sources.all():
                         choices += ((ds_orm.id, ds_orm),)
             if self.state.data_source_types:
@@ -155,8 +155,8 @@ class DataSourcesForm(BestiaryEditorForm):
                     if ds_orm.rep.data_source_type.name in self.state.data_source_types:
                         choices += ((ds_orm.id, ds_orm),)
             if self.state.data_sources:
-                for ds_id in self.state.data_sources:
-                    ds_orm = DataSource.objects.get(id=ds_id)
+                data_sources = DataSource.objects.filter(id__in=self.state.data_sources)
+                for ds_orm in data_sources:
                     choices += ((ds_orm.id, ds_orm),)
 
         self.fields['id'] = forms.ChoiceField(label='DataSource',
