@@ -16,10 +16,10 @@
 <!-- Upper row -->
 <div><h1>Bestiary Editor</h1></div>
 
-<!-- Testing Django Forms capabilities -->
 <div style="width: 40%; margin: 10px">
   <form action="/edit_ecosystem" method="post">
     {% csrf_token %}
+    {{ ecosystem_form.eco_name_state }}
     {{ ecosystem_form.name.errors }}
     <div class="form-group row">
       <div class="col-sm-7">
@@ -39,6 +39,10 @@
 <div class="four-column">
   <form action="/edit_project" method="post">
     {% csrf_token %}
+    <!-- {% for field in projects_form.state_fields %}
+      {{ field }}
+    {% endfor %} -->
+    {{ projects_form.eco_name_state }}
     {{ projects_form.name.errors }}
     <div class="form-group">
       {{ projects_form.name }}
