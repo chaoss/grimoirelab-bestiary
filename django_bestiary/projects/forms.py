@@ -1,6 +1,8 @@
+from time import time
+
 from django import forms
 
-from projects.models import DataSource, DataSourceType, Ecosystem, Project
+from projects.models import DataSource, DataSourceType, Ecosystem, Project, Repository
 
 SELECT_LINES = 20
 
@@ -75,13 +77,16 @@ class ProjectsForm(BestiaryEditorForm):
                                 choices += ((project_orm.name, project_orm.name),)
                             break
             if self.state.data_source_types:
-                for project_orm in Project.objects.all():
-                    for ds in project_orm.data_sources.all():
-                        ds_type = ds.rep.data_source_type.name
-                        if ds_type in self.state.data_source_types:
-                            if (project_orm.name, project_orm.name) not in choices:
-                                choices += ((project_orm.name, project_orm.name),)
-                            break
+                task_init = time()
+                ds_types_ids = DataSourceType.objects.filter(name__in=self.state.data_source_types).values_list("id")
+                repos_ids = Repository.objects.filter(data_source_type__in=list(ds_types_ids)).values_list("id")
+                ds_ids = DataSource.objects.filter(rep__in=list(repos_ids)).values_list("id")
+                projects = Project.objects.filter(data_sources__in=list(ds_ids))
+                for project_orm in projects:
+                    if (project_orm.name, project_orm.name) not in choices:
+                        choices += ((project_orm.name, project_orm.name),)
+                print("Total QUERY time for finding projects for data sources %.3f sec"
+                      % (time() - task_init))
 
         choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='Projects',
