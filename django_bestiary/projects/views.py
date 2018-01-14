@@ -13,6 +13,7 @@ from django.core.files.base import ContentFile
 from projects.bestiary_export import fetch_projects
 
 from django import shortcuts
+from django.http import Http404
 
 from projects.bestiary_import import load_projects
 from projects.models import DataSource, Ecosystem, Project, Repository
@@ -34,30 +35,58 @@ def index(request):
     return HttpResponse(render_index)
 
 
-def build_forms_context(eco_name=None, project_name=None,
-                        data_source_type=None, data_source_id=None):
+class EditorState():
+
+    def __init__(self, eco_name=None, projects=[], data_source_types=[],
+                 data_sources=[]):
+        self.eco_name = eco_name
+        self.projects = projects
+        self.data_source_types = data_source_types
+        self.data_sources = data_sources
+
+        # Hidden fields to store the status
+
+    def is_empty(self):
+        return not (self.eco_name or self.projects or self.data_source_types or
+                    self.data_sources)
+
+    def initial_state(self):
+        """ State to be filled in the forms so it is propagated
+
+        The state needs to be serialized so it can be used in
+        forms fields.
+        """
+        initial = {
+            'eco_name_state': self.eco_name,
+            'projects_state': ";".join(self.projects),
+            'data_source_types_state': ";".join(self.data_source_types),
+            "data_sources_state": ";".join([str(ds_id) for ds_id in self.data_sources])
+        }
+
+        return initial
+
+
+def build_forms_context(state=None):
     """ Get all forms to be shown in the editor """
+    eco_form = forms.EcosystemForm(state=state)
+    projects_form = forms.ProjectsForm(state=state)
+    ds_types_form = forms.DataSourceTypeForm(state=state)
+    data_sources_form = forms.DataSourcesForm(state=state)
+    data_source_form = forms.DataSourceForm(state=state)
 
-    projects = [project_name] if project_name else None
-    data_source_types = [data_source_type] if data_source_type else None
-    data_sources = [data_source_id] if data_source_id else None
+    if state:
+        eco_form.initial['name'] = state.eco_name
+        if state.projects:
+            projects_form.initial['name'] = state.projects[0]
+        if state.data_source_types:
+            ds_types_form.initial['name'] = state.data_source_types[0]
 
-    context = {"ecosystem_form": forms.EcosystemForm(initial={'name': eco_name}),
-               "projects_form": forms.ProjectsForm(eco_name=eco_name, projects=projects,
-                                                   data_source_types=data_source_types,
-                                                   data_sources=data_sources,
-                                                   initial={'name': project_name}),
-               "data_source_types_form": forms.DataSourceTypeForm(eco_name=eco_name,
-                                                                  data_source_types=data_source_types,
-                                                                  projects=projects,
-                                                                  data_sources=data_sources,
-                                                                  initial={'name': data_source_type}),
-               "data_sources_form": forms.DataSourcesForm(eco_name=eco_name, projects=projects,
-                                                          data_source_types=data_source_types,
-                                                          data_sources=data_sources),
-               "data_source_form": forms.DataSourceForm(data_source_id=data_source_id)
+    context = {"ecosystem_form": eco_form,
+               "projects_form": projects_form,
+               "data_source_types_form": ds_types_form,
+               "data_sources_form": data_sources_form,
+               "data_source_form": data_source_form
                }
-
     return context
 
 
@@ -75,10 +104,10 @@ def update_data_source(request):
             # TODO: filters not yet in the data models
             ds_orm.save()
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(data_source_id=data_source_id))
+                                    build_forms_context(EditorState(data_sources=[data_source_id])))
         else:
             # TODO: Show error
-            pass
+            raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
@@ -91,10 +120,10 @@ def edit_data_source(request):
         if form.is_valid():
             data_source_id = int(form.cleaned_data['id'])
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(data_source_id=data_source_id))
+                                    build_forms_context(EditorState(data_sources=[data_source_id])))
         else:
             # TODO: Show error
-            pass
+            raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
@@ -107,10 +136,10 @@ def edit_data_source_type(request):
         if form.is_valid():
             name = form.cleaned_data['name']
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(data_source_type=name))
+                                    build_forms_context(EditorState(data_source_types=[name])))
         else:
             # TODO: Show error
-            pass
+            raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
@@ -122,11 +151,15 @@ def edit_project(request):
         form = forms.ProjectsForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
+            state = {
+                "eco_name": form.cleaned_data['eco_name_state'],
+                "projects": [name],
+            }
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(project_name=name))
+                                    build_forms_context(EditorState(**state)))
         else:
             # TODO: Show error
-            pass
+            raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
@@ -139,10 +172,11 @@ def edit_ecosystem(request):
         if form.is_valid():
             name = form.cleaned_data['name']
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(eco_name=name))
+                                    build_forms_context(EditorState(eco_name=name)))
         else:
             # TODO: Show error
-            pass
+            print("FORM errors", form.errors)
+            raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
