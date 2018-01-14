@@ -61,23 +61,22 @@ class ProjectsForm(BestiaryEditorForm):
             for project in Project.objects.all():
                 choices += ((project.name, project.name),)
         elif self.state.projects:
-            for project in Project.objects.all():
-                if project.name in self.state.projects:
-                    choices += ((project.name, project.name),)
+            projects = Project.objects.filter(name__in=self.state.projects)
+            for project in projects:
+                choices += ((project.name, project.name),)
         else:
             if self.state.eco_name:
                 ecosystem_orm = Ecosystem.objects.get(name=self.state.eco_name)
-                for project in ecosystem_orm.projects.all():
+                projects = ecosystem_orm.projects.all()
+                for project in projects:
                     choices += ((project.name, project.name),)
             if self.state.data_sources:
-                for project_orm in Project.objects.all():
-                    for ds in project_orm.data_sources.all():
-                        if ds.id in self.state.data_sources:
-                            if (project_orm.name, project_orm.name) not in choices:
-                                choices += ((project_orm.name, project_orm.name),)
-                            break
+                ds_ids = DataSource.objects.filter(id__in=self.state.data_sources).values_list("id")
+                projects = Project.objects.filter(data_sources__in=list(ds_ids))
+                for project_orm in projects:
+                    if (project_orm.name, project_orm.name) not in choices:
+                        choices += ((project_orm.name, project_orm.name),)
             if self.state.data_source_types:
-                task_init = time()
                 ds_types_ids = DataSourceType.objects.filter(name__in=self.state.data_source_types).values_list("id")
                 repos_ids = Repository.objects.filter(data_source_type__in=list(ds_types_ids)).values_list("id")
                 ds_ids = DataSource.objects.filter(rep__in=list(repos_ids)).values_list("id")
@@ -85,8 +84,6 @@ class ProjectsForm(BestiaryEditorForm):
                 for project_orm in projects:
                     if (project_orm.name, project_orm.name) not in choices:
                         choices += ((project_orm.name, project_orm.name),)
-                print("Total QUERY time for finding projects for data sources %.3f sec"
-                      % (time() - task_init))
 
         choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='Projects',
