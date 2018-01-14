@@ -19,7 +19,9 @@
 <div style="width: 40%; margin: 10px">
   <form action="/edit_ecosystem" method="post">
     {% csrf_token %}
-    {{ ecosystem_form.eco_name_state }}
+    {% for field in projects_form.state_fields %}
+      {{ field }}
+    {% endfor %}
     {{ ecosystem_form.name.errors }}
     <div class="form-group row">
       <div class="col-sm-7">
@@ -39,10 +41,9 @@
 <div class="four-column">
   <form action="/edit_project" method="post">
     {% csrf_token %}
-    <!-- {% for field in projects_form.state_fields %}
+    {% for field in projects_form.state_fields %}
       {{ field }}
-    {% endfor %} -->
-    {{ projects_form.eco_name_state }}
+    {% endfor %}
     {{ projects_form.name.errors }}
     <div class="form-group">
       {{ projects_form.name }}
@@ -69,6 +70,9 @@
 <div class="four-column">
   <form action="/edit_data_source_type" method="post">
     {% csrf_token %}
+    {% for field in projects_form.state_fields %}
+      {{ field }}
+    {% endfor %}
     {{ data_source_types_form.name.errors }}
     <div class="form-group">
       {{ data_source_types_form.name }}
@@ -89,6 +93,9 @@
 <div class="four-column">
   <form action="/edit_data_source" method="post">
     {% csrf_token %}
+    {% for field in projects_form.state_fields %}
+      {{ field }}
+    {% endfor %}
     {{ data_sources_form.name.errors }}
     <div class="form-group">
       {{ data_sources_form.id }}
@@ -109,8 +116,10 @@
 <div class="four-column">
   <form action="/update_data_source" method="post">
     {% csrf_token %}
+    {% for field in projects_form.state_fields %}
+      {{ field }}
+    {% endfor %}
     {{ data_source_form.name.errors }}
-    {{ data_source_form.data_source_id.as_hidden }}
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Repository</label>
       <div class="col-sm-8">{{ data_source_form.repository }}</div>

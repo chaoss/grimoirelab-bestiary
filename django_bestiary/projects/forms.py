@@ -10,15 +10,10 @@ class BestiaryEditorForm(forms.Form):
     widget = forms.Select(attrs={'size': SELECT_LINES, 'class': 'form-control'})
 
     # Hidden widgets to store the state of the BestiaryEditorForm
-
     eco_name_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     projects_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     data_source_types_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     data_sources_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
-
-    state_fields = [eco_name_state, projects_state, data_source_types_state, data_sources_state]
-
-    # _status = forms.CharField(widget=forms.MultipleHiddenInput)
 
     def is_empty_state(self):
         return self.state.is_empty() if self.state else True
@@ -28,6 +23,13 @@ class BestiaryEditorForm(forms.Form):
         if self.state:
             kwargs['initial'] = self.state.initial_state()
         super(BestiaryEditorForm, self).__init__(*args, **kwargs)
+
+        self.state_fields = [self['eco_name_state'],
+                             self['projects_state'],
+                             self['data_source_types_state'],
+                             self['data_sources_state']
+                             ]
+
 
 
 class EcosystemForm(BestiaryEditorForm):
