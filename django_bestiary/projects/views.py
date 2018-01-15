@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 
@@ -65,7 +66,17 @@ class EditorState():
 
         return initial
 
+def perfdata(func):
+    @functools.wraps(func)
+    def decorator(*args, **kwargs):
+        task_init = time()
+        data = func(*args, **kwargs)
+        print("%s: %0.3f sec" % (func, time() - task_init))
+        return data
+    return decorator
 
+
+@perfdata
 def build_forms_context(state=None):
     """ Get all forms to be shown in the editor """
     eco_form = forms.EcosystemForm(state=state)
@@ -165,7 +176,7 @@ def edit_project(request):
         # TODO: Show error
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
-
+@perfdata
 def edit_ecosystem(request):
     if request.method == 'POST':
         form = forms.EcosystemForm(request.POST)
@@ -183,6 +194,7 @@ def edit_ecosystem(request):
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
+@perfdata
 def editor(request):
     """ Shows the Bestiary Editor """
 

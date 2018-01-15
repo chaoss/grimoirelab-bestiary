@@ -1,3 +1,5 @@
+import functools
+
 from time import time
 
 from django import forms
@@ -5,6 +7,17 @@ from django import forms
 from projects.models import DataSource, DataSourceType, Ecosystem, Project, Repository
 
 SELECT_LINES = 20
+MAX_ITEMS = 1000  # Implement pagination if there are more items
+
+def perfdata(func):
+    @functools.wraps(func)
+    def decorator(self, *args, **kwargs):
+        task_init = time()
+        data = func(self, *args, **kwargs)
+        print("%s: Total data collecting time ... %0.3f sec" %
+              (self.__class__.__name__, time() - task_init))
+        return data
+    return decorator
 
 
 class BestiaryEditorForm(forms.Form):
@@ -33,11 +46,11 @@ class BestiaryEditorForm(forms.Form):
                              ]
 
 
-
 class EcosystemForm(BestiaryEditorForm):
 
     widget = forms.Select(attrs={'class': 'form-control'})
 
+    @perfdata
     def __init__(self, *args, **kwargs):
         super(EcosystemForm, self).__init__(*args, **kwargs)
 
@@ -52,6 +65,7 @@ class EcosystemForm(BestiaryEditorForm):
 
 class ProjectsForm(BestiaryEditorForm):
 
+    @perfdata
     def __init__(self, *args, **kwargs):
         super(ProjectsForm, self).__init__(*args, **kwargs)
 
@@ -92,6 +106,7 @@ class ProjectsForm(BestiaryEditorForm):
 
 class DataSourceTypeForm(BestiaryEditorForm):
 
+    @perfdata
     def __init__(self, *args, **kwargs):
         super(DataSourceTypeForm, self).__init__(*args, **kwargs)
 
@@ -131,6 +146,8 @@ class DataSourceTypeForm(BestiaryEditorForm):
 
 
 class DataSourcesForm(BestiaryEditorForm):
+
+    @perfdata
     def __init__(self, *args, **kwargs):
         super(DataSourcesForm, self).__init__(*args, **kwargs)
 
@@ -139,12 +156,19 @@ class DataSourcesForm(BestiaryEditorForm):
         if not self.state or self.state.is_empty():
             for ds in DataSource.objects.all():
                 choices += ((ds.id, ds),)
+                if len(choices) > MAX_ITEMS:
+                    break
+
         else:
             if self.state.eco_name and not self.state.projects:
                 eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 for project_orm in eco_orm.projects.all():
+                    if len(choices) > MAX_ITEMS:
+                        break
                     for ds in project_orm.data_sources.all():
                         choices += ((ds.id, ds),)
+                        if len(choices) > MAX_ITEMS:
+                            break
             if self.state.projects:
                 projects = Project.objects.filter(name__in=self.state.projects)
                 for project_orm in projects:
@@ -154,17 +178,24 @@ class DataSourcesForm(BestiaryEditorForm):
                 for ds_orm in DataSource.objects.all():
                     if ds_orm.rep.data_source_type.name in self.state.data_source_types:
                         choices += ((ds_orm.id, ds_orm),)
+                        if len(choices) > MAX_ITEMS:
+                            break
             if self.state.data_sources:
                 data_sources = DataSource.objects.filter(id__in=self.state.data_sources)
                 for ds_orm in data_sources:
                     choices += ((ds_orm.id, ds_orm),)
 
+        print("Choices len", len(choices))
         self.fields['id'] = forms.ChoiceField(label='DataSource',
                                               widget=self.widget, choices=choices)
 
 
 class DataSourceForm(BestiaryEditorForm):
+
+    @perfdata
     def __init__(self, *args, **kwargs):
+        task_init = time()
+
         self.data_source_id = None
         self.ds_orm = None
 
