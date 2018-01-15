@@ -20,27 +20,27 @@ def index(request):
     project = 'grimoire'  # debug value just during testing
     if (request.GET.get('project')):
         project = request.GET.get('project')
-    context = find_data_sources(project)
+    context = find_project_views(project)
     context.update(find_projects())
-    context.update(find_data_sources_types(project))
+    context.update(find_project_data_sources(project))
     context['project_selected'] = project
     render_index = template.render(context, request)
     return HttpResponse(render_index)
 
 
-def find_data_sources(project):
+def find_project_views(project):
 
-    data = {"data_sources": []}
+    data = {"repo_views": []}
 
     try:
         project_orm = Project.objects.get(name=project)
-        data_sources_orm = project_orm.data_sources.all()
-        for ds in data_sources_orm:
-            data['data_sources'].append({
-                "id": ds.id,
-                "name": ds.rep.name,
-                "params": ds.params,
-                "type": ds.rep.data_source_type.name
+        repo_views_orm = project_orm.repo_views.all()
+        for view in repo_views_orm:
+            data['repo_views'].append({
+                "id": view.id,
+                "name": view.rep.name,
+                "params": view.params,
+                "type": view.rep.data_source.name
             })
     except Project.DoesNotExist:
         print('Can not find project', project)
@@ -48,20 +48,20 @@ def find_data_sources(project):
     return data
 
 
-def find_data_sources_types(project):
-    data = {"data_sources_types": []}
-    already_add_ds_tpes = []
+def find_project_data_sources(project):
+    data = {"data_sources": []}
+    already_added_data_sources = []
 
     try:
         project_orm = Project.objects.get(name=project)
-        data_sources_orm = project_orm.data_sources.all()
-        for ds in data_sources_orm:
-            if ds.rep.data_source_type.id in already_add_ds_tpes:
+        repo_views_orm = project_orm.repo_views.all()
+        for view in repo_views_orm:
+            if view.rep.data_source.id in already_added_data_sources:
                 continue
-            already_add_ds_tpes.append(ds.rep.data_source_type.id)
-            data['data_sources_types'].append({
-                "id": ds.rep.data_source_type.id,
-                "name": ds.rep.data_source_type.name
+            already_added_data_sources.append(view.rep.data_source.id)
+            data['data_sources'].append({
+                "id": view.rep.data_source.id,
+                "name": view.rep.data_source.name
             })
     except Project.DoesNotExist:
         print('Can not find project', project)
