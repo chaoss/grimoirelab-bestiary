@@ -39,20 +39,20 @@ class RepositoryView(BeastModel):
     params = models.CharField(max_length=400)
     # Relations
     # Base Repository from which to create the View
-    rep = models.ForeignKey(Repository, on_delete=models.CASCADE)
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('rep', 'params')
+        unique_together = ('repository', 'params')
 
     def __str__(self):
-        return self.rep.name + " " + self.params
+        return self.repository.name + " " + self.params
 
 
 class Project(BeastModel):
     name = models.CharField(max_length=200)
     meta_title = models.CharField(max_length=200)
     # Relations
-    repo_views = models.ManyToManyField(RepositoryView)
+    repository_views = models.ManyToManyField(RepositoryView)
     # https://docs.djangoproject.com/en/1.11/ref/models/fields/#foreignkey
     subprojects = models.ManyToManyField("Project")
     eco = models.ForeignKey("Ecosystem", on_delete=models.CASCADE)

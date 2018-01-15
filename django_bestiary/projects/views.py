@@ -17,7 +17,7 @@ from django import shortcuts
 from django.http import Http404
 
 from projects.bestiary_import import load_projects
-from projects.models import DataSource, Ecosystem, Project, Repository
+from projects.models import Ecosystem, Project, Repository, RepositoryView
 
 from . import forms
 
@@ -28,7 +28,7 @@ def index(request):
     project = 'grimoire'  # debug value just during testing
     if (request.GET.get('project')):
         project = request.GET.get('project')
-    context = find_project_views(project)
+    context = find_project_repository_views(project)
     context.update(find_projects())
     context.update(find_project_data_sources(project))
     context['project_selected'] = project
@@ -38,18 +38,16 @@ def index(request):
 
 class EditorState():
 
-    def __init__(self, eco_name=None, projects=[], data_source_types=[],
-                 data_sources=[]):
+    def __init__(self, eco_name=None, projects=[], data_sources=[],
+                 repository_views=[]):
         self.eco_name = eco_name
         self.projects = projects
-        self.data_source_types = data_source_types
         self.data_sources = data_sources
-
-        # Hidden fields to store the status
+        self.repository_views = repository_views
 
     def is_empty(self):
-        return not (self.eco_name or self.projects or self.data_source_types or
-                    self.data_sources)
+        return not (self.eco_name or self.projects or self.data_sources or
+                    self.repository_views)
 
     def initial_state(self):
         """ State to be filled in the forms so it is propagated
@@ -60,11 +58,12 @@ class EditorState():
         initial = {
             'eco_name_state': self.eco_name,
             'projects_state': ";".join(self.projects),
-            'data_source_types_state': ";".join(self.data_source_types),
-            "data_sources_state": ";".join([str(ds_id) for ds_id in self.data_sources])
+            'data_sources_state': ";".join(self.data_sources),
+            "repository_views_state": ";".join([str(repo_view_id) for repo_view_id in self.repository_views])
         }
 
         return initial
+
 
 def perfdata(func):
     @functools.wraps(func)
@@ -81,41 +80,57 @@ def build_forms_context(state=None):
     """ Get all forms to be shown in the editor """
     eco_form = forms.EcosystemForm(state=state)
     projects_form = forms.ProjectsForm(state=state)
-    ds_types_form = forms.DataSourceTypeForm(state=state)
     data_sources_form = forms.DataSourcesForm(state=state)
-    data_source_form = forms.DataSourceForm(state=state)
+    repository_views_form = forms.RepositoryViewsForm(state=state)
+    repository_view_form = forms.RepositoryViewForm(state=state)
 
     if state:
         eco_form.initial['name'] = state.eco_name
         if state.projects:
             projects_form.initial['name'] = state.projects[0]
-        if state.data_source_types:
-            ds_types_form.initial['name'] = state.data_source_types[0]
+        if state.data_sources:
+            data_sources_form.initial['name'] = state.data_sources[0]
 
     context = {"ecosystem_form": eco_form,
                "projects_form": projects_form,
-               "data_source_types_form": ds_types_form,
                "data_sources_form": data_sources_form,
-               "data_source_form": data_source_form
+               "repository_views_form": repository_views_form,
+               "repository_view_form": repository_view_form
                }
     return context
 
 
-def update_data_source(request):
+def update_repository_view(request):
     if request.method == 'POST':
-        form = forms.DataSourceForm(request.POST)
+        form = forms.RepositoryViewForm(request.POST)
         if form.is_valid():
-            data_source_id = form.cleaned_data['data_source_id']
+            repository_view_id = form.cleaned_data['repository_view_id']
             repository = form.cleaned_data['repository']
             params = form.cleaned_data['params']
             filters = form.cleaned_data['filters']
-            ds_orm = DataSource.objects.get(id=data_source_id)
-            ds_orm.repo = Repository.objects.get(name=repository)
-            ds_orm.params = params
+            repository_view_orm = RepositoryView.objects.get(id=repository_view_id)
+            repository_view_orm.repo = Repository.objects.get(name=repository)
+            repository_view_orm.params = params
             # TODO: filters not yet in the data models
-            ds_orm.save()
+            repository_view_orm.save()
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(data_sources=[data_source_id])))
+                                    build_forms_context(EditorState(repository_views=[repository_view_id])))
+        else:
+            # TODO: Show error
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def edit_repository_view(request):
+    if request.method == 'POST':
+        form = forms.RepositoryViewsForm(request.POST)
+        if form.is_valid():
+            repository_view_id = int(form.cleaned_data['id'])
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(EditorState(repository_views=[repository_view_id])))
         else:
             # TODO: Show error
             raise Http404
@@ -129,25 +144,9 @@ def edit_data_source(request):
     if request.method == 'POST':
         form = forms.DataSourcesForm(request.POST)
         if form.is_valid():
-            data_source_id = int(form.cleaned_data['id'])
-            return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(data_sources=[data_source_id])))
-        else:
-            # TODO: Show error
-            raise Http404
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        # TODO: Show error
-        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
-
-
-def edit_data_source_type(request):
-    if request.method == 'POST':
-        form = forms.DataSourceTypeForm(request.POST)
-        if form.is_valid():
             name = form.cleaned_data['name']
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(data_source_types=[name])))
+                                    build_forms_context(EditorState(data_sources=[name])))
         else:
             # TODO: Show error
             raise Http404
@@ -176,6 +175,7 @@ def edit_project(request):
         # TODO: Show error
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
+
 @perfdata
 def edit_ecosystem(request):
     if request.method == 'POST':
@@ -203,19 +203,19 @@ def editor(request):
     return shortcuts.render(request, 'projects/editor.html', context)
 
 
-def find_project_views(project):
+def find_project_repository_views(project):
 
-    data = {"repo_views": []}
+    data = {"repository_views": []}
 
     try:
         project_orm = Project.objects.get(name=project)
-        repo_views_orm = project_orm.repo_views.all()
-        for view in repo_views_orm:
-            data['repo_views'].append({
+        repository_views_orm = project_orm.repository_views.all()
+        for view in repository_views_orm:
+            data['repository_views'].append({
                 "id": view.id,
-                "name": view.rep.name,
+                "name": view.repository.name,
                 "params": view.params,
-                "type": view.rep.data_source.name
+                "type": view.repository.data_source.name
             })
     except Project.DoesNotExist:
         print('Can not find project', project)
@@ -229,14 +229,14 @@ def find_project_data_sources(project):
 
     try:
         project_orm = Project.objects.get(name=project)
-        repo_views_orm = project_orm.repo_views.all()
-        for view in repo_views_orm:
-            if view.rep.data_source.id in already_added_data_sources:
+        repository_views = project_orm.repository_views.all()
+        for repository_view_orm in repository_views:
+            if repository_view_orm.repository.data_source.id in already_added_data_sources:
                 continue
-            already_added_data_sources.append(view.rep.data_source.id)
+            already_added_data_sources.append(repository_view_orm.repository.data_source.id)
             data['data_sources'].append({
-                "id": view.rep.data_source.id,
-                "name": view.rep.data_source.name
+                "id": repository_view_orm.repository.data_source.id,
+                "name": repository_view_orm.repository.data_source.name
             })
     except Project.DoesNotExist:
         print('Can not find project', project)

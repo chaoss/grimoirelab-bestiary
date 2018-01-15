@@ -189,8 +189,8 @@ def load_projects(projects_file, ecosystem):
                 repo_obj = add(Repository, **{"name": repo_name, "data_source": ds_type_obj})
                 nrepos += 1
                 repo_params = find_params(repository_view_str, data_source)
-                data_source_orm = add(RepositoryView, **{"params": repo_params, "rep": repo_obj})
-                project_orm.repo_views.add(data_source_orm)
+                data_source_orm = add(RepositoryView, **{"params": repo_params, "repository": repo_obj})
+                project_orm.repository_views.add(data_source_orm)
 
         # Register all the repo views added
         project_orm.save()

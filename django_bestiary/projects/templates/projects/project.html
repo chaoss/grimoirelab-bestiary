@@ -38,14 +38,14 @@
         <tfoot>
         </tfoot>
         <tbody>
-            {% for view in repo_views %}
+            {% for repository_view in repository_views %}
             <tr>
                 <td>
-                    <input type="checkbox" name="view_id" value="{{view.id}}">
+                    <input type="checkbox" name="view_id" value="{{repository_view.id}}">
                 </td>
-                <td>{{view.type}}</a></td>
-                <td style="max-width: 300px;">{{view.name}}</a></td>
-                <td>{{view.params}}</td>
+                <td>{{repository_view.type}}</a></td>
+                <td style="max-width: 300px;">{{repository_view.name}}</a></td>
+                <td>{{repository_view.params}}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -74,7 +74,7 @@
     Scope<br><br>
     Projects: 1<br>
     Data Sources: {{data_sources|length}}<br>
-    Repository Views: {{repo_views|length}}<br>
+    Repository Views: {{repository_views|length}}<br>
     <div style="height:100px"></div>
     <form method="POST" action="/projects/import/" enctype="multipart/form-data">{% csrf_token %}
         <input type="file" name="imported_file" accept="application/json" required=True><br>

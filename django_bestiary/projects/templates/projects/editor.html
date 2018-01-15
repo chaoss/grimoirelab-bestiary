@@ -19,7 +19,7 @@
 <div style="width: 40%; margin: 10px">
   <form action="/edit_ecosystem" method="post">
     {% csrf_token %}
-    {% for field in projects_form.state_fields %}
+    {% for field in ecosystem_form.state_fields %}
       {{ field }}
     {% endfor %}
     {{ ecosystem_form.name.errors }}
@@ -68,17 +68,17 @@
 </div>
 
 <div class="four-column">
-  <form action="/edit_data_source_type" method="post">
+  <form action="/edit_data_source" method="post">
     {% csrf_token %}
-    {% for field in projects_form.state_fields %}
+    {% for field in data_sources_form.state_fields %}
       {{ field }}
     {% endfor %}
-    {{ data_source_types_form.name.errors }}
+    {{ data_sources_form.name.errors }}
     <div class="form-group">
-      {{ data_source_types_form.name }}
+      {{ data_sources_form.name }}
     </div>
     <div class="form-group">
-      <button type="submit" class="btn btn-primary">Select Data Source Type</button>
+      <button type="submit" class="btn btn-primary">Select Data Source</button>
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
@@ -91,21 +91,21 @@
 </div>
 
 <div class="four-column">
-  <form action="/edit_data_source" method="post">
+  <form action="/edit_repository_view" method="post">
     {% csrf_token %}
-    {% for field in projects_form.state_fields %}
+    {% for field in repository_views_form.state_fields %}
       {{ field }}
     {% endfor %}
-    {{ data_sources_form.name.errors }}
+    {{ repository_views_form.name.errors }}
     <div class="form-group">
-      {{ data_sources_form.id }}
+      {{ repository_views_form.id }}
     </div>
     <div class="form-group">
-      <button type="submit" class="btn btn-primary">Select Data Source</button>
+      <button type="submit" class="btn btn-primary">Select Repo View</button>
     </div>
     <div class="form-group row">
       <div class="col-sm-7"><input type="text" name="repository_name_add" placeholder="name" class="form-control"></div>
-      <div class="col-sm-5"><input type="button" value="Add data source" class="form-control"></div>
+      <div class="col-sm-5"><input type="button" value="Add repo view" class="form-control"></div>
     </div>
     <div class="form-group">
       <input type="button" value="Remove repository" class="form-control">
@@ -114,28 +114,28 @@
 </div>
 
 <div class="four-column">
-  <form action="/update_data_source" method="post">
+  <form action="/update_repository_view" method="post">
     {% csrf_token %}
-    {% for field in projects_form.state_fields %}
+    {% for field in repository_view_form.state_fields %}
       {{ field }}
     {% endfor %}
-    {{ data_source_form.name.errors }}
+    {{ repository_view_form.name.errors }}
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Repository</label>
-      <div class="col-sm-8">{{ data_source_form.repository }}</div>
+      <div class="col-sm-8">{{ repository_view_form.repository }}</div>
     </div>
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Params</label>
-      <div class="col-sm-8">{{ data_source_form.params }}</div>
+      <div class="col-sm-8">{{ repository_view_form.params }}</div>
     </div>
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Filters</label>
-      <div class="col-sm-8">{{ data_source_form.filters }}</div>
+      <div class="col-sm-8">{{ repository_view_form.filters }}</div>
     </div>
 
     <div class="form-group row">
       <div class="col-sm-12">
-        <button type="submit" class="btn btn-primary">Update Data Source</button>
+        <button type="submit" class="btn btn-primary">Update Repo View</button>
       </div>
     </div>
     </div>

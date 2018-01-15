@@ -58,8 +58,8 @@ def find_project_repo_line(repository_view):
     repo_line = None
 
     params = repository_view.params
-    repo = repository_view.rep.name
-    data_source = str(repository_view.rep.data_source)
+    repo = repository_view.repository.name
+    data_source = str(repository_view.repository.data_source)
 
     # First complete the repository for filtering
     if data_source in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
@@ -91,7 +91,7 @@ def find_project_repo_line(repository_view):
 def find_project_params_line(repository_view):
 
     repo_line_params = None
-    data_source = str(repository_view.rep.data_source)
+    data_source = str(repository_view.repository.data_source)
     params = repository_view.params
 
     # And now add the params to the repository url for JSON file
@@ -148,8 +148,8 @@ def fetch_projects(ecosystem):
         if project.meta_title:
             beasts[project.name]["meta"] = {"title": project.meta_title}
 
-        for repository_view_orm in project.repo_views.all():
-            data_source = repository_view_orm.rep.data_source.name
+        for repository_view_orm in project.repository_views.all():
+            data_source = repository_view_orm.repository.data_source.name
             if data_source not in beasts[project.name]:
                 beasts[project.name][data_source] = []
             repo_proj_line = build_project_repository_view(repository_view_orm)
@@ -160,19 +160,19 @@ def fetch_projects(ecosystem):
 
 def export_projects(projects_file, ecosystem):
 
-    nrepos_views = 0
+    nrepository_views = 0
     projects = fetch_projects(ecosystem)
     nprojects = len(list(projects.keys()))
 
     for project in projects:
         for ds in projects[project]:
             if ds != 'meta':
-                nrepos_views += len(projects[project][ds])
+                nrepository_views += len(projects[project][ds])
 
     with open(projects_file, "w") as pfile:
         json.dump(projects, pfile, indent=True, sort_keys=True)
 
-    return (nprojects, nrepos_views)
+    return (nprojects, nrepository_views)
 
 
 if __name__ == '__main__':
