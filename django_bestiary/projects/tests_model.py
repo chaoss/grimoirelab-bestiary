@@ -53,10 +53,7 @@ class EcosystemModelTests(TestCase):
 class ProjectModelTests(TestCase):
 
     def test_init(self):
-        # All projects are related to a ecosystem
-        eco = Ecosystem()
-        eco.save()
-        project = Project(eco=eco)
+        project = Project()
         self.assertIsNot(project, None)
         project.save()
 

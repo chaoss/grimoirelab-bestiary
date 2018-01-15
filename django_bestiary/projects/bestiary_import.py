@@ -162,7 +162,7 @@ def load_projects(projects_file, ecosystem):
         projects = json.load(pfile)
 
     for project in projects.keys():
-        pparams = {"name": project, "eco": eco_orm}
+        pparams = {"name": project}
         if 'meta' in projects[project].keys():
             if isinstance(projects[project]['meta'], str):
                 # In Mozilla the meta is the title directly

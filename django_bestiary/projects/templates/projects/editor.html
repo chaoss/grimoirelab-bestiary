@@ -54,14 +54,23 @@
   </form>
   <form action="/add_project" method="post">
     {% csrf_token %}
+    {% for field in project_form.state_fields %}
+      {{ field }}
+    {% endfor %}
+    {{ project_form.name.errors }}
     <div class="form-group row">
-      <div class="col-sm-7"><input type="text" name="project_name_add" placeholder="name" class="form-control"></div>
+      <div class="col-sm-7">{{ project_form.project_name }}</div>
       <div class="col-sm-5"><button type="submit" class="form-control">Add project</a></div>
     </div>
   </form>
   <form action="/remove_project" method="post">
     {% csrf_token %}
+    {% for field in project_remove_form.state_fields %}
+      {{ field }}
+    {% endfor %}
+    {{ project_remove_form.name.errors }}
     <div class="form-group">
+      <div>{{ project_remove_form.project_name }}</div>
       <button type="submit" class="form-control">Remove project</button>
     </div>
   </form>
