@@ -51,36 +51,36 @@ def get_params():
     return parser.parse_args()
 
 
-def find_project_repo_line(data_source):
-    """ Given a DataSource build the complete repository
+def find_project_repo_line(repository_view):
+    """ Given a RepositoryView build the complete repository
     string tp be included in the JSON project file to collect the data"""
 
     repo_line = None
 
-    params = data_source.params
-    repo = data_source.rep.name
-    data_source_type = str(data_source.rep.data_source_type)
+    params = repository_view.params
+    repo = repository_view.rep.name
+    data_source = str(repository_view.rep.data_source)
 
     # First complete the repository for filtering
-    if data_source_type in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
-                            'mozillaclub', 'phabricator', 'pipermail',
-                            'redmine', 'remo', 'rss']:
+    if data_source in ['askbot', 'functest', 'hyperkitty', 'jenkins', 'mediawiki',
+                       'mozillaclub', 'phabricator', 'pipermail',
+                       'redmine', 'remo', 'rss']:
         repo = repo
-    elif data_source_type in ['bugzilla', 'bugzillarest']:
+    elif data_source in ['bugzilla', 'bugzillarest']:
         if params:
             repo += '/bugs/buglist.cgi?'
-    elif data_source_type in ['confluence', 'discourse', 'git', 'github', 'jira',
-                              'supybot', 'nntp']:
+    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
+                         'supybot', 'nntp']:
         repo = repo
-    elif data_source_type in ['crates', 'dockerhub', 'google_hits',
-                              'meetup', 'puppetforge', 'slack', 'telegram',
-                              'twitter']:
+    elif data_source in ['crates', 'dockerhub', 'google_hits',
+                         'meetup', 'puppetforge', 'slack', 'telegram',
+                         'twitter']:
         repo = ''  # not needed because it is always the same
-    elif data_source_type in ['gerrit']:
+    elif data_source in ['gerrit']:
         repo = repo
-    elif data_source_type in ['mbox']:
+    elif data_source in ['mbox']:
         repo = repo
-    elif data_source_type in ['stackexchange']:
+    elif data_source in ['stackexchange']:
         repo += "questions"
 
     repo_line = repo
@@ -88,48 +88,47 @@ def find_project_repo_line(data_source):
     return repo_line
 
 
-def find_project_params_line(data_source):
+def find_project_params_line(repository_view):
 
     repo_line_params = None
-    data_source_type = str(data_source.rep.data_source_type)
-    params = data_source.params
+    data_source = str(repository_view.rep.data_source)
+    params = repository_view.params
 
     # And now add the params to the repository url for JSON file
-    if data_source_type in ['askbot', 'crates', 'functest',
-                            'hyperkitty', 'jenkins', 'mediawiki', 'mozillaclub',
-                            'phabricator', 'pipermail', 'puppetforge', 'redmine',
-                            'remo', 'rss']:
+    if data_source in ['askbot', 'crates', 'functest',
+                       'hyperkitty', 'jenkins', 'mediawiki', 'mozillaclub',
+                       'phabricator', 'pipermail', 'puppetforge', 'redmine',
+                       'remo', 'rss']:
         pass
-    elif data_source_type in ['bugzilla', 'bugzillarest']:
+    elif data_source in ['bugzilla', 'bugzillarest']:
         repo_line_params = params
-    elif data_source_type in ['confluence', 'discourse', 'git', 'github', 'jira',
-                              'supybot', 'nntp']:
+    elif data_source in ['confluence', 'discourse', 'git', 'github', 'jira',
+                         'supybot', 'nntp']:
         repo_line_params = " " + params
-    elif data_source_type in ['dockerhub', 'google_hits', 'meetup', 'slack',
-                              'telegram', 'twitter']:
+    elif data_source in ['dockerhub', 'google_hits', 'meetup', 'slack',
+                         'telegram', 'twitter']:
         repo_line_params = params
-    elif data_source_type in ['gerrit']:
+    elif data_source in ['gerrit']:
         repo_line_params = "_" + params
-    elif data_source_type in ['mbox']:
+    elif data_source in ['mbox']:
         repo_line_params = " " + params
-    elif data_source_type in ['stackexchange']:
+    elif data_source in ['stackexchange']:
         repo_line_params = "/tagged/" + params
 
     return repo_line_params
 
 
-def build_project_data_source(data_source):
-    """ Given a DataSource build the complete repository
+def build_project_repository_view(repository_view):
+    """ Given a RepositoryView build the complete repository
     string tp be included in the JSON project file to collect the data"""
 
     repo_line = None
 
-    params = data_source.params
-    repo = data_source.rep.name
-    repo_line = find_project_repo_line(data_source)
+    params = repository_view.params
+    repo_line = find_project_repo_line(repository_view)
 
     if params:
-        repo_line += find_project_params_line(data_source)
+        repo_line += find_project_params_line(repository_view)
 
     return repo_line
 
@@ -149,12 +148,12 @@ def fetch_projects(ecosystem):
         if project.meta_title:
             beasts[project.name]["meta"] = {"title": project.meta_title}
 
-        for data_source_orm in project.data_sources.all():
-            data_source_type = data_source_orm.rep.data_source_type.name
-            if data_source_type not in beasts[project.name]:
-                beasts[project.name][data_source_type] = []
-            repo_proj_line = build_project_data_source(data_source_orm)
-            beasts[project.name][data_source_type].append(repo_proj_line)
+        for repository_view_orm in project.repo_views.all():
+            data_source = repository_view_orm.rep.data_source.name
+            if data_source not in beasts[project.name]:
+                beasts[project.name][data_source] = []
+            repo_proj_line = build_project_repository_view(repository_view_orm)
+            beasts[project.name][data_source].append(repo_proj_line)
 
     return beasts
 

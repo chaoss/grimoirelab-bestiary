@@ -28,7 +28,7 @@ import django
 from django.db import transaction
 from django.test import TestCase
 
-from .models import Ecosystem, Project, Repository, DataSource, DataSourceType
+from .models import Ecosystem, Project, Repository, RepositoryView, DataSource
 
 
 class EcosystemModelTests(TestCase):
@@ -70,43 +70,43 @@ class RepositoryModelTest(TestCase):
             # The exception tested breaks the test transaction
             with transaction.atomic():
                 rep.save()
-        ds_type = DataSourceType(name='git')
+        ds_type = DataSource(name='git')
         ds_type.save()
-        rep = Repository(data_source_type=ds_type)
+        rep = Repository(data_source=ds_type)
         rep.save()
 
 
-class DataSourceModelTests(TestCase):
+class RepositoryViewModelTests(TestCase):
 
     def test_init(self):
-        data_source = DataSource()
-        self.assertIsNot(data_source, None)
+        repository_view = RepositoryView()
+        self.assertIsNot(repository_view, None)
         with self.assertRaises(django.db.utils.IntegrityError):
             # The exception tested breaks the test transaction
             with transaction.atomic():
-                data_source.save()
+                repository_view.save()
 
-        ds_type = DataSourceType(name='git')
-        ds_type.save()
-        rep = Repository(data_source_type=ds_type, name='test')
-        data_source = DataSource(rep=rep)
+        ds = DataSource(name='git')
+        ds.save()
+        rep = Repository(data_source=ds, name='test')
+        repository_view = RepositoryView(rep=rep)
         # rep must be saved before using it in data_source above
         # it is saved before data_source but it fails because of that
         rep.save()
         with self.assertRaises(django.db.utils.IntegrityError):
             with transaction.atomic():
-                data_source.save()
+                repository_view.save()
 
         # rep is saved already so we can now use it
-        data_source = DataSource(rep=rep)
-        data_source.save()
+        repository_view = RepositoryView(rep=rep)
+        repository_view.save()
 
         return
 
 
-class DataSourceTypeModelTests(TestCase):
+class DataSourceModelTests(TestCase):
 
     def test_init(self):
-        ds_type = DataSourceType()
+        ds_type = DataSource()
         self.assertIsNot(ds_type, None)
         ds_type.save()

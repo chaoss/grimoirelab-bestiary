@@ -14,7 +14,8 @@ class BeastModel(models.Model):
 
 
 # Create your models here.
-class DataSourceType(BeastModel):
+class DataSource(BeastModel):
+    """ The type of data source: git, github ... """
     name = models.CharField(max_length=200, unique=True)
 
     def __str__(self):
@@ -24,16 +25,17 @@ class DataSourceType(BeastModel):
 class Repository(BeastModel):
     name = models.CharField(max_length=200)
     # Relations
-    data_source_type = models.ForeignKey(DataSourceType, on_delete=models.CASCADE)
+    data_source = models.ForeignKey(DataSource, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('name', 'data_source_type')
+        unique_together = ('name', 'data_source')
 
     def __str__(self):
-        return "%s (%s)" % (self.name, self.data_source_type)
+        return "%s (%s)" % (self.name, self.data_source)
 
 
-class DataSource(BeastModel):
+class RepositoryView(BeastModel):
+    """ A repository wit the extra params needed to collect it """
     params = models.CharField(max_length=400)
     # Relations
     # Base Repository from which to create the View
@@ -50,7 +52,7 @@ class Project(BeastModel):
     name = models.CharField(max_length=200)
     meta_title = models.CharField(max_length=200)
     # Relations
-    data_sources = models.ManyToManyField(DataSource)
+    repo_views = models.ManyToManyField(RepositoryView)
     # https://docs.djangoproject.com/en/1.11/ref/models/fields/#foreignkey
     subprojects = models.ManyToManyField("Project")
     eco = models.ForeignKey("Ecosystem", on_delete=models.CASCADE)
