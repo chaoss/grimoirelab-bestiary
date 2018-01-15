@@ -64,16 +64,16 @@ class ProjectModelTests(TestCase):
 class RepositoryModelTest(TestCase):
 
     def test_init(self):
-        rep = Repository()
+        repository = Repository()
         self.assertIsNot(rep, None)
         with self.assertRaises(django.db.utils.IntegrityError):
             # The exception tested breaks the test transaction
             with transaction.atomic():
-                rep.save()
+                repository.save()
         ds_type = DataSource(name='git')
         ds_type.save()
-        rep = Repository(data_source=ds_type)
-        rep.save()
+        repository = Repository(data_source=ds_type)
+        repository.save()
 
 
 class RepositoryViewModelTests(TestCase):
@@ -88,17 +88,17 @@ class RepositoryViewModelTests(TestCase):
 
         ds = DataSource(name='git')
         ds.save()
-        rep = Repository(data_source=ds, name='test')
-        repository_view = RepositoryView(rep=rep)
+        repository = Repository(data_source=ds, name='test')
+        repository_view = RepositoryView(repository=repository)
         # rep must be saved before using it in data_source above
         # it is saved before data_source but it fails because of that
-        rep.save()
+        repository.save()
         with self.assertRaises(django.db.utils.IntegrityError):
             with transaction.atomic():
                 repository_view.save()
 
         # rep is saved already so we can now use it
-        repository_view = RepositoryView(rep=rep)
+        repository_view = RepositoryView(repository=repository)
         repository_view.save()
 
         return

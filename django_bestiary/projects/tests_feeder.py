@@ -53,7 +53,7 @@ class BeastFeederTests(TestCase):
         read_repos = 0
         dup_repos = 2  # repos duplicated in projects-release.json
         repos_already = []
-        read_repo_views = 0
+        read_repository_views = 0
 
         for project in projects.keys():
             for data_source in projects[project]:
@@ -64,7 +64,7 @@ class BeastFeederTests(TestCase):
                     repo = find_repo_name(repo_view_str, data_source)
                     if repo is None:
                         continue
-                    read_repo_views += 1
+                    read_repository_views += 1
                     if repo != '' and repo in repos_already:
                         # stackexchange has three repos view for the same repo
                         continue
@@ -77,13 +77,13 @@ class BeastFeederTests(TestCase):
         total_projects = Project.objects.all().count()
         total_data_sources = DataSource.objects.all().count()
         total_repos = Repository.objects.all().count()
-        total_repo_views = RepositoryView.objects.all().count()
+        total_repository_views = RepositoryView.objects.all().count()
 
         self.assertEqual(total_orgs, read_orgs)
         self.assertEqual(total_projects, read_projects)
         self.assertEqual(total_data_sources, read_data_sources)
         self.assertEqual(total_repos, read_repos)
-        self.assertEqual(total_repo_views, read_repo_views)
+        self.assertEqual(total_repository_views, read_repository_views)
 
     def test_import_export(self):
         pfile = 'projects/projects-release.json'
