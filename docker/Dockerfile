@@ -5,7 +5,7 @@ FROM debian:stretch-slim
 MAINTAINER Alvaro del Castillo <acs@bitergia.com>
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV DEPLOY_USER meditor
+ENV DEPLOY_USER bestiary
 ENV DEPLOY_USER_DIR /home/${DEPLOY_USER}
 
 # Initial user
@@ -39,6 +39,7 @@ ENV LC_ALL en_US.UTF-8
 ENV LANG C.UTF-8
 
 # Install pip packages needed
+RUN pip3 install setuptools
 RUN pip3 install django
 RUN pip3 install gunicorn
 
