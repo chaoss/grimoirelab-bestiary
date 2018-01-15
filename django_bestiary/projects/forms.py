@@ -66,6 +66,16 @@ class EcosystemForm(BestiaryEditorForm):
                                                 widget=self.widget, choices=choices)
 
 
+class ProjectForm(BestiaryEditorForm):
+
+    @perfdata
+    def __init__(self, *args, **kwargs):
+        super(ProjectForm, self).__init__(*args, **kwargs)
+
+        self.fields['project_name'] = forms.CharField(label='Project name', max_length=100)
+        self.fields['project_name'].widget = forms.TextInput(attrs={'class': 'form-control'})
+
+
 class ProjectsForm(BestiaryEditorForm):
 
     @perfdata
@@ -93,6 +103,7 @@ class ProjectsForm(BestiaryEditorForm):
             if self.state.eco_name:
                 ecosystem_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 projects = ecosystem_orm.projects.all()
+                print("AQUI ...", ecosystem_orm, projects)
                 for project in projects:
                     choices += ((project.name, project.name),)
             if self.state.repository_views:

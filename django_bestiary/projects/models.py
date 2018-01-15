@@ -7,7 +7,7 @@ class BeastModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    created_by = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
     class Meta:
         abstract = True
@@ -49,16 +49,12 @@ class RepositoryView(BeastModel):
 
 
 class Project(BeastModel):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, unique=True)
     meta_title = models.CharField(max_length=200)
     # Relations
     repository_views = models.ManyToManyField(RepositoryView)
     # https://docs.djangoproject.com/en/1.11/ref/models/fields/#foreignkey
     subprojects = models.ManyToManyField("Project")
-    eco = models.ForeignKey("Ecosystem", on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ('name', 'eco')
 
     def __str__(self):
         return self.name
