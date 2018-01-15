@@ -81,6 +81,14 @@ class ProjectsForm(BestiaryEditorForm):
             projects = Project.objects.filter(name__in=self.state.projects)
             for project in projects:
                 choices += ((project.name, project.name),)
+        elif self.state.data_sources:
+            ds_ids = DataSource.objects.filter(name__in=self.state.data_sources).values_list("id")
+            repos_ids = Repository.objects.filter(data_source__in=list(ds_ids)).values_list("id")
+            repository_views_ids = RepositoryView.objects.filter(repository__in=list(repos_ids)).values_list("id")
+            projects = Project.objects.filter(repository_views__in=list(repository_views_ids))
+            for project_orm in projects:
+                if (project_orm.name, project_orm.name) not in choices:
+                    choices += ((project_orm.name, project_orm.name),)
         else:
             if self.state.eco_name:
                 ecosystem_orm = Ecosystem.objects.get(name=self.state.eco_name)
@@ -89,14 +97,6 @@ class ProjectsForm(BestiaryEditorForm):
                     choices += ((project.name, project.name),)
             if self.state.repository_views:
                 repository_views_ids = RepositoryView.objects.filter(id__in=self.state.repository_views).values_list("id")
-                projects = Project.objects.filter(repository_views__in=list(repository_views_ids))
-                for project_orm in projects:
-                    if (project_orm.name, project_orm.name) not in choices:
-                        choices += ((project_orm.name, project_orm.name),)
-            if self.state.data_sources:
-                ds_ids = DataSource.objects.filter(name__in=self.state.data_sources).values_list("id")
-                repos_ids = Repository.objects.filter(data_source__in=list(ds_ids)).values_list("id")
-                repository_views_ids = RepositoryView.objects.filter(repository__in=list(repos_ids)).values_list("id")
                 projects = Project.objects.filter(repository_views__in=list(repository_views_ids))
                 for project_orm in projects:
                     if (project_orm.name, project_orm.name) not in choices:
@@ -118,6 +118,9 @@ class DataSourcesForm(BestiaryEditorForm):
         if not self.state or self.state.is_empty():
             for ds in DataSource.objects.all():
                 choices += ((ds.name, ds.name),)
+        elif self.state.data_sources:
+            for ds_name in self.state.data_sources:
+                choices += ((ds_name, ds_name),)
         else:
             if self.state.eco_name and not self.state.projects:
                 eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
@@ -133,9 +136,6 @@ class DataSourcesForm(BestiaryEditorForm):
                         ds_name = repository_view.repository.data_source.name
                         if (ds_name, ds_name) not in choices:
                             choices += ((ds_name, ds_name),)
-            if self.state.data_sources:
-                for ds_name in self.state.data_sources:
-                    choices += ((ds_name, ds_name),)
             if self.state.repository_views:
                 repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
                 for repository_view_orm in repository_views:
