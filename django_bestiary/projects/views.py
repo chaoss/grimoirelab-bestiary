@@ -145,8 +145,15 @@ def edit_data_source(request):
         form = forms.DataSourcesForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
+            projects_state = form.cleaned_data['projects_state']
+            state = {
+                "eco_name": form.cleaned_data['eco_name_state'],
+                "projects": [projects_state] if projects_state else [],
+                "data_sources": [name] if name else []
+            }
+
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(data_sources=[name])))
+                                    build_forms_context(EditorState(**state)))
         else:
             # TODO: Show error
             raise Http404
