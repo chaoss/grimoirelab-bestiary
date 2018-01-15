@@ -65,7 +65,7 @@ class RepositoryModelTest(TestCase):
 
     def test_init(self):
         repository = Repository()
-        self.assertIsNot(rep, None)
+        self.assertIsNot(repository, None)
         with self.assertRaises(django.db.utils.IntegrityError):
             # The exception tested breaks the test transaction
             with transaction.atomic():

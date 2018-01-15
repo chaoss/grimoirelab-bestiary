@@ -161,9 +161,14 @@ class RepositoryViewsForm(BestiaryEditorForm):
                 choices += ((view.id, view),)
                 if len(choices) > MAX_ITEMS:
                     break
-
+        elif self.state.repository_views:
+            repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
+            for repository_view_orm in repository_views:
+                choices += ((repository_view_orm.id, repository_view_orm),)
         else:
-            if self.state.eco_name and not self.state.projects:
+            choices_projects = []
+            choices_data_sources = []
+            if self.state.eco_name and not self.state.projects and not self.state.data_sources:
                 eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 for project_orm in eco_orm.projects.all():
                     if len(choices) > MAX_ITEMS:
@@ -176,17 +181,21 @@ class RepositoryViewsForm(BestiaryEditorForm):
                 projects = Project.objects.filter(name__in=self.state.projects)
                 for project_orm in projects:
                     for repository_view_orm in project_orm.repository_views.all():
+                        choices_projects.append(repository_view_orm)
                         choices += ((repository_view_orm.id, repository_view_orm),)
             if self.state.data_sources:
                 for repository_view_orm in RepositoryView.objects.all():
                     if repository_view_orm.repository.data_source.name in self.state.data_sources:
+                        choices_data_sources.append(repository_view_orm)
                         choices += ((repository_view_orm.id, repository_view_orm),)
                         if len(choices) > MAX_ITEMS:
                             break
-            if self.state.repository_views:
-                repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
-                for repository_view_orm in repository_views:
-                    choices += ((repository_view_orm.id, repository_view_orm),)
+
+            if self.state.projects and self.state.data_sources:
+                choices = ()
+                choices_orms = list(set(choices_projects) & set(choices_data_sources))
+                for choice_orm in choices_orms:
+                    choices += ((choice_orm.id, choice_orm),)
 
         print("Choices len", len(choices))
         self.fields['id'] = forms.ChoiceField(label='DataSource',
