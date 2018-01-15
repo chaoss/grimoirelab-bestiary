@@ -134,8 +134,7 @@ def build_project_data_source(data_source):
     return repo_line
 
 
-def export_projects(projects_file, ecosystem):
-
+def fetch_projects(ecosystem):
     try:
         eco_orm = Ecosystem.objects.get(name=ecosystem)
     except Ecosystem.DoesNotExist:
@@ -144,25 +143,35 @@ def export_projects(projects_file, ecosystem):
     projects_orm = eco_orm.projects.all()
 
     beasts = {}
-    nprojects = 0
-    nrepos_views = 0
 
     for project in projects_orm:
         beasts[project.name] = {}
         if project.meta_title:
             beasts[project.name]["meta"] = {"title": project.meta_title}
-        nprojects += 1
 
         for data_source_orm in project.data_sources.all():
-            nrepos_views += 1
             data_source_type = data_source_orm.rep.data_source_type.name
             if data_source_type not in beasts[project.name]:
                 beasts[project.name][data_source_type] = []
             repo_proj_line = build_project_data_source(data_source_orm)
             beasts[project.name][data_source_type].append(repo_proj_line)
 
+    return beasts
+
+
+def export_projects(projects_file, ecosystem):
+
+    nrepos_views = 0
+    projects = fetch_projects(ecosystem)
+    nprojects = len(list(projects.keys()))
+
+    for project in projects:
+        for ds in projects[project]:
+            if ds != 'meta':
+                nrepos_views += len(projects[project][ds])
+
     with open(projects_file, "w") as pfile:
-        json.dump(beasts, pfile, indent=True, sort_keys=True)
+        json.dump(projects, pfile, indent=True, sort_keys=True)
 
     return (nprojects, nrepos_views)
 
