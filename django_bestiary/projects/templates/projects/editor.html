@@ -5,155 +5,158 @@
 
 {% block head %}
     {{ block.super }}
-    <style type="text/css">
-      .four-column {float: left; width: 20%; margin-right: 10px;
-                    height: 90%; min-height: 600px;}
-    </style>
 {% endblock %}
 
 {% block body %}
 
-<!-- Upper row -->
-<div><h1>Bestiary Editor</h1></div>
 
-<div style="width: 40%; margin: 10px">
-  <form action="/select_ecosystem" method="post">
-    {% csrf_token %}
-    {% for field in ecosystem_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ ecosystem_form.name.errors }}
-    <div class="form-group row">
-      <div class="col-sm-7">
-        {{ ecosystem_form.name }}
-      </div>
-      <div class="col-sm-5">
-        <button type="submit" class="btn btn-primary">Select Ecosystem</button>
-      </div>
-    </div>
-  </form>
+
+<div class="row">
+  <div class="col-sm">
+    <div><h1>Bestiary Editor</h1></div>
+  </div>
 </div>
 
-<div style="clear:both; width:90%;"></div>
-
-<!-- Four columns: Change to BS layout! -->
-
-<div class="four-column">
-  <form action="/select_project" method="post">
-    {% csrf_token %}
-    {% for field in projects_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ projects_form.name.errors }}
-    <div class="form-group">
-      {{ projects_form.name }}
-    </div>
-    <div class="form-group">
-      <button type="submit" class="btn btn-primary">Select Project</button>
-    </div>
-  </form>
-  <form action="/add_project" method="post">
-    {% csrf_token %}
-    {% for field in project_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ project_form.name.errors }}
-    <div class="form-group row">
-      <div class="col-sm-7">{{ project_form.project_name }}</div>
-      <div class="col-sm-5"><button type="submit" class="form-control">Add project</a></div>
-    </div>
-  </form>
-  <form action="/remove_project" method="post">
-    {% csrf_token %}
-    {% for field in project_remove_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ project_remove_form.name.errors }}
-    <div class="form-group">
-      <div>{{ project_remove_form.project_name }}</div>
-      <button type="submit" class="form-control">Remove project</button>
-    </div>
-  </form>
-</div>
-
-<div class="four-column">
-  <form action="/select_data_source" method="post">
-    {% csrf_token %}
-    {% for field in data_sources_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ data_sources_form.name.errors }}
-    <div class="form-group">
-      {{ data_sources_form.name }}
-    </div>
-    <div class="form-group">
-      <button type="submit" class="btn btn-primary">Select Data Source</button>
-    </div>
-    <div class="form-group row">
-      <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
-      <div class="col-sm-5"><input type="button" value="Add data source type" class="form-control"></div>
-    </div>
-    <div class="form-group">
-      <input type="button" value="Remove data source" class="form-control">
-    </div>
-  </form>
-</div>
-
-<div class="four-column">
-  <form action="/select_repository_view" method="post">
-    {% csrf_token %}
-    {% for field in repository_views_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ repository_views_form.name.errors }}
-    <div class="form-group">
-      {{ repository_views_form.id }}
-    </div>
-    <div class="form-group">
-      <button type="submit" class="btn btn-primary">Select Repo View</button>
-    </div>
-  </form>
-</div>
-
-<div class="four-column">
-  <h4>Repository View</h4>
-  <form  method="post">
-    {% csrf_token %}
-    {% for field in repository_view_form.state_fields %}
-      {{ field }}
-    {% endfor %}
-    {{ repository_view_form.repository_view_id }}
-    {{ repository_view_form.name.errors }}
-    <div class="form-group row">
-      <label class="col-sm-4 col-form-label">Repository</label>
-      <div class="col-sm-8">{{ repository_view_form.repository }}</div>
-    </div>
-    <div class="form-group row">
-      <label class="col-sm-4 col-form-label">Params</label>
-      <div class="col-sm-8">{{ repository_view_form.params }}</div>
-    </div>
-    <div class="form-group row">
-      <label class="col-sm-4 col-form-label">Data Source</label>
-      <div class="col-sm-8">{{ repository_view_form.data_source }}</div>
-    </div>
-    <div class="form-group row">
-      <label class="col-sm-4 col-form-label">Project</label>
-      <div class="col-sm-8">{{ repository_view_form.project }}</div>
-    </div>
-    <div class="form-group row">
-      <div class="col-sm-4">
-        <button type="submit" formaction='/add_repository_view' class="btn btn-primary">Add</button>
+<div class="row">
+  <div class="col-sm">
+    <form action="/select_ecosystem" method="post">
+      {% csrf_token %}
+      {% for field in ecosystem_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ ecosystem_form.name.errors }}
+      <div class="form-group row">
+        <div class="col-sm-7">
+          {{ ecosystem_form.name }}
+        </div>
+        <div class="col-sm-5">
+          <button type="submit" class="btn btn-primary">Select Ecosystem</button>
+        </div>
       </div>
-      <div class="col-sm-4">
-        <button type="submit" formaction="/update_repository_view" class="btn btn-primary">Update</button>
-      </div>
-      <div class="col-sm-4">
-        <button type="submit" formaction='/remove_repository_view' class="btn btn-primary">Remove</button>
-      </div>
-    </div>
-    </div>
-  </form>
+    </form>
+  </div>
 </div>
+
+<div class="row">
+  <!-- Main row with the four columns for the editor -->
+  <div class="col-sm-2">
+    <form action="/select_project" method="post">
+      {% csrf_token %}
+      {% for field in projects_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ projects_form.name.errors }}
+      <div class="form-group">
+        {{ projects_form.name }}
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary">Select Project</button>
+      </div>
+    </form>
+    <form action="/add_project" method="post">
+      {% csrf_token %}
+      {% for field in project_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ project_form.name.errors }}
+      <div class="form-group row">
+        <div class="col-sm-7">{{ project_form.project_name }}</div>
+        <div class="col-sm-5"><button type="submit" class="form-control">Add project</a></div>
+      </div>
+    </form>
+    <form action="/remove_project" method="post">
+      {% csrf_token %}
+      {% for field in project_remove_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ project_remove_form.name.errors }}
+      <div class="form-group">
+        <div>{{ project_remove_form.project_name }}</div>
+        <button type="submit" class="form-control">Remove project</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-sm-2">
+    <form action="/select_data_source" method="post">
+      {% csrf_token %}
+      {% for field in data_sources_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ data_sources_form.name.errors }}
+      <div class="form-group">
+        {{ data_sources_form.name }}
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary">Select Data Source</button>
+      </div>
+      <div class="form-group row">
+        <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
+        <div class="col-sm-5"><input type="button" value="Add data source type" class="form-control"></div>
+      </div>
+      <div class="form-group">
+        <input type="button" value="Remove data source" class="form-control">
+      </div>
+    </form>
+  </div>
+
+  <div class="col-sm-3">
+    <form action="/select_repository_view" method="post">
+      {% csrf_token %}
+      {% for field in repository_views_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ repository_views_form.name.errors }}
+      <div class="form-group">
+        {{ repository_views_form.id }}
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary">Select Repo View</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-sm-5">
+    <h4>Repository View</h4>
+    <form  method="post">
+      {% csrf_token %}
+      {% for field in repository_view_form.state_fields %}
+        {{ field }}
+      {% endfor %}
+      {{ repository_view_form.repository_view_id }}
+      {{ repository_view_form.name.errors }}
+      <div class="form-group row">
+        <label class="col-sm-4 col-form-label">Repository</label>
+        <div class="col-sm-8">{{ repository_view_form.repository }}</div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-4 col-form-label">Params</label>
+        <div class="col-sm-8">{{ repository_view_form.params }}</div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-4 col-form-label">Data Source</label>
+        <div class="col-sm-8">{{ repository_view_form.data_source }}</div>
+      </div>
+      <div class="form-group row">
+        <label class="col-sm-4 col-form-label">Project</label>
+        <div class="col-sm-8">{{ repository_view_form.project }}</div>
+      </div>
+      <div class="form-group row">
+        <div class="col-sm-4">
+          <button type="submit" formaction='/add_repository_view' class="btn btn-primary">Add</button>
+        </div>
+        <div class="col-sm-4">
+          <button type="submit" formaction="/update_repository_view" class="btn btn-primary">Update</button>
+        </div>
+        <div class="col-sm-4">
+          <button type="submit" formaction='/remove_repository_view' class="btn btn-primary">Remove</button>
+        </div>
+      </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 
 {% endblock %}
 {% endwith  %}
