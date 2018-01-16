@@ -134,25 +134,24 @@ class DataSourcesForm(BestiaryEditorForm):
         elif self.state.data_sources:
             for ds_name in self.state.data_sources:
                 choices += ((ds_name, ds_name),)
-        else:
-            if self.state.eco_name and not self.state.projects:
-                eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
-                for project_orm in eco_orm.projects.all():
-                    for repository_view in project_orm.repository_views.all():
-                        ds_name = repository_view.repository.data_source.name
-                        if (ds_name, ds_name) not in choices:
-                            choices += ((ds_name, ds_name),)
-            if self.state.projects:
-                projects = Project.objects.filter(name__in=self.state.projects)
-                for project_orm in projects:
-                    for repository_view in project_orm.repository_views.all():
-                        ds_name = repository_view.repository.data_source.name
-                        if (ds_name, ds_name) not in choices:
-                            choices += ((ds_name, ds_name),)
-            if self.state.repository_views:
-                repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
-                for repository_view_orm in repository_views:
-                    ds_name = repository_view_orm.repository.data_source.name
+        elif self.state.repository_views:
+            repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
+            for repository_view_orm in repository_views:
+                ds_name = repository_view_orm.repository.data_source.name
+                if (ds_name, ds_name) not in choices:
+                    choices += ((ds_name, ds_name),)
+        elif self.state.projects:
+            projects = Project.objects.filter(name__in=self.state.projects)
+            for project_orm in projects:
+                for repository_view in project_orm.repository_views.all():
+                    ds_name = repository_view.repository.data_source.name
+                    if (ds_name, ds_name) not in choices:
+                        choices += ((ds_name, ds_name),)
+        elif self.state.eco_name:
+            eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
+            for project_orm in eco_orm.projects.all():
+                for repository_view in project_orm.repository_views.all():
+                    ds_name = repository_view.repository.data_source.name
                     if (ds_name, ds_name) not in choices:
                         choices += ((ds_name, ds_name),)
 
@@ -232,10 +231,10 @@ class RepositoryViewForm(BestiaryEditorForm):
             self.repository_view_id = self.state.repository_views[0]
 
         if self.state and self.state.projects:
-                project_orm = Project.objects.get(name=self.state.projects[0])
-                kwargs['initial'].update({
-                    'project': project_orm.name
-                })
+            project_orm = Project.objects.get(name=self.state.projects[0])
+            kwargs['initial'].update({
+                'project': project_orm.name
+            })
 
         if self.repository_view_id:
             try:
