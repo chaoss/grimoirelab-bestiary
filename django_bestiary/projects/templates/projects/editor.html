@@ -112,22 +112,17 @@
     <div class="form-group">
       <button type="submit" class="btn btn-primary">Select Repo View</button>
     </div>
-    <div class="form-group row">
-      <div class="col-sm-7"><input type="text" name="repository_name_add" placeholder="name" class="form-control"></div>
-      <div class="col-sm-5"><input type="button" value="Add repo view" class="form-control"></div>
-    </div>
-    <div class="form-group">
-      <input type="button" value="Remove repository" class="form-control">
-    </div>
   </form>
 </div>
 
 <div class="four-column">
-  <form action="/update_repository_view" method="post">
+  <h4>Repository View</h4>
+  <form  method="post">
     {% csrf_token %}
     {% for field in repository_view_form.state_fields %}
       {{ field }}
     {% endfor %}
+    {{ repository_view_form.repository_view_id }}
     {{ repository_view_form.name.errors }}
     <div class="form-group row">
       <label class="col-sm-4 col-form-label">Repository</label>
@@ -137,10 +132,23 @@
       <label class="col-sm-4 col-form-label">Params</label>
       <div class="col-sm-8">{{ repository_view_form.params }}</div>
     </div>
-
     <div class="form-group row">
-      <div class="col-sm-12">
-        <button type="submit" class="btn btn-primary">Update Repo View</button>
+      <label class="col-sm-4 col-form-label">Data Source</label>
+      <div class="col-sm-8">{{ repository_view_form.data_source }}</div>
+    </div>
+    <div class="form-group row">
+      <label class="col-sm-4 col-form-label">Project</label>
+      <div class="col-sm-8">{{ repository_view_form.project }}</div>
+    </div>
+    <div class="form-group row">
+      <div class="col-sm-4">
+        <button type="submit" formaction='/add_repository_view' class="btn btn-primary">Add</button>
+      </div>
+      <div class="col-sm-4">
+        <button type="submit" formaction="/update_repository_view" class="btn btn-primary">Update</button>
+      </div>
+      <div class="col-sm-4">
+        <button type="submit" formaction='/remove_repository_view' class="btn btn-primary">Remove</button>
       </div>
     </div>
     </div>
