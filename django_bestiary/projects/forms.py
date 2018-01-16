@@ -235,8 +235,7 @@ class RepositoryViewForm(BestiaryEditorForm):
             kwargs['initial'] = {
                 'repository_view_id': self.repository_view_id,
                 'repository': repository_view_orm.repository.name,
-                'params': repository_view_orm.params,
-                'filters': ''
+                'params': repository_view_orm.params
             }
         super(RepositoryViewForm, self).__init__(*args, **kwargs)
 
@@ -247,6 +246,3 @@ class RepositoryViewForm(BestiaryEditorForm):
 
         self.fields['params'] = forms.CharField(label='params', max_length=100, required=False)
         self.fields['params'].widget = forms.TextInput(attrs={'class': 'form-control'})
-
-        self.fields['filters'] = forms.CharField(label='filters', max_length=100, required=False)
-        self.fields['filters'].widget = forms.TextInput(attrs={'class': 'form-control'})
