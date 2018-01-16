@@ -130,7 +130,7 @@ def update_repository_view(request):
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
-def edit_repository_view(request):
+def select_repository_view(request):
     if request.method == 'POST':
         form = forms.RepositoryViewsForm(request.POST)
         if form.is_valid():
@@ -146,7 +146,7 @@ def edit_repository_view(request):
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
-def edit_data_source(request):
+def select_data_source(request):
     if request.method == 'POST':
         form = forms.DataSourcesForm(request.POST)
         if form.is_valid():
@@ -214,7 +214,7 @@ def add_project(request):
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
-def edit_project(request):
+def select_project(request):
     if request.method == 'POST':
         form = forms.ProjectsForm(request.POST)
         if form.is_valid():
@@ -235,7 +235,7 @@ def edit_project(request):
 
 
 @perfdata
-def edit_ecosystem(request):
+def select_ecosystem(request):
     if request.method == 'POST':
         form = forms.EcosystemForm(request.POST)
         if form.is_valid():
