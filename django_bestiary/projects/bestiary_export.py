@@ -27,7 +27,6 @@ import argparse
 import json
 import logging
 import os
-import sys
 
 from time import time
 
@@ -138,7 +137,8 @@ def fetch_projects(ecosystem):
         eco_orm = Ecosystem.objects.get(name=ecosystem)
     except Ecosystem.DoesNotExist:
         logging.error("Can not find ecosystem %s", ecosystem)
-        sys.exit(1)
+        raise Ecosystem.DoesNotExist
+
     projects_orm = eco_orm.projects.all()
 
     beasts = {}

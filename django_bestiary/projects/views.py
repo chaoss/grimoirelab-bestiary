@@ -25,7 +25,12 @@ from . import forms
 def index(request):
 
     template = loader.get_template('projects/project.html')
+<<<<<<< HEAD
     project = 'grimoire'  # debug value just during testing
+=======
+    eco_form = forms.EcosystemForm(state=None)
+    project = None
+>>>>>>> c0377c1... Fix typos and remove debug trace
     if (request.GET.get('project')):
         project = request.GET.get('project')
     context = find_project_repository_views(project)
@@ -421,7 +426,11 @@ def import_from_file(request):
         save_path = default_storage.save(fpath, ContentFile(myfile.read()))
 
         task_init = time()
-        (nprojects, nrepos) = load_projects(save_path, ecosystem)
+        try:
+            (nprojects, nrepos) = load_projects(save_path, ecosystem)
+        except Exception:
+            error_msg = "File %s couldn't be imported." % myfile.name
+            return return_error(error_msg)
 
         print("Total loading time ... %.2f sec", time() - task_init)
         print("Projects loaded", nprojects)
@@ -437,17 +446,31 @@ def export_to_file(request):
 
     if request.method == "POST":
         ecosystem = request.POST["ecosystem"]
+        file_name = "projects_%s.json" % ecosystem
         task_init = time()
-        projects = fetch_projects(ecosystem)
+        try:
+            projects = fetch_projects(ecosystem)
+        except (Ecosystem.DoesNotExist, Exception):
+            error_msg = "Projects from ecosystem \"%s\" couldn't be exported." % ecosystem
+            return return_error(error_msg)
 
         print("Total loading time ... %.2f sec", time() - task_init)
 
         if projects:
             projects_json = json.dumps(projects, indent=True, sort_keys=True)
-            file_name = "projects_%s.json" % ecosystem
             response = HttpResponse(projects_json, content_type="application/json")
             response['Content-Disposition'] = 'attachment; filename=' + file_name
             return response
-        return HttpResponse(status=503)
+        else:
+            error_msg = "There are no projects to export"
+            return return_error(error_msg)
 
     return index(request)
+
+
+def return_error(message):
+
+    template = loader.get_template('projects/error.html')
+    context = {"alert_message": message}
+    render_error = template.render(context)
+    return HttpResponse(render_error)
