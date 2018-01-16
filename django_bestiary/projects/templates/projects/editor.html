@@ -17,7 +17,7 @@
 <div><h1>Bestiary Editor</h1></div>
 
 <div style="width: 40%; margin: 10px">
-  <form action="/edit_ecosystem" method="post">
+  <form action="/select_ecosystem" method="post">
     {% csrf_token %}
     {% for field in ecosystem_form.state_fields %}
       {{ field }}
@@ -39,7 +39,7 @@
 <!-- Four columns: Change to BS layout! -->
 
 <div class="four-column">
-  <form action="/edit_project" method="post">
+  <form action="/select_project" method="post">
     {% csrf_token %}
     {% for field in projects_form.state_fields %}
       {{ field }}
@@ -77,7 +77,7 @@
 </div>
 
 <div class="four-column">
-  <form action="/edit_data_source" method="post">
+  <form action="/select_data_source" method="post">
     {% csrf_token %}
     {% for field in data_sources_form.state_fields %}
       {{ field }}
@@ -100,7 +100,7 @@
 </div>
 
 <div class="four-column">
-  <form action="/edit_repository_view" method="post">
+  <form action="/select_repository_view" method="post">
     {% csrf_token %}
     {% for field in repository_views_form.state_fields %}
       {{ field }}
