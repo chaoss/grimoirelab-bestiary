@@ -17,7 +17,7 @@ from django import shortcuts
 from django.http import Http404
 
 from projects.bestiary_import import load_projects
-from projects.models import Ecosystem, Project, Repository, RepositoryView
+from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
 
 from . import forms
 
@@ -39,11 +39,26 @@ def index(request):
 class EditorState():
 
     def __init__(self, eco_name=None, projects=[], data_sources=[],
-                 repository_views=[]):
+                 repository_views=[], form=None):
         self.eco_name = eco_name
         self.projects = projects
         self.data_sources = data_sources
         self.repository_views = repository_views
+
+        if form:
+            # The form includes the state not chnaged to be propagated
+            projects_state = form.cleaned_data['projects_state']
+            data_sources = form.cleaned_data['data_sources_state']
+            repository_views = form.cleaned_data['repository_views_state']
+
+            if not self.eco_name:
+                self.eco_name = form.cleaned_data['eco_name_state']
+            if not self.projects:
+                self.projects = [projects_state] if projects_state else []
+            if not self.data_sources:
+                self.data_sources = [data_sources] if data_sources else []
+            if not self.repository_views:
+                self.repository_views = [repository_views] if repository_views else []
 
     def is_empty(self):
         return not (self.eco_name or self.projects or self.data_sources or
@@ -106,23 +121,106 @@ def build_forms_context(state=None):
     return context
 
 
+def add_repository_view(request):
+    if request.method == 'POST':
+        form = forms.RepositoryViewForm(request.POST)
+        if form.is_valid():
+            repository = form.cleaned_data['repository']
+            params = form.cleaned_data['params']
+            data_source = form.cleaned_data['data_source']
+            # Don't support multiselect in projects yet
+            project = form.cleaned_data['projects_state']
+            # Adding a new repository view
+            data_source_orm = DataSource.objects.get(name=data_source)
+            # Try to find a repository already created
+            try:
+                repository_orm = Repository.objects.get(name=repository, data_source=data_source_orm)
+            except Repository.DoesNotExist:
+                # Create a new repository
+                repository_orm = Repository(name=repository, data_source=data_source_orm)
+                repository_orm.save()
+            # Try to find a repository view already created
+            try:
+                repository_view_orm = RepositoryView.objects.get(params=params, repository=repository_orm)
+            except RepositoryView.DoesNotExist:
+                repository_view_orm = RepositoryView(params=params,
+                                                     repository=repository_orm)
+                repository_view_orm.save()
+            # If there is a project defined, add the repository view to the project
+            if project:
+                project_orm = Project.objects.get(name=project)
+                project_orm.repository_views.add(repository_view_orm)
+                project_orm.save()
+
+            repository_view_orm.save()
+
+            form.cleaned_data['repository_views_state'] = []
+            state = EditorState(form=form)
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(state))
+        else:
+            # TODO: Show error
+            print(form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
 def update_repository_view(request):
     if request.method == 'POST':
         form = forms.RepositoryViewForm(request.POST)
+
         if form.is_valid():
             repository_view_id = form.cleaned_data['repository_view_id']
             repository = form.cleaned_data['repository']
             params = form.cleaned_data['params']
-            filters = form.cleaned_data['filters']
+            data_source = form.cleaned_data['data_source']
+
             repository_view_orm = RepositoryView.objects.get(id=repository_view_id)
-            repository_view_orm.repo = Repository.objects.get(name=repository)
+
+            try:
+                repository_orm = Repository.objects.get(name=repository)
+                repository_view_orm.repository = repository_orm
+            except Repository.DoesNotExist:
+                # Create a new repository
+                data_source_orm = DataSource.objects.get(name=data_source)
+                repository_orm = Repository(name=repository, data_source=data_source_orm)
+                repository_orm.save()
+
+            repository_view_orm.repository = repository_orm
             repository_view_orm.params = params
-            # TODO: filters not yet in the data models
+
             repository_view_orm.save()
+
+            state = EditorState(repository_views=[repository_view_id], form=form)
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(repository_views=[repository_view_id])))
+                                    build_forms_context(state))
         else:
             # TODO: Show error
+            print(form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def remove_repository_view(request):
+    if request.method == 'POST':
+        form = forms.RepositoryViewForm(request.POST)
+        if form.is_valid():
+            if form.cleaned_data['repository_view_id']:
+                repository_view_id = int(form.cleaned_data['repository_view_id'])
+                RepositoryView.objects.get(id=repository_view_id).delete()
+            # Clean from the state the removed repository view
+            form.cleaned_data['repository_views_state'] = []
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(EditorState(form=form)))
+        else:
+            # TODO: Show error
+            print(form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -135,8 +233,9 @@ def select_repository_view(request):
         form = forms.RepositoryViewsForm(request.POST)
         if form.is_valid():
             repository_view_id = int(form.cleaned_data['id'])
+            state = EditorState(form=form, repository_views=[repository_view_id])
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(repository_views=[repository_view_id])))
+                                    build_forms_context(state))
         else:
             # TODO: Show error
             raise Http404
@@ -151,15 +250,10 @@ def select_data_source(request):
         form = forms.DataSourcesForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
-            projects_state = form.cleaned_data['projects_state']
-            state = {
-                "eco_name": form.cleaned_data['eco_name_state'],
-                "projects": [projects_state] if projects_state else [],
-                "data_sources": [name] if name else []
-            }
+            data_sources = [name] if name else []
 
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(**state)))
+                                    build_forms_context(EditorState(form=form, data_sources=data_sources)))
         else:
             # TODO: Show error
             raise Http404
@@ -199,12 +293,8 @@ def add_project(request):
                 eco_orm = Ecosystem.objects.get(name=eco_name)
                 eco_orm.projects.add(project_orm)
                 eco_orm.save()
-            state = {
-                "eco_name": eco_name,
-                "projects": [project_name],
-            }
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(**state)))
+                                    build_forms_context(EditorState(form=form)))
         else:
             # TODO: Show error
             raise Http404
@@ -219,12 +309,9 @@ def select_project(request):
         form = forms.ProjectsForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
-            state = {
-                "eco_name": form.cleaned_data['eco_name_state'],
-                "projects": [name],
-            }
+            projects = [name]
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(**state)))
+                                    build_forms_context(EditorState(projects=projects, form=form)))
         else:
             # TODO: Show error
             raise Http404
@@ -240,6 +327,7 @@ def select_ecosystem(request):
         form = forms.EcosystemForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
+            # Select and ecosystem reset the state. Don't pass form=form
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(EditorState(eco_name=name)))
         else:

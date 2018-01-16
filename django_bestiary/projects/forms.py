@@ -29,7 +29,7 @@ class BestiaryEditorForm(forms.Form):
     eco_name_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     projects_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     data_sources_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
-    data_repository_views = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
+    repository_views_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
 
     def is_empty_state(self):
         return self.state.is_empty() if self.state else True
@@ -37,7 +37,10 @@ class BestiaryEditorForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.state = kwargs.pop('state') if 'state' in kwargs else None
         if self.state:
-            kwargs['initial'] = self.state.initial_state()
+            if 'initial' in kwargs:
+                kwargs['initial'].update(self.state.initial_state())
+            else:
+                kwargs['initial'] = self.state.initial_state()
         super(BestiaryEditorForm, self).__init__(*args, **kwargs)
 
         # The state includes the names of objects except for repository_views
@@ -45,7 +48,7 @@ class BestiaryEditorForm(forms.Form):
         self.state_fields = [self['eco_name_state'],
                              self['projects_state'],
                              self['data_sources_state'],
-                             self['data_repository_views']
+                             self['repository_views_state']
                              ]
 
 
@@ -103,7 +106,6 @@ class ProjectsForm(BestiaryEditorForm):
             if self.state.eco_name:
                 ecosystem_orm = Ecosystem.objects.get(name=self.state.eco_name)
                 projects = ecosystem_orm.projects.all()
-                print("AQUI ...", ecosystem_orm, projects)
                 for project in projects:
                     choices += ((project.name, project.name),)
             if self.state.repository_views:
@@ -217,32 +219,63 @@ class RepositoryViewForm(BestiaryEditorForm):
 
     @perfdata
     def __init__(self, *args, **kwargs):
-        task_init = time()
-
         self.repository_view_id = None
         self.repository_view_orm = None
 
-        # Process the state here because we need it for other initial values
-        self.state = kwargs.pop('state') if 'state' in kwargs else None
+        # First state process in order to fill initial values
+        kwargs['initial'] = {}
+        self.state = kwargs.get('state') if 'state' in kwargs else None
         if self.state:
             kwargs['initial'] = self.state.initial_state()
 
         if self.state and self.state.repository_views:
             self.repository_view_id = self.state.repository_views[0]
 
+        if self.state and self.state.projects:
+                project_orm = Project.objects.get(name=self.state.projects[0])
+                kwargs['initial'].update({
+                    'project': project_orm.name
+                })
+
         if self.repository_view_id:
-            repository_view_orm = RepositoryView.objects.get(id=self.repository_view_id)
-            kwargs['initial'] = {
-                'repository_view_id': self.repository_view_id,
-                'repository': repository_view_orm.repository.name,
-                'params': repository_view_orm.params
-            }
+            try:
+                repository_view_orm = RepositoryView.objects.get(id=self.repository_view_id)
+                kwargs['initial'].update({
+                    'repository_view_id': self.repository_view_id,
+                    'repository': repository_view_orm.repository.name,
+                    'params': repository_view_orm.params
+                })
+            except RepositoryView.DoesNotExist:
+                print(self.__class__, "Received repository view which does not exists", self.repository_view_id)
         super(RepositoryViewForm, self).__init__(*args, **kwargs)
 
-        self.fields['repository_view_id'] = forms.CharField(label='repository_view_id', max_length=100)
+        self.fields['repository_view_id'] = forms.CharField(label='repository_view_id', required=False, max_length=100)
+        self.fields['repository_view_id'].widget = forms.HiddenInput()
 
         self.fields['repository'] = forms.CharField(label='repository', max_length=100, required=False)
         self.fields['repository'].widget = forms.TextInput(attrs={'class': 'form-control'})
 
         self.fields['params'] = forms.CharField(label='params', max_length=100, required=False)
         self.fields['params'].widget = forms.TextInput(attrs={'class': 'form-control'})
+
+        choices = ()
+
+        if self.state and self.state.data_sources:
+            for ds_name in self.state.data_sources:
+                choices += ((ds_name, ds_name),)
+        elif self.repository_view_id:
+            repository_view_orm = RepositoryView.objects.get(id=self.repository_view_id)
+            ds_name = repository_view_orm.repository.data_source.name
+            choices += ((ds_name, ds_name),)
+        else:
+            for ds in DataSource.objects.all():
+                choices += ((ds.name, ds.name),)
+
+        choices = sorted(choices, key=lambda x: x[1])
+
+        self.widget = forms.Select(attrs={'class': 'form-control'})
+        self.fields['data_source'] = forms.ChoiceField(label='Data Source',
+                                                       widget=self.widget, choices=choices)
+
+        self.fields['project'] = forms.CharField(label='project', max_length=100, required=False)
+        self.fields['project'].widget = forms.TextInput(attrs={'class': 'form-control', 'readonly': 'True'})
