@@ -435,29 +435,36 @@ def import_from_file(request):
     return index(request)
 
 
-def export_to_file(request):
+def export_to_file(request, ecosystem=None):
+
+    if (request.method == "GET") and (not ecosystem):
+        return index(request)
 
     if request.method == "POST":
-        print(request.POST)
         ecosystem = request.POST["name"]
-        file_name = "projects_%s.json" % ecosystem
-        task_init = time()
-        try:
-            projects = fetch_projects(ecosystem)
-        except (Ecosystem.DoesNotExist, Exception):
-            error_msg = "Projects from ecosystem \"%s\" couldn't be exported." % ecosystem
+
+    file_name = "projects_%s.json" % ecosystem
+    task_init = time()
+    try:
+        projects = fetch_projects(ecosystem)
+    except (Ecosystem.DoesNotExist, Exception):
+        error_msg = "Projects from ecosystem \"%s\" couldn't be exported." % ecosystem
+        if request.method == "POST":
+            # If request comes from web UI and fails, return error page
             return return_error(error_msg)
-
-        print("Total loading time ... %.2f sec", time() - task_init)
-
-        if projects:
-            projects_json = json.dumps(projects, indent=True, sort_keys=True)
-            response = HttpResponse(projects_json, content_type="application/json")
-            response['Content-Disposition'] = 'attachment; filename=' + file_name
-            return response
         else:
-            error_msg = "There are no projects to export"
-            return return_error(error_msg)
+            # If request comes as a GET request, return HTTP 404: Not Found
+            return HttpResponse(status=404)
+
+    print("Total loading time ... %.2f sec", time() - task_init)
+    if projects:
+        projects_json = json.dumps(projects, indent=True, sort_keys=True)
+        response = HttpResponse(projects_json, content_type="application/json")
+        response['Content-Disposition'] = 'attachment; filename=' + file_name
+        return response
+    else:
+        error_msg = "There are no projects to export"
+        return return_error(error_msg)
 
     return index(request)
 

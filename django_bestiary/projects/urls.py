@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     url(r'^import/$', views.import_from_file),
+    url(r'^export/ecosystem=(?P<ecosystem>[\w ]+)', views.export_to_file),
     url(r'^export/$', views.export_to_file),
     url(r'^editor/$', views.editor, name='editor'),
     url(r'^select_ecosystem$', views.select_ecosystem),
