@@ -25,7 +25,7 @@ SECRET_KEY = 'zn!wzpgva32vib)s6()0xvl=6)nl%ggy%+g2iekfyp#*h$irz1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['bestiary']
+ALLOWED_HOSTS = ['bestiary', 'localhost']
 
 
 # Application definition
