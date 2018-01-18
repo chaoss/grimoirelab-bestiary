@@ -1,6 +1,5 @@
 import functools
 import json
-import os
 
 from datetime import datetime
 from time import time
@@ -25,18 +24,15 @@ from . import forms
 def index(request):
 
     template = loader.get_template('projects/project.html')
-<<<<<<< HEAD
-    project = 'grimoire'  # debug value just during testing
-=======
     eco_form = forms.EcosystemForm(state=None)
     project = None
->>>>>>> c0377c1... Fix typos and remove debug trace
     if (request.GET.get('project')):
         project = request.GET.get('project')
     context = find_project_repository_views(project)
     context.update(find_projects())
     context.update(find_project_data_sources(project))
     context['project_selected'] = project
+    context['ecosystem_form'] = eco_form
     render_index = template.render(context, request)
     return HttpResponse(render_index)
 
@@ -441,11 +437,9 @@ def import_from_file(request):
 
 def export_to_file(request):
 
-    if not os.path.exists('.exported'):
-        os.mkdir(".exported")
-
     if request.method == "POST":
-        ecosystem = request.POST["ecosystem"]
+        print(request.POST)
+        ecosystem = request.POST["name"]
         file_name = "projects_%s.json" % ecosystem
         task_init = time()
         try:
