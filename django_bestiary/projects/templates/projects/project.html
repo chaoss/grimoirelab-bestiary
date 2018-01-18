@@ -14,6 +14,65 @@
 
 {% block body %}
 
+<div class="container-fluid">
+  <!-- Modal -->
+  <div class="modal fade" id="importModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <form method="POST" action="/projects/import/" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-header">
+                <div class="modal-title">
+                    Import projects file
+                </div>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                    <div class="input-group">
+                       <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                       <input type="text" name="ecosystem" placeholder="Ecosystem name" required=True class="form-control">
+                     </div>
+                     <div class="input-group">
+                       <span class="input-group-addon"><i class="fa fa-arrow-circle-o-up"></i></span>
+                       <input type="file" name="imported_file" placeholder="Select JSON file" accept="application/json" required=True class="form-control">
+                     </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Import</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="exportModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <form method="POST" action="/projects/export/" enctype="multipart/form-data">{% csrf_token %}
+            <div class="modal-header">
+              <div class="modal-title">Download projects file</div>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                        {{ ecosystem_form.name }}
+                    </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Download</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </form>
+          </div>
+      </div>
+  </div>
+</div>
+
 <!-- LEFT COLUMN -->
 <div style="float:left; width:70%; margin-right: 10px; height:90%; min-height: 600px;">
 
@@ -76,18 +135,12 @@
     Data Sources: {{data_sources|length}}<br>
     Repository Views: {{repository_views|length}}<br>
     <div style="height:100px"></div>
-    <form method="POST" action="/projects/import/" enctype="multipart/form-data">{% csrf_token %}
-        <input type="file" name="imported_file" accept="application/json" required=True><br>
-        <input type="text" name="ecosystem" placeholder="Ecosystem name" required=True><br>
-        <button type="submit" class="btn btn-success">Import Projects File</button>
-    </form>
+        <button type="submit" class="btn btn-success" data-toggle="modal" data-target="#importModal">Import Projects File</button>
     </div>
     <div style="height:10px"></div>
-    <form method="POST" action="/projects/export/" enctype="multipart/form-data" target="_blank">{% csrf_token %}
-        <input type="text" name="ecosystem" placeholder="Ecosystem name" required=True><br>
-        <button type="submit" class="btn btn-success">Download Projects File</button>
-    </form>
+        <button type="submit" class="btn btn-success" data-toggle="modal" data-target="#exportModal">Download Projects File</button>
     </div>
+
 <!-- END RIGHT COLUMN -->
 {% endblock %}
 {% endwith  %}
