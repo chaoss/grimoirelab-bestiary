@@ -54,11 +54,21 @@ class BestiaryEditorForm(forms.Form):
 
 class EcosystemForm(BestiaryEditorForm):
 
+    @perfdata
+    def __init__(self, *args, **kwargs):
+        super(EcosystemForm, self).__init__(*args, **kwargs)
+
+        self.fields['ecosystem_name'] = forms.CharField(label='Ecosystem name', max_length=100)
+        self.fields['ecosystem_name'].widget = forms.TextInput(attrs={'class': 'form-control'})
+
+
+class EcosystemsForm(BestiaryEditorForm):
+
     widget = forms.Select(attrs={'class': 'form-control'})
 
     @perfdata
     def __init__(self, *args, **kwargs):
-        super(EcosystemForm, self).__init__(*args, **kwargs)
+        super(EcosystemsForm, self).__init__(*args, **kwargs)
 
         choices = ()
 
