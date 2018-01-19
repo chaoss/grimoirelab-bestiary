@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^export/ecosystem=(?P<ecosystem>[\w ]+)', views.export_to_file),
     url(r'^export/$', views.export_to_file),
     url(r'^editor/$', views.editor, name='editor'),
+    url(r'^add_ecosystem$', views.add_ecosystem),
     url(r'^select_ecosystem$', views.select_ecosystem),
     url(r'^add_project$', views.add_project),
     url(r'^remove_project$', views.remove_project),

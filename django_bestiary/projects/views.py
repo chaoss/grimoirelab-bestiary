@@ -24,7 +24,7 @@ from . import forms
 def index(request):
 
     template = loader.get_template('projects/project.html')
-    eco_form = forms.EcosystemForm(state=None)
+    eco_form = forms.EcosystemsForm(state=None)
     project = None
     if (request.GET.get('project')):
         project = request.GET.get('project')
@@ -32,7 +32,7 @@ def index(request):
     context.update(find_projects())
     context.update(find_project_data_sources(project))
     context['project_selected'] = project
-    context['ecosystem_form'] = eco_form
+    context['ecosystems_form'] = eco_form
     render_index = template.render(context, request)
     return HttpResponse(render_index)
 
@@ -94,7 +94,8 @@ def perfdata(func):
 @perfdata
 def build_forms_context(state=None):
     """ Get all forms to be shown in the editor """
-    eco_form = forms.EcosystemForm(state=state)
+    eco_form = forms.EcosystemsForm(state=state)
+    add_eco_form = forms.EcosystemForm(state=state)
     projects_form = forms.ProjectsForm(state=state)
     project_form = forms.ProjectForm(state=state)
     project_remove_form = None
@@ -112,7 +113,8 @@ def build_forms_context(state=None):
         if state.data_sources:
             data_sources_form.initial['name'] = state.data_sources[0]
 
-    context = {"ecosystem_form": eco_form,
+    context = {"ecosystems_form": eco_form,
+               "ecosystem_form": add_eco_form,
                "projects_form": projects_form,
                "project_form": project_form,
                "project_remove_form": project_remove_form,
@@ -122,6 +124,28 @@ def build_forms_context(state=None):
                "repository_view_form": repository_view_form
                }
     return context
+
+
+def add_ecosystem(request):
+
+    if request.method == 'POST':
+        form = forms.EcosystemForm(request.POST)
+        if form.is_valid():
+            ecosystem_name = form.cleaned_data['ecosystem_name']
+            eco_orm = Ecosystem(name=ecosystem_name)
+            eco_orm.save()
+
+            # Select and ecosystem reset the state. Don't pass form=form
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(EditorState(eco_name=ecosystem_name)))
+        else:
+            # TODO: Show error
+            print("FORM errors", form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
 def add_repository_view(request):
@@ -356,7 +380,7 @@ def select_project(request):
 @perfdata
 def select_ecosystem(request):
     if request.method == 'POST':
-        form = forms.EcosystemForm(request.POST)
+        form = forms.EcosystemsForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
             # Select and ecosystem reset the state. Don't pass form=form

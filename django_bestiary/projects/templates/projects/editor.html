@@ -21,19 +21,28 @@
   <div class="col-sm">
     <form action="/select_ecosystem" method="post">
       {% csrf_token %}
-      {% for field in ecosystem_form.state_fields %}
+      {% for field in ecosystems_form.state_fields %}
         {{ field }}
       {% endfor %}
-      {{ ecosystem_form.name.errors }}
+      {{ ecosystems_form.name.errors }}
       <div class="form-group row">
         <div class="col-sm-7">
-          {{ ecosystem_form.name }}
+          {{ ecosystems_form.name }}
         </div>
         <div class="col-sm-5">
           <button type="submit" class="btn btn-primary">Select Ecosystem</button>
         </div>
       </div>
     </form>
+  </div>
+  <div class="col-sm">
+    <form action="/add_ecosystem" method="post">
+        {% csrf_token %}
+        <div class="form-group row">
+            <div class="col-sm-4">{{ ecosystem_form.ecosystem_name }}</div>
+            <div class="col-sm-3"><input type="submit" value="Add ecosystem" class="form-control"></div>
+      </form>
+  </div>
   </div>
 </div>
 
