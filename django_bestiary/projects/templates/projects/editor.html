@@ -90,9 +90,12 @@
       <div class="form-group">
         <button type="submit" class="btn btn-primary">Select Data Source</button>
       </div>
+      </form>
+      <form action="/add_data_source" method="post">
+        {% csrf_token %}
       <div class="form-group row">
-        <div class="col-sm-7"><input type="text" name="data_source_name_add" placeholder="name" class="form-control"></div>
-        <div class="col-sm-5"><input type="button" value="Add data source type" class="form-control"></div>
+        <div class="col-sm-7">{{ data_source_form.data_source_name }}</div>
+        <div class="col-sm-5"><input type="submit" value="Add data source type" class="form-control"></div>
       </div>
       <div class="form-group">
         <input type="button" value="Remove data source" class="form-control">
