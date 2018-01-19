@@ -120,6 +120,16 @@ class ProjectsForm(BestiaryEditorForm):
                                                 widget=self.widget, choices=choices)
 
 
+class DataSourceForm(BestiaryEditorForm):
+
+    @perfdata
+    def __init__(self, *args, **kwargs):
+        super(DataSourceForm, self).__init__(*args, **kwargs)
+
+        self.fields['data_source_name'] = forms.CharField(label='Data source name', max_length=100)
+        self.fields['data_source_name'].widget = forms.TextInput(attrs={'class': 'form-control'})
+
+
 class DataSourcesForm(BestiaryEditorForm):
 
     @perfdata

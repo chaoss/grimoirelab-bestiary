@@ -98,6 +98,7 @@ def build_forms_context(state=None):
     projects_form = forms.ProjectsForm(state=state)
     project_form = forms.ProjectForm(state=state)
     project_remove_form = None
+    data_source_form = forms.DataSourceForm(state=state)
     data_sources_form = forms.DataSourcesForm(state=state)
     repository_views_form = forms.RepositoryViewsForm(state=state)
     repository_view_form = forms.RepositoryViewForm(state=state)
@@ -115,6 +116,7 @@ def build_forms_context(state=None):
                "projects_form": projects_form,
                "project_form": project_form,
                "project_remove_form": project_remove_form,
+               "data_source_form": data_source_form,
                "data_sources_form": data_sources_form,
                "repository_views_form": repository_views_form,
                "repository_view_form": repository_view_form
@@ -237,6 +239,35 @@ def select_repository_view(request):
             state = EditorState(form=form, repository_views=[repository_view_id])
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(state))
+        else:
+            # TODO: Show error
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def add_data_source(request):
+
+    if request.method == 'POST':
+        form = forms.DataSourceForm(request.POST)
+        if form.is_valid():
+            eco_name = form.cleaned_data['eco_name_state']
+            eco_orm = None
+            project_name = form.cleaned_data['projects_state']
+            project_orm = None
+            if eco_name:
+                eco_orm = Ecosystem.objects.get(name=eco_name)
+                projects_orm = eco_orm.projects.all()
+                eco_orm.save()
+
+            data_source_name = form.cleaned_data['data_source_name']
+            data_source_orm = DataSource(name=data_source_name)
+            data_source_orm.save()
+
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(EditorState(form=form)))
         else:
             # TODO: Show error
             raise Http404
