@@ -1,8 +1,14 @@
 import functools
 import json
+import pickle
 
 from datetime import datetime
 from time import time
+
+import redis
+from rq import Queue, use_connection
+from rq.job import Job, JobStatus
+from arthur.common import Q_STORAGE_ITEMS, Q_CREATION_JOBS, Q_UPDATING_JOBS
 
 from django.http import HttpResponse
 from django.template import loader
@@ -169,15 +175,68 @@ def build_forms_context(state=None):
 # status page methods
 ##
 
+def check_status(repository_view):
+    from random import random
+    status = ['Pending', 'Creating', 'Updating']
+
+    queues = ['create', 'update', 'failed']
+
+    conn = redis.Redis(
+        host="redis",
+        port=6379,
+        password=None,
+        db=8
+    )
+
+    db_url = 'redis://redis/8'
+    conn = redis.StrictRedis.from_url(db_url)
+
+
+    use_connection(conn)
+
+    for queue in Queue.all():
+        # Let's try to find the repository_view in the queues
+        for job in queue.get_jobs():
+            print(job)
+
+    # Sometimes a job is not currently in any worker
+    # It is scheduled for the future, so it is not yet in a execution queue
+    # Let's check redis queue with the tasks directly
+
+    pipe = conn.pipeline()
+    pipe.lrange(Q_UPDATING_JOBS, 0, -1)
+    update_jobs = pipe.execute()[0]
+    print(" ** update_jobs", len(update_jobs))
+    for rq_job in update_jobs:
+        job = pickle.loads(rq_job)
+        print(job)
+    pipe = conn.pipeline()
+    pipe.lrange(Q_CREATION_JOBS, 0, -1)
+    creation_jobs = pipe.execute()[0]
+    print(" ** creation_jobs", len(creation_jobs))
+    pipe = conn.pipeline()
+    pipe.lrange(Q_STORAGE_ITEMS, 0, -1)
+    items = pipe.execute()[0]
+    print(" ** items", len(items))
+
+    # pipe.lrange(Q_STORAGE_ITEMS, 0, -1)
+    # pipe.ltrim(Q_STORAGE_ITEMS, 1, 0)
+    # items = pipe.execute()[0]
+
+
+
+
+    return status[int(len(status)*random())]
 
 def fetch_status_repository_views(state=None):
     views = data.RepositoryViewsData(state).fetch()
     views_status = []
     for view in views:
         view_str = " ".join([view.repository.name, view.params])
+        status = check_status(view)
         views_status.append({"id": view.id,
                              "name": view_str,
-                             "status": "",
+                             "status": status,
                              "last_updated": "",
                              "creation_date": "",
                              "results": ""})
