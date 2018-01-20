@@ -18,5 +18,6 @@ urlpatterns = [
     url(r'^remove_repository_view$', views.remove_repository_view),
     url(r'^select_repository_view$', views.select_repository_view),
     url(r'^update_repository_view$', views.update_repository_view),
+    url(r'^status/$', views.status),
     url(r'^$', views.index, name='index'),
 ]
