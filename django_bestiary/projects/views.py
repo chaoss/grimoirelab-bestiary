@@ -19,6 +19,7 @@ from projects.bestiary_import import load_projects
 from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
 
 from . import forms
+from . import data
 
 
 class EditorState():
@@ -65,30 +66,6 @@ class EditorState():
         return initial
 
 
-def index(request):
-
-    template = loader.get_template('projects/project.html')
-    eco_form = forms.EcosystemsForm(state=None)
-    project = None
-    if (request.GET.get('project')):
-        project = request.GET.get('project')
-    context = find_project_repository_views(project)
-    context.update(find_projects())
-    context.update(find_project_data_sources(project))
-    context['project_selected'] = project
-    context['ecosystems_form'] = eco_form
-    render_index = template.render(context, request)
-    return HttpResponse(render_index)
-
-
-def status(request):
-
-    template = loader.get_template('projects/status.html')
-    context = {}
-    render_status = template.render(context, request)
-    return HttpResponse(render_status)
-
-
 def perfdata(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
@@ -97,6 +74,58 @@ def perfdata(func):
         print("%s: %0.3f sec" % (func, time() - task_init))
         return data
     return decorator
+
+
+def return_error(message):
+
+    template = loader.get_template('projects/error.html')
+    context = {"alert_message": message}
+    render_error = template.render(context)
+    return HttpResponse(render_error)
+
+
+def select_project(request, template, context=None):
+    if request.method == 'POST':
+        form = forms.ProjectsForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            projects = [name]
+            state = EditorState(projects=projects, form=form)
+            if context:
+                context.update(build_forms_context(state))
+            else:
+                context = build_forms_context(state)
+            return shortcuts.render(request, template, context)
+        else:
+            # TODO: Show error
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, template, build_forms_context())
+
+
+@perfdata
+def select_ecosystem(request, template, context=None):
+    if request.method == 'POST':
+        form = forms.EcosystemsForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            # Select and ecosystem reset the state. Don't pass form=form
+            state = build_forms_context(EditorState(eco_name=name))
+            if context:
+                context.update(state)
+            else:
+                context = build_forms_context(EditorState(eco_name=name))
+            return shortcuts.render(request, template, context)
+        else:
+            # TODO: Show error
+            print("FORM errors", form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, template, build_forms_context())
 
 
 @perfdata
@@ -132,6 +161,79 @@ def build_forms_context(state=None):
                "repository_view_form": repository_view_form
                }
     return context
+
+##
+# status page methods
+##
+
+
+def fetch_status_repository_views(state=None):
+    views = data.RepositoryViewsData(state).fetch()
+    views_status = []
+    for view in views:
+        view_str = " ".join([view.repository.name, view.params])
+        views_status.append({"id": view.id,
+                             "name": view_str,
+                             "status": "",
+                             "last_updated": "",
+                             "creation_date": "",
+                             "results": ""})
+    return views_status
+
+
+def status(request):
+    # Get the repository views
+    state = None
+    views_status = fetch_status_repository_views(state)
+    context = {"views": views_status}
+    # Adding more forms than needed. To be optimized.
+    context.update(build_forms_context())
+    template = loader.get_template('projects/status.html')
+    render_status = template.render(context, request)
+    return HttpResponse(render_status)
+
+
+def status_select_ecosystem(request):
+    state = None
+    if request.method == 'POST':
+        form = forms.EcosystemsForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            state = EditorState(eco_name=name)
+
+    views_status = fetch_status_repository_views(state)
+    context = {"views": views_status}
+    return select_ecosystem(request, "projects/status.html", context)
+
+
+def status_select_project(request):
+    state = None
+    if request.method == 'POST':
+        form = forms.ProjectsForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            state = EditorState(projects=[name])
+
+    views_status = fetch_status_repository_views(state)
+    context = {"views": views_status}
+    return select_project(request, "projects/status.html", context)
+
+
+##
+# editor page methods
+##
+
+@perfdata
+def editor(request):
+    """ Shows the Bestiary Editor """
+
+    context = build_forms_context()
+
+    return shortcuts.render(request, 'projects/editor.html', context)
+
+
+def editor_select_ecosystem(request):
+    return select_ecosystem(request, "projects/editor.html")
 
 
 def add_ecosystem(request):
@@ -327,6 +429,10 @@ def select_data_source(request):
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
+def editor_select_project(request):
+    return select_project(request, "projects/editor.html")
+
+
 def remove_project(request):
     if request.method == 'POST':
         form = forms.ProjectForm(request.POST)
@@ -367,50 +473,24 @@ def add_project(request):
         # TODO: Show error
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
-
-def select_project(request):
-    if request.method == 'POST':
-        form = forms.ProjectsForm(request.POST)
-        if form.is_valid():
-            name = form.cleaned_data['name']
-            projects = [name]
-            return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(projects=projects, form=form)))
-        else:
-            # TODO: Show error
-            raise Http404
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        # TODO: Show error
-        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+##
+# viewer page
+##
 
 
-@perfdata
-def select_ecosystem(request):
-    if request.method == 'POST':
-        form = forms.EcosystemsForm(request.POST)
-        if form.is_valid():
-            name = form.cleaned_data['name']
-            # Select and ecosystem reset the state. Don't pass form=form
-            return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(eco_name=name)))
-        else:
-            # TODO: Show error
-            print("FORM errors", form.errors)
-            raise Http404
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        # TODO: Show error
-        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
-
-
-@perfdata
-def editor(request):
-    """ Shows the Bestiary Editor """
-
-    context = build_forms_context()
-
-    return shortcuts.render(request, 'projects/editor.html', context)
+def viewer(request):
+    template = loader.get_template('projects/project.html')
+    eco_form = forms.EcosystemsForm(state=None)
+    project = None
+    if (request.GET.get('project')):
+        project = request.GET.get('project')
+    context = find_project_repository_views(project)
+    context.update(find_projects())
+    context.update(find_project_data_sources(project))
+    context['project_selected'] = project
+    context['ecosystems_form'] = eco_form
+    render_viewer = template.render(context, request)
+    return HttpResponse(render_viewer)
 
 
 def find_project_repository_views(project):
@@ -495,13 +575,13 @@ def import_from_file(request):
         print("Projects loaded", nprojects)
         print("Repositories loaded", nrepos)
 
-    return index(request)
+    return viewer(request)
 
 
 def export_to_file(request, ecosystem=None):
 
     if (request.method == "GET") and (not ecosystem):
-        return index(request)
+        return viewer(request)
 
     if request.method == "POST":
         ecosystem = request.POST["name"]
@@ -529,12 +609,4 @@ def export_to_file(request, ecosystem=None):
         error_msg = "There are no projects to export"
         return return_error(error_msg)
 
-    return index(request)
-
-
-def return_error(message):
-
-    template = loader.get_template('projects/error.html')
-    context = {"alert_message": message}
-    render_error = template.render(context)
-    return HttpResponse(render_error)
+    return viewer(request)
