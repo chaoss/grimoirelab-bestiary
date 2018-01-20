@@ -21,22 +21,6 @@ from projects.models import DataSource, Ecosystem, Project, Repository, Reposito
 from . import forms
 
 
-def index(request):
-
-    template = loader.get_template('projects/project.html')
-    eco_form = forms.EcosystemsForm(state=None)
-    project = None
-    if (request.GET.get('project')):
-        project = request.GET.get('project')
-    context = find_project_repository_views(project)
-    context.update(find_projects())
-    context.update(find_project_data_sources(project))
-    context['project_selected'] = project
-    context['ecosystems_form'] = eco_form
-    render_index = template.render(context, request)
-    return HttpResponse(render_index)
-
-
 class EditorState():
 
     def __init__(self, eco_name=None, projects=[], data_sources=[],
@@ -79,6 +63,30 @@ class EditorState():
         }
 
         return initial
+
+
+def index(request):
+
+    template = loader.get_template('projects/project.html')
+    eco_form = forms.EcosystemsForm(state=None)
+    project = None
+    if (request.GET.get('project')):
+        project = request.GET.get('project')
+    context = find_project_repository_views(project)
+    context.update(find_projects())
+    context.update(find_project_data_sources(project))
+    context['project_selected'] = project
+    context['ecosystems_form'] = eco_form
+    render_index = template.render(context, request)
+    return HttpResponse(render_index)
+
+
+def status(request):
+
+    template = loader.get_template('projects/status.html')
+    context = {}
+    render_status = template.render(context, request)
+    return HttpResponse(render_status)
 
 
 def perfdata(func):
