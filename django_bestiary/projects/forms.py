@@ -4,7 +4,9 @@ from time import time
 
 from django import forms
 
-from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
+from projects.models import DataSource, Project, RepositoryView
+
+from . import data
 
 SELECT_LINES = 20
 MAX_ITEMS = 1000  # Implement pagination if there are more items
@@ -72,7 +74,7 @@ class EcosystemsForm(BestiaryEditorForm):
 
         choices = ()
 
-        for eco in Ecosystem.objects.all():
+        for eco in data.EcosystemsData(self.state).fetch():
             choices += ((eco.name, eco.name),)
 
         self.fields['name'] = forms.ChoiceField(label='Ecosystems',
@@ -97,33 +99,9 @@ class ProjectsForm(BestiaryEditorForm):
 
         choices = ()
 
-        if not self.state or self.state.is_empty():
-            for project in Project.objects.all():
+        for project in data.ProjectsData(self.state).fetch():
+            if (project.name, project.name) not in choices:
                 choices += ((project.name, project.name),)
-        elif self.state.projects:
-            projects = Project.objects.filter(name__in=self.state.projects)
-            for project in projects:
-                choices += ((project.name, project.name),)
-        elif self.state.data_sources:
-            ds_ids = DataSource.objects.filter(name__in=self.state.data_sources).values_list("id")
-            repos_ids = Repository.objects.filter(data_source__in=list(ds_ids)).values_list("id")
-            repository_views_ids = RepositoryView.objects.filter(repository__in=list(repos_ids)).values_list("id")
-            projects = Project.objects.filter(repository_views__in=list(repository_views_ids))
-            for project_orm in projects:
-                if (project_orm.name, project_orm.name) not in choices:
-                    choices += ((project_orm.name, project_orm.name),)
-        else:
-            if self.state.eco_name:
-                ecosystem_orm = Ecosystem.objects.get(name=self.state.eco_name)
-                projects = ecosystem_orm.projects.all()
-                for project in projects:
-                    choices += ((project.name, project.name),)
-            if self.state.repository_views:
-                repository_views_ids = RepositoryView.objects.filter(id__in=self.state.repository_views).values_list("id")
-                projects = Project.objects.filter(repository_views__in=list(repository_views_ids))
-                for project_orm in projects:
-                    if (project_orm.name, project_orm.name) not in choices:
-                        choices += ((project_orm.name, project_orm.name),)
 
         choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='Projects',
@@ -148,32 +126,9 @@ class DataSourcesForm(BestiaryEditorForm):
 
         choices = ()
 
-        if not self.state or self.state.is_empty():
-            for ds in DataSource.objects.all():
-                choices += ((ds.name, ds.name),)
-        elif self.state.data_sources:
-            for ds_name in self.state.data_sources:
-                choices += ((ds_name, ds_name),)
-        elif self.state.repository_views:
-            repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
-            for repository_view_orm in repository_views:
-                ds_name = repository_view_orm.repository.data_source.name
-                if (ds_name, ds_name) not in choices:
-                    choices += ((ds_name, ds_name),)
-        elif self.state.projects:
-            projects = Project.objects.filter(name__in=self.state.projects)
-            for project_orm in projects:
-                for repository_view in project_orm.repository_views.all():
-                    ds_name = repository_view.repository.data_source.name
-                    if (ds_name, ds_name) not in choices:
-                        choices += ((ds_name, ds_name),)
-        elif self.state.eco_name:
-            eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
-            for project_orm in eco_orm.projects.all():
-                for repository_view in project_orm.repository_views.all():
-                    ds_name = repository_view.repository.data_source.name
-                    if (ds_name, ds_name) not in choices:
-                        choices += ((ds_name, ds_name),)
+        for data_source in data.DataSourcesData(self.state).fetch():
+            if (data_source.name, data_source.name) not in choices:
+                choices += ((data_source.name, data_source.name),)
 
         choices = sorted(choices, key=lambda x: x[1])
         self.fields['name'] = forms.ChoiceField(label='DataSources',
@@ -188,46 +143,10 @@ class RepositoryViewsForm(BestiaryEditorForm):
 
         choices = ()
 
-        if not self.state or self.state.is_empty():
-            for view in RepositoryView.objects.all():
-                choices += ((view.id, view),)
-                if len(choices) > MAX_ITEMS:
-                    break
-        elif self.state.repository_views:
-            repository_views = RepositoryView.objects.filter(id__in=self.state.repository_views)
-            for repository_view_orm in repository_views:
-                choices += ((repository_view_orm.id, repository_view_orm),)
-        else:
-            choices_projects = []
-            choices_data_sources = []
-            if self.state.eco_name and not self.state.projects and not self.state.data_sources:
-                eco_orm = Ecosystem.objects.get(name=self.state.eco_name)
-                for project_orm in eco_orm.projects.all():
-                    if len(choices) > MAX_ITEMS:
-                        break
-                    for repository_view_orm in project_orm.repository_views.all():
-                        choices += ((repository_view_orm.id, repository_view_orm),)
-                        if len(choices) > MAX_ITEMS:
-                            break
-            if self.state.projects:
-                projects = Project.objects.filter(name__in=self.state.projects)
-                for project_orm in projects:
-                    for repository_view_orm in project_orm.repository_views.all():
-                        choices_projects.append(repository_view_orm)
-                        choices += ((repository_view_orm.id, repository_view_orm),)
-            if self.state.data_sources:
-                for repository_view_orm in RepositoryView.objects.all():
-                    if repository_view_orm.repository.data_source.name in self.state.data_sources:
-                        choices_data_sources.append(repository_view_orm)
-                        choices += ((repository_view_orm.id, repository_view_orm),)
-                        if len(choices) > MAX_ITEMS:
-                            break
-
-            if self.state.projects and self.state.data_sources:
-                choices = ()
-                choices_orms = list(set(choices_projects) & set(choices_data_sources))
-                for choice_orm in choices_orms:
-                    choices += ((choice_orm.id, choice_orm),)
+        for view in data.RepositoryViewsData(self.state).fetch():
+            choices += ((view.id, view),)
+            if len(choices) > MAX_ITEMS:
+                break
 
         print("Choices len", len(choices))
         self.fields['id'] = forms.ChoiceField(label='DataSource',
