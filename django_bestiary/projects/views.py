@@ -76,6 +76,69 @@ class EditorState():
 
         return initial
 
+class ServicesState():
+    def __init__(self):
+        self.arthur_tasks=None
+        self.queued_tasks=None
+        self.running_tasks=None
+        self.waiting_tasks=None
+        self.redis_items=None
+
+        self.redis_con = redis.StrictRedis.from_url(REDIS_URL)
+
+    def collect_arthur_tasks(self):
+        arthur_tasks = []
+        try:
+            res = requests.get(ARTHUR_URL + "/tasks")
+            res.raise_for_status()
+            arthur_tasks = res.json()['tasks']
+        except requests.exceptions.ConnectionError:
+            print("Can not connect to arthur")
+
+        return len(arthur_tasks)
+
+    def collect_rq_tasks(self):
+        tasks = 0
+        use_connection(self.redis_con)
+        for queue in Queue.all():
+            # Let's try to find the repository_view in the queues
+            for job in queue.get_jobs():
+                print(job)
+                tasks += 1
+        return tasks
+
+    def collect_redis_items(self):
+        pipe = self.redis_con.pipeline()
+        pipe.lrange(Q_UPDATING_JOBS, 0, -1)
+        update_jobs = pipe.execute()[0]
+        print(" ** update_jobs", len(update_jobs))
+        for rq_job in update_jobs:
+            job = pickle.loads(rq_job)
+            print(job)
+        pipe = self.redis_con.pipeline()
+        pipe.lrange(Q_CREATION_JOBS, 0, -1)
+        creation_jobs = pipe.execute()[0]
+        print(" ** creation_jobs", len(creation_jobs))
+        pipe = self.redis_con.pipeline()
+        pipe.lrange(Q_STORAGE_ITEMS, 0, -1)
+        items = pipe.execute()[0]
+        print(" ** items", len(items))
+
+        return len(items)
+
+    def collect(self):
+        arthur_tasks = self.collect_arthur_tasks()
+        rq_tasks = self.collect_rq_tasks()
+        running_tasks = 0  # number of workers active
+        waiting_tasks = arthur_tasks - rq_tasks - running_tasks
+        return {
+           "arthur_tasks": arthur_tasks,
+           "queued_tasks": rq_tasks,
+           "running_tasks": running_tasks,
+           "waiting_tasks": waiting_tasks,
+           "redis_items": self.collect_redis_items()
+           }
+
 
 def perfdata(func):
     @functools.wraps(func)
@@ -179,59 +242,21 @@ def build_forms_context(state=None):
 # status page methods
 ##
 
+REDIS_URL = 'redis://redis/8'
+ARTHUR_URL = 'http://mordred:8080'
+
 def check_status(repository_views):
     from random import random
 
     views_status = {}
 
-    status = ['Pending', 'Creating', 'Updating']
-
+    status = ['Running', 'Waiting', 'Failed', 'Creating Queue', 'Updating Queue']
     queues = ['create', 'update', 'failed']
 
-    conn = redis.Redis(
-        host="redis",
-        port=6379,
-        password=None,
-        db=8
-    )
-
-    db_url = 'redis://redis/8'
-    conn = redis.StrictRedis.from_url(db_url)
-
-
-    use_connection(conn)
-
-    for queue in Queue.all():
-        # Let's try to find the repository_view in the queues
-        for job in queue.get_jobs():
-            print(job)
-
-    # Sometimes a job is not currently in any worker
-    # It is scheduled for the future, so it is not yet in a execution queue
-    # Let's check redis queue with the tasks directly
-
-    pipe = conn.pipeline()
-    pipe.lrange(Q_UPDATING_JOBS, 0, -1)
-    update_jobs = pipe.execute()[0]
-    print(" ** update_jobs", len(update_jobs))
-    for rq_job in update_jobs:
-        job = pickle.loads(rq_job)
-        print(job)
-    pipe = conn.pipeline()
-    pipe.lrange(Q_CREATION_JOBS, 0, -1)
-    creation_jobs = pipe.execute()[0]
-    print(" ** creation_jobs", len(creation_jobs))
-    pipe = conn.pipeline()
-    pipe.lrange(Q_STORAGE_ITEMS, 0, -1)
-    items = pipe.execute()[0]
-    print(" ** items", len(items))
-
-
     # The task list information comes from arthur
-    arthur_url = 'http://mordred:8080'
     arthur_tasks = []
     try:
-        res = requests.get(arthur_url + "/tasks")
+        res = requests.get(ARTHUR_URL + "/tasks")
         res.raise_for_status()
         arthur_tasks = res.json()['tasks']
     except requests.exceptions.ConnectionError:
@@ -272,6 +297,7 @@ def status(request):
     state = None
     views_status = fetch_status_repository_views(state)
     context = {"views": views_status}
+    context.update(ServicesState().collect())
     # Adding more forms than needed. To be optimized.
     context.update(build_forms_context())
     template = loader.get_template('projects/status.html')
@@ -289,6 +315,7 @@ def status_select_ecosystem(request):
 
     views_status = fetch_status_repository_views(state)
     context = {"views": views_status}
+    context.update(ServicesState().collect())
     return select_ecosystem(request, "projects/status.html", context)
 
 
@@ -302,6 +329,7 @@ def status_select_project(request):
 
     views_status = fetch_status_repository_views(state)
     context = {"views": views_status}
+    context.update(ServicesState().collect())
     return select_project(request, "projects/status.html", context)
 
 
