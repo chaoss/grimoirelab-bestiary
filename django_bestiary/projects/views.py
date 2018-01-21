@@ -5,6 +5,8 @@ import pickle
 from datetime import datetime
 from time import time
 
+import requests
+
 import redis
 from rq import Queue, use_connection
 from rq.job import Job, JobStatus
@@ -23,6 +25,8 @@ from django.http import Http404
 
 from projects.bestiary_import import load_projects
 from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
+
+from grimoirelab.toolkit.datetime import unixtime_to_datetime
 
 from . import forms
 from . import data
@@ -175,8 +179,11 @@ def build_forms_context(state=None):
 # status page methods
 ##
 
-def check_status(repository_view):
+def check_status(repository_views):
     from random import random
+
+    views_status = {}
+
     status = ['Pending', 'Creating', 'Updating']
 
     queues = ['create', 'update', 'failed']
@@ -219,26 +226,43 @@ def check_status(repository_view):
     items = pipe.execute()[0]
     print(" ** items", len(items))
 
-    # pipe.lrange(Q_STORAGE_ITEMS, 0, -1)
-    # pipe.ltrim(Q_STORAGE_ITEMS, 1, 0)
-    # items = pipe.execute()[0]
 
+    # The task list information comes from arthur
+    arthur_url = 'http://mordred:8080'
+    arthur_tasks = []
+    try:
+        res = requests.get(arthur_url + "/tasks")
+        res.raise_for_status()
+        arthur_tasks = res.json()['tasks']
+    except requests.exceptions.ConnectionError:
+        print("Can not connect to arthur")
 
+    for view in repository_views:
+        views_status[view.id] = {}
+        views_status[view.id]['status'] = 'N/A'
+        views_status[view.id]['creation_date'] = 'N/A'
+        for task in arthur_tasks:
+            print(task)
+            if view.repository.name == task['backend_args']['uri']:
+                # views_status[view.id]['status'] = status[int(len(status)*random())]
+                views_status[view.id]['status'] = 'arthur'
+                views_status[view.id]['creation_date'] = unixtime_to_datetime(task['created_on'])
+                break
 
-
-    return status[int(len(status)*random())]
+    return views_status
 
 def fetch_status_repository_views(state=None):
-    views = data.RepositoryViewsData(state).fetch()
     views_status = []
+    views = data.RepositoryViewsData(state).fetch()
+    views_data = check_status(views)
+    views = data.RepositoryViewsData(state).fetch()
     for view in views:
         view_str = " ".join([view.repository.name, view.params])
-        status = check_status(view)
         views_status.append({"id": view.id,
                              "name": view_str,
-                             "status": status,
+                             "status": views_data[view.id]['status'],
                              "last_updated": "",
-                             "creation_date": "",
+                             "creation_date": views_data[view.id]['creation_date'],
                              "results": ""})
     return views_status
 
