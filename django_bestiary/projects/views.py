@@ -243,7 +243,7 @@ def build_forms_context(state=None):
 ##
 
 REDIS_URL = 'redis://redis/8'
-ARTHUR_URL = 'http://mordred:8080'
+ARTHUR_URL = 'http://arthur:8080'
 
 def check_status(repository_views):
     from random import random
