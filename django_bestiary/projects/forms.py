@@ -60,13 +60,14 @@ class EcosystemForm(BestiaryEditorForm):
     def __init__(self, *args, **kwargs):
         super(EcosystemForm, self).__init__(*args, **kwargs)
 
+        eco_attrs = {'class': 'form-control', 'placeholder': 'Ecosystem name'}
         self.fields['ecosystem_name'] = forms.CharField(label='Ecosystem name', max_length=100)
-        self.fields['ecosystem_name'].widget = forms.TextInput(attrs={'class': 'form-control'})
+        self.fields['ecosystem_name'].widget = forms.TextInput(attrs=eco_attrs)
 
 
 class EcosystemsForm(BestiaryEditorForm):
 
-    widget = forms.Select(attrs={'class': 'form-control'})
+    widget = forms.Select(attrs={'class': 'form-control', 'onclick': 'this.form.submit()'})
 
     @perfdata
     def __init__(self, *args, **kwargs):
@@ -114,8 +115,9 @@ class DataSourceForm(BestiaryEditorForm):
     def __init__(self, *args, **kwargs):
         super(DataSourceForm, self).__init__(*args, **kwargs)
 
+        ds_attrs = {'class': 'form-control', 'placeholder': 'Data source type'}
         self.fields['data_source_name'] = forms.CharField(label='Data source name', max_length=100)
-        self.fields['data_source_name'].widget = forms.TextInput(attrs={'class': 'form-control'})
+        self.fields['data_source_name'].widget = forms.TextInput(attrs=ds_attrs)
 
 
 class DataSourcesForm(BestiaryEditorForm):
@@ -191,10 +193,10 @@ class RepositoryViewForm(BestiaryEditorForm):
         self.fields['repository_view_id'].widget = forms.HiddenInput()
 
         self.fields['repository'] = forms.CharField(label='repository', max_length=100, required=False)
-        self.fields['repository'].widget = forms.TextInput(attrs={'class': 'form-control'})
+        self.fields['repository'].widget = forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'URL'})
 
         self.fields['params'] = forms.CharField(label='params', max_length=100, required=False)
-        self.fields['params'].widget = forms.TextInput(attrs={'class': 'form-control'})
+        self.fields['params'].widget = forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Params'})
 
         choices = ()
 
@@ -212,8 +214,9 @@ class RepositoryViewForm(BestiaryEditorForm):
         choices = sorted(choices, key=lambda x: x[1])
 
         self.widget = forms.Select(attrs={'class': 'form-control'})
-        self.fields['data_source'] = forms.ChoiceField(label='Data Source',
-                                                       widget=self.widget, choices=choices)
+        self.fields['data_source'] = forms.CharField(label='Data Source',
+                                                     max_length=100, required=False)
+        self.fields['data_source'].widget = forms.HiddenInput(attrs={'class': 'form-control', 'readonly': 'True'})
 
         self.fields['project'] = forms.CharField(label='project', max_length=100, required=False)
-        self.fields['project'].widget = forms.TextInput(attrs={'class': 'form-control', 'readonly': 'True'})
+        self.fields['project'].widget = forms.HiddenInput(attrs={'class': 'form-control', 'readonly': 'True'})

@@ -21,5 +21,5 @@ urlpatterns = [
     url(r'^status/$', views.status),
     url(r'^status_select_ecosystem$', views.status_select_ecosystem),
     url(r'^status_select_project$', views.status_select_project),
-    url(r'^$', views.viewer, name='index'),
+    url(r'^$', views.editor, name='index'),
 ]

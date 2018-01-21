@@ -56,6 +56,7 @@ class EditorState():
         The state needs to be serialized so it can be used in
         forms fields.
         """
+
         initial = {
             'eco_name_state': self.eco_name,
             'projects_state': ";".join(self.projects),
@@ -135,7 +136,7 @@ def build_forms_context(state=None):
     add_eco_form = forms.EcosystemForm(state=state)
     projects_form = forms.ProjectsForm(state=state)
     project_form = forms.ProjectForm(state=state)
-    project_remove_form = None
+    project_remove_form = forms.ProjectForm(state=state)
     data_source_form = forms.DataSourceForm(state=state)
     data_sources_form = forms.DataSourcesForm(state=state)
     repository_views_form = forms.RepositoryViewsForm(state=state)
@@ -242,8 +243,12 @@ def add_ecosystem(request):
         form = forms.EcosystemForm(request.POST)
         if form.is_valid():
             ecosystem_name = form.cleaned_data['ecosystem_name']
-            eco_orm = Ecosystem(name=ecosystem_name)
-            eco_orm.save()
+
+            try:
+                eco_orm = Ecosystem.objects.get(name=ecosystem_name)
+            except Ecosystem.DoesNotExist:
+                eco_orm = Ecosystem(name=ecosystem_name)
+                eco_orm.save()
 
             # Select and ecosystem reset the state. Don't pass form=form
             return shortcuts.render(request, 'projects/editor.html',
@@ -268,7 +273,12 @@ def add_repository_view(request):
             # Don't support multiselect in projects yet
             project = form.cleaned_data['projects_state']
             # Adding a new repository view
-            data_source_orm = DataSource.objects.get(name=data_source)
+            try:
+                data_source_orm = DataSource.objects.get(name=data_source)
+            except DataSource.DoesNotExist:
+                data_source_orm = DataSource(name=data_source)
+                data_source_orm.save()
+
             # Try to find a repository already created
             try:
                 repository_orm = Repository.objects.get(name=repository, data_source=data_source_orm)
@@ -473,25 +483,6 @@ def add_project(request):
         # TODO: Show error
         return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
-##
-# viewer page
-##
-
-
-def viewer(request):
-    template = loader.get_template('projects/project.html')
-    eco_form = forms.EcosystemsForm(state=None)
-    project = None
-    if (request.GET.get('project')):
-        project = request.GET.get('project')
-    context = find_project_repository_views(project)
-    context.update(find_projects())
-    context.update(find_project_data_sources(project))
-    context['project_selected'] = project
-    context['ecosystems_form'] = eco_form
-    render_viewer = template.render(context, request)
-    return HttpResponse(render_viewer)
-
 
 def find_project_repository_views(project):
 
@@ -558,7 +549,7 @@ def import_from_file(request):
 
     if request.method == "POST":
         myfile = request.FILES["imported_file"]
-        ecosystem = request.POST["ecosystem"]
+        ecosystem = request.POST["name"]
         cur_dt = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         file_name = "%s_%s.json" % (ecosystem, cur_dt)
         fpath = '.imported/' + file_name  # FIXME Define path where all these files must be saved
@@ -575,13 +566,13 @@ def import_from_file(request):
         print("Projects loaded", nprojects)
         print("Repositories loaded", nrepos)
 
-    return viewer(request)
+    return editor(request)
 
 
 def export_to_file(request, ecosystem=None):
 
     if (request.method == "GET") and (not ecosystem):
-        return viewer(request)
+        return editor(request)
 
     if request.method == "POST":
         ecosystem = request.POST["name"]
@@ -609,4 +600,4 @@ def export_to_file(request, ecosystem=None):
         error_msg = "There are no projects to export"
         return return_error(error_msg)
 
-    return viewer(request)
+    return editor(request)

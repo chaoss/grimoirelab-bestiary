@@ -9,166 +9,391 @@
 
 {% block body %}
 
+<!-- Editor modals -->
 
-
-<div class="row">
-  <div class="col-sm">
-    <div><h1>Bestiary Editor</h1></div>
+<div class="container-fluid">
+  <!-- Modal: Import -->
+  <div class="modal fade" id="importModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <form id="ecosystem_import" method="POST" action="/projects/import/" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-header">
+                <div class="modal-title">
+                    Import projects file
+                </div>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                    <div class="input-group">
+                       <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                           {{ ecosystems_form.name }}
+                     </div>
+                     <div class="input-group">
+                       <span class="input-group-addon"><i class="fa fa-arrow-circle-o-up"></i></span>
+                       <input type="file" name="imported_file" placeholder="Select JSON file" accept="application/json" required=True class="form-control">
+                     </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Import</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </form>
+          </div>
+      </div>
   </div>
+
+  <!-- Modal: Download -->
+  <div class="modal fade" id="exportModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <form id="ecosystem_download" method="POST" action="/projects/export/" enctype="multipart/form-data">{% csrf_token %}
+            <div class="modal-header">
+              <div class="modal-title">Download projects file</div>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                        {{ ecosystems_form.name }}
+                    </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Download</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- Modal: Add ecosystem -->
+    <div class="modal fade" id="addEcosystemModal" role="dialog">
+        <div class="modal-dialog">
+        <!-- Modal content-->
+            <div class="modal-content">
+              <form action="/add_ecosystem" method="post">
+                  {% csrf_token %}
+              <div class="modal-header">
+                <div class="modal-title">Add ecosystem</div>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+              </div>
+              <div class="modal-body">
+                  <div class="input-group">
+                      <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                      {{ ecosystem_form.ecosystem_name }}
+                  </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Add</button>
+              </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+  <!-- Modal: Add project -->
+  <div class="modal fade" id="addProjectModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <div class="modal-header">
+                <form>
+                    <div class="modal-title">Add project for <strong>{{ ecosystems_form.initial.name }}</strong></div>
+                </form>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="/add_project" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% for field in project_form.state_fields %}
+                      {{ field }}
+                    {% endfor %}
+                    {{ project_form.name.errors }}
+                <div class="input-group">
+                    <span class="input-group-addon"><i class="fa fa-suitcase"></i></span>
+                    {{ project_form.project_name }}
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Add project</button>
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+          </form>
+          </div>
+      </div>
+  </div>
+
+  <!-- Modal: Add data source -->
+  <div class="modal fade" id="DSModal" role="dialog">
+      <div class="modal-dialog">
+      <!-- Modal content-->
+          <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                {% for field in repository_view_form.state_fields %}
+                  {{ field }}
+                {% endfor %}
+                {{ repository_view_form.repository_view_id }}
+                {{ repository_view_form.name.errors }}
+            <div class="modal-header">
+              <div class="modal-title">Data source for <strong>{{ projects_form.initial.name }}</strong> in <strong>{{ ecosystems_form.initial.name }}</strong></div>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label">Type:</label>
+                    <div class="col-sm-10">
+                        <select id="selected_ds_rv_modal" class="form-control" onclick='document.getElementById("id_data_source").value = this.value;'>
+                            <option disabled selected value> Select data source </option>
+                            <option>askbot</option>
+                            <option>bugzilla</option>
+                            <option>bugzillarest</option>
+                            <option>confluence</option>
+                            <option>discourse</option>
+                            <option>dockerhub</option>
+                            <option>gerrit</option>
+                            <option>git</option>
+                            <option>github</option>
+                            <option>gmane</option>
+                            <option>hyperkitty</option>
+                            <option>jenkins</option>
+                            <option>jira</option>
+                            <option>launchpad</option>
+                            <option>mbox</option>
+                            <option>mediawiki</option>
+                            <option>meetup</option>
+                            <option>nntp</option>
+                            <option>phabricator</option>
+                            <option>pipermail</option>
+                            <option>redmine</option>
+                            <option>rss</option>
+                            <option>slack</option>
+                            <option>stackexchange</option>
+                            <option>supybot</option>
+                            <option>telegram</option>
+                            <option>twitter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group"> {{ repository_view_form.data_source }}</div>
+                <div class="input-group">
+                  <span class="input-group-addon"><i class="fa fa-external-link"></i></span>
+                  {{ repository_view_form.repository }}
+                </div>
+                <div class="input-group">
+                    <span class="input-group-addon"><i class="fa fa-cogs"></i></span>
+                    {{ repository_view_form.params }}
+                </div>
+                <div class="input-group"> <!-- Hidden field with selected project -->
+                    {{ repository_view_form.project }}
+                </div>
+                </div>
+            <div class="modal-footer">
+                <div class="form-actions pull-right">
+                    <div class="input-group">
+                        <div id="add-btn-group-rv_modal" class="button-group">
+                            <button type="submit" formaction='/add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
+                        </div>
+                        <div id="edit-btn-group-rv_modal" class="button-group">
+                            <button type="submit" formaction="/update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
+                            <button type="submit" formaction='/remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </form>
+          </div>
+      </div>
+  </div>
+
 </div>
 
-<div class="row">
-  <div class="col-sm">
-    <form action="/editor_select_ecosystem" method="post">
-      {% csrf_token %}
-      {% for field in ecosystems_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ ecosystems_form.name.errors }}
-      <div class="form-group row">
-        <div class="col-sm-7">
-          {{ ecosystems_form.name }}
-        </div>
-        <div class="col-sm-5">
-          <button type="submit" class="btn btn-primary">Select Ecosystem</button>
-        </div>
-      </div>
-    </form>
-  </div>
-  <div class="col-sm">
-    <form action="/add_ecosystem" method="post">
-        {% csrf_token %}
-        <div class="form-group row">
-            <div class="col-sm-4">{{ ecosystem_form.ecosystem_name }}</div>
-            <div class="col-sm-3"><input type="submit" value="Add ecosystem" class="form-control"></div>
-        </div>
-      </form>
-  </div>
-</div>
+<!-- Main body -->
+    <div class="container-fluid">
 
-<div class="row">
-  <!-- Main row with the four columns for the editor -->
-  <div class="col-sm-2">
-    <form action="/editor_select_project" method="post">
-      {% csrf_token %}
-      {% for field in projects_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ projects_form.name.errors }}
-      <div class="form-group">
-        {{ projects_form.name }}
-      </div>
-      <div class="form-group">
-        <button type="submit" class="btn btn-primary">Select Project</button>
-      </div>
-    </form>
-    <form action="/add_project" method="post">
-      {% csrf_token %}
-      {% for field in project_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ project_form.name.errors }}
-      <div class="form-group row">
-        <div class="col-sm-7">{{ project_form.project_name }}</div>
-        <div class="col-sm-5"><button type="submit" class="form-control">Add project</a></div>
-      </div>
-    </form>
-    <form action="/remove_project" method="post">
-      {% csrf_token %}
-      {% for field in project_remove_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ project_remove_form.name.errors }}
-      <div class="form-group">
-        <div>{{ project_remove_form.project_name }}</div>
-        <button type="submit" class="form-control">Remove project</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="col-sm-2">
-    <form action="/select_data_source" method="post">
-      {% csrf_token %}
-      {% for field in data_sources_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ data_sources_form.name.errors }}
-      <div class="form-group">
-        {{ data_sources_form.name }}
-      </div>
-      <div class="form-group">
-        <button type="submit" class="btn btn-primary">Select Data Source</button>
-      </div>
-      </form>
-      <form action="/add_data_source" method="post">
-        {% csrf_token %}
-      <div class="form-group row">
-        <div class="col-sm-7">{{ data_source_form.data_source_name }}</div>
-        <div class="col-sm-5"><input type="submit" value="Add data source type" class="form-control"></div>
-      </div>
-      <div class="form-group">
-        <input type="button" value="Remove data source" class="form-control">
-      </div>
-    </form>
-  </div>
-
-  <div class="col-sm-3">
-    <form action="/select_repository_view" method="post">
-      {% csrf_token %}
-      {% for field in repository_views_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ repository_views_form.name.errors }}
-      <div class="form-group">
-        {{ repository_views_form.id }}
-      </div>
-      <div class="form-group">
-        <button type="submit" class="btn btn-primary">Select Repo View</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="col-sm-5">
-    <h4>Repository View</h4>
-    <form  method="post">
-      {% csrf_token %}
-      {% for field in repository_view_form.state_fields %}
-        {{ field }}
-      {% endfor %}
-      {{ repository_view_form.repository_view_id }}
-      {{ repository_view_form.name.errors }}
-      <div class="form-group row">
-        <label class="col-sm-4 col-form-label">Repository</label>
-        <div class="col-sm-8">{{ repository_view_form.repository }}</div>
-      </div>
-      <div class="form-group row">
-        <label class="col-sm-4 col-form-label">Params</label>
-        <div class="col-sm-8">{{ repository_view_form.params }}</div>
-      </div>
-      <div class="form-group row">
-        <label class="col-sm-4 col-form-label">Data Source</label>
-        <div class="col-sm-8">{{ repository_view_form.data_source }}</div>
-      </div>
-      <div class="form-group row">
-        <label class="col-sm-4 col-form-label">Project</label>
-        <div class="col-sm-8">{{ repository_view_form.project }}</div>
-      </div>
-      <div class="form-group row">
-        <div class="col-sm-4">
-          <button type="submit" formaction='/add_repository_view' class="btn btn-primary">Add</button>
+      <div class="row" style="margin-top: 1%;">
+        <div class="col-sm-6">
+            <div class="row">
+                <span><h1>Ecosystem: </h1></span>
+                <span style="margin-left:2%;">
+                    <form action="/editor_select_ecosystem" method="post">
+                      {% csrf_token %}
+                      {% for field in ecosystems_form.state_fields %}
+                        {{ field }}
+                      {% endfor %}
+                      {{ ecosystems_form.name.errors }}
+                      <div class="input-group-lg">
+                          {{ ecosystems_form.name }}
+                      </div>
+                  </form>
+                </span>
+                <span style="margin-left: 1%;">
+                    <button type="submit" class="btn-lg btn-primary" data-toggle="modal" data-target="#addEcosystemModal"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> ecosystem</span></button>
+                </span>
+            </div>
         </div>
         <div class="col-sm-4">
-          <button type="submit" formaction="/update_repository_view" class="btn btn-primary">Update</button>
+        </div>
+        <div class="col-sm-2">
+            <div class="button-group">
+                <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#importModal"><span><i class="fa fa-upload"></i></span> Import<span class="sr-only">  Projects File</span></button>
+                <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#exportModal"><span><i class="fa fa-download"></i></span> Download<span class="sr-only">  Projects File</span></button>
+            </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 3%;">
+        <div class="col-sm-2">
+          <div class="row">
+            <div class="col-sm-8">
+              <h2>Projects</h2>
+            </div>
+            <div class="col-sm-4">
+              <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#addProjectModal"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> project</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-2">
+            <h2>Data Sources</h2>
+        </div>
+        <div class="col-sm-6">
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary" onclick="showAddButtons();"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> repository view</span></button>
+                <button type="submit" class="btn btn-primary" onclick="showEditButtons();"><span><i class="fa fa-pencil"></i> Edit<span class="sr-only"> repository view</span></button>
+            </div>
+        </div>
+        <div class="col-sm-2">
+          <h2>Scope</h2>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 20px;">
+        <div class="col-sm-2">
+          <form action="/editor_select_project" method="post">
+            {% csrf_token %}
+            {% for field in projects_form.state_fields %}
+              {{ field }}
+            {% endfor %}
+            {{ projects_form.name.errors }}
+            <div class="form-group form-group-lg">
+              {{ projects_form.name }}
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary"><span><i class="fa fa-check"></i></span> Select <span class="sr-only"> project</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="col-sm-2">
+          <form action="/select_data_source" method="post">
+            {% csrf_token %}
+            {% for field in data_sources_form.state_fields %}
+              {{ field }}
+            {% endfor %}
+            {{ data_sources_form.name.errors }}
+            <div class="form-group">
+              {{ data_sources_form.name }}
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> data source type</span></button>
+            </div>
+            </form>
+        </div>
+        <div class="col-sm-6">
+          <form action="/select_repository_view" method="post">
+            {% csrf_token %}
+            {% for field in repository_views_form.state_fields %}
+              {{ field }}
+            {% endfor %}
+            {{ repository_views_form.name.errors }}
+            <div class="form-group">
+              {{ repository_views_form.id }}
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> Repo View<span></button>
+            </div>
+          </form>
+        </div>
+        <div class="col-sm-2">
+          <table class="table table-hover">
+            <tbody>
+              <tr>
+                <td>Projects</td>
+                <td>{{ projects_form.name|length }}</td>
+              </tr>
+              <tr>
+                <td>Data Sources</td>
+                <td>{{ data_sources_form.name|length }}</td>
+              </tr>
+              <tr>
+                <td>Repository Views</td>
+                <td>{{ repository_views_form.id|length }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 20px;">
+        <div class="col-sm-2">
+                <form action="/remove_project" method="post">
+                  {% csrf_token %}
+                  {% for field in project_remove_form.state_fields %}
+                    {{ field }}
+                  {% endfor %}
+                  {{ project_remove_form.name.errors }}
+                    <div class="input-group">
+                        {{ project_remove_form.project_name }}
+                        <button type="submit" class="btn btn-danger"><span><i class="fa fa-trash-o"></i></span> Remove<span class="sr-only"> project</span></button>
+                    </div>
+
+                </form>
         </div>
         <div class="col-sm-4">
-          <button type="submit" formaction='/remove_repository_view' class="btn btn-primary">Remove</button>
+        </div>
+        <div class="col-sm-3">
+        </div>
+        <div class="col-sm-3">
         </div>
       </div>
-      </div>
-    </form>
-  </div>
-</div>
+    </div>
 
+
+<script>
+
+// Disable "onclick" event when selecting an ecosystem on
+// Import and Download modals.
+eco_download_form = document.getElementById("ecosystem_download");
+eco_download_form["name"].removeAttribute("onclick");
+eco_download_form = document.getElementById("ecosystem_import");
+eco_download_form["name"].removeAttribute("onclick");
+
+// Copy the value from selected data source for update state into
+// Add/Edit RepositoryView modals.
+selected_repo = document.getElementById("id_repository").value;
+current_ds_state = document.getElementById("id_data_sources_state").value;
+
+document.getElementById("selected_ds_rv_modal").value = current_ds_state;
+document.getElementById("id_data_source").value = current_ds_state;
+
+// Functions to show/hide buttons on modals depending on the action.
+function showAddButtons() {
+    document.getElementById("add-btn-group-rv_modal").style.display = "block";
+    document.getElementById("edit-btn-group-rv_modal").style.display = "none";
+    $('#DSModal').modal('show');
+}
+
+function showEditButtons(){
+    document.getElementById("add-btn-group-rv_modal").style.display = "none";
+    document.getElementById("edit-btn-group-rv_modal").style.display = "block";
+    $('#DSModal').modal('show');
+}
+
+
+</script>
 
 {% endblock %}
 {% endwith  %}
