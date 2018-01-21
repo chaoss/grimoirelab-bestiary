@@ -16,7 +16,7 @@
 
 <div class="container-fluid">
   <div class="row">
-    <!-- LEFT COLUMN: Ecosystem and Projects selectors -->
+    <!-- LEFT COLUMN: Ecosystem and Projects selectors, Arthur + Redis info -->
     <div class="col-sm-2">
       <div class="row">
         <form action="./status_select_ecosystem" method="post">
@@ -47,6 +47,15 @@
             <button type="submit" class="btn btn-primary">Select Project</button>
           </div>
         </form>
+      </div>
+      <div class="row">
+        <div class="container" id='services_status'>
+          <p class="h6">Arthur tasks: {{arthur_tasks}}</p>
+          <p class="h6">Queued tasks: {{queued_tasks}}</p>
+          <p class="h6">Running tasks: {{running_tasks}}</p>
+          <p class="h6">Waiting tasks: {{waiting_tasks}}</p>
+          <p class="h6">Redis items: {{redis_items}}</p>
+        </div>
       </div>
     </div>
     <!-- RIGHT COLUMN: ReposityView status viewer -->
