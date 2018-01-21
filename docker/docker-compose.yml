@@ -55,9 +55,11 @@ mariadb:
         - MYSQL_ALLOW_EMPTY_PASSWORD=yes
 
 bestiary:
-  image: acsdocker/bestiary
-  # links:
-  #      - mariadb
+  image: acsdocker/bestiary:status-panel-docker
+  # image: acsdocker/bestiary
+  links:
+        - redis
+        - arthur
   ports:
         - 8000:8000
 
