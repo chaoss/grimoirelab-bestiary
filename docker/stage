@@ -3,7 +3,9 @@
 echo "Running Bestiary"
 
 git clone https://github.com/acs/bestiary.git
-cd bestiary/django_bestiary
+cd bestiary
+git checkout status-panel
+cd django_bestiary
 
 # Create the data models
 python3 manage.py makemigrations
