@@ -106,6 +106,9 @@ class RepositoryViewsData():
             projects = Project.objects.filter(name__in=self.state.projects)
             for project in projects:
                 for view in project.repository_views.all():
+                    if self.state.data_sources:
+                        if view.repository.data_source.name not in self.state.data_sources:
+                            continue
                     yield view
         elif self.state.data_sources:
             for view in RepositoryView.objects.all():
