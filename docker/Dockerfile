@@ -43,6 +43,10 @@ RUN pip3 install setuptools
 RUN pip3 install django
 RUN pip3 install gunicorn
 RUN pip3 install grimoire-elk
+RUN pip3 install requests
+RUN pip3 install redis
+RUN pip3 install rq
+RUN pip3 install kingarthur
 
 ADD stage ${DEPLOY_USER_DIR}/stage
 RUN chmod 755 ${DEPLOY_USER_DIR}/stage
