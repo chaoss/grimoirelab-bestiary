@@ -21,7 +21,7 @@ kibiter:
     - ELASTICSEARCH_USER=bitergia
     - ELASTICSEARCH_PASSWORD=bitergia
     - PROJECT_NAME=Test20
-    - NODE_OPTIONS=--max-old-space-size=1000
+    - NODE_OPTIONS=--max-old-space-size=1200
 
 redis:
   image: redis:latest
