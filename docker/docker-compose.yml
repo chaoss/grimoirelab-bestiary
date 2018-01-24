@@ -26,6 +26,8 @@ kibiter:
 redis:
   image: redis:latest
   command: redis-server --save "" --appendonly no
+  ports:
+        - 6379:6379
 
 arthur:
   image: acsdocker/arthur
