@@ -42,6 +42,7 @@ ENV LANG C.UTF-8
 RUN pip3 install setuptools
 RUN pip3 install django
 RUN pip3 install gunicorn
+RUN pip3 install grimoire-elk
 
 ADD stage ${DEPLOY_USER_DIR}/stage
 RUN chmod 755 ${DEPLOY_USER_DIR}/stage
