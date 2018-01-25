@@ -61,8 +61,8 @@ mariadb:
 
 bestiary:
   image: acsdocker/bestiary
-  links:
-        - mariadb
+  # links:
+  #      - mariadb
   ports:
         - 8000:8000
 
