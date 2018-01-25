@@ -52,9 +52,12 @@ mordred:
 
 mariadb:
     image: mariadb:10.0
+    command: --wait_timeout=2592000 --interactive_timeout=2592000 --max_connections=300
     environment:
         - MYSQL_ROOT_PASSWORD=
         - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+    ports:
+        - 3306:3306
 
 bestiary:
   image: acsdocker/bestiary
@@ -62,8 +65,6 @@ bestiary:
         - mariadb
   ports:
         - 8000:8000
-  # volumes:
-    # - ./stage:/home/meditor/stage
 
 hatstall:
   image: acsdocker/hatstall
