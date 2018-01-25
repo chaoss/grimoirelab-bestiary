@@ -1,4 +1,5 @@
 from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
+from grimoire_elk import utils as gelk_utils
 
 
 class DataSourcesData():
@@ -26,7 +27,9 @@ class DataSourcesData():
     def fetch(self):
 
         if not self.state or self.state.is_empty():
-            for data_source in DataSource.objects.all():
+            supported_data_sources = list(gelk_utils.get_connectors())
+            for data_source_name in supported_data_sources:
+                data_source = DataSource(name=data_source_name)
                 yield data_source
         elif self.state.data_sources:
             data_sources = DataSource.objects.filter(name__in=self.state.data_sources)

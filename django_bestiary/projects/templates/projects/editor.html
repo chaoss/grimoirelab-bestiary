@@ -143,43 +143,7 @@
               <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-
-                <div class="form-group row">
-                    <label class="col-sm-2 col-form-label">Type:</label>
-                    <div class="col-sm-10">
-                        <select id="selected_ds_rv_modal" class="form-control" onclick='document.getElementById("id_data_source").value = this.value;'>
-                            <option disabled selected value> Select data source </option>
-                            <option>askbot</option>
-                            <option>bugzilla</option>
-                            <option>bugzillarest</option>
-                            <option>confluence</option>
-                            <option>discourse</option>
-                            <option>dockerhub</option>
-                            <option>gerrit</option>
-                            <option>git</option>
-                            <option>github</option>
-                            <option>gmane</option>
-                            <option>hyperkitty</option>
-                            <option>jenkins</option>
-                            <option>jira</option>
-                            <option>launchpad</option>
-                            <option>mbox</option>
-                            <option>mediawiki</option>
-                            <option>meetup</option>
-                            <option>nntp</option>
-                            <option>phabricator</option>
-                            <option>pipermail</option>
-                            <option>redmine</option>
-                            <option>rss</option>
-                            <option>slack</option>
-                            <option>stackexchange</option>
-                            <option>supybot</option>
-                            <option>telegram</option>
-                            <option>twitter</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group"> {{ repository_view_form.data_source }}</div>
+                <div class="input-group"><span class="input-group-addon">Data source type</span>{{ repository_view_form.data_source }}</div>
                 <div class="input-group">
                   <span class="input-group-addon"><i class="fa fa-external-link"></i></span>
                   {{ repository_view_form.repository }}
@@ -370,14 +334,6 @@ eco_download_form = document.getElementById("ecosystem_download");
 eco_download_form["name"].removeAttribute("onclick");
 eco_download_form = document.getElementById("ecosystem_import");
 eco_download_form["name"].removeAttribute("onclick");
-
-// Copy the value from selected data source for update state into
-// Add/Edit RepositoryView modals.
-selected_repo = document.getElementById("id_repository").value;
-current_ds_state = document.getElementById("id_data_sources_state").value;
-
-document.getElementById("selected_ds_rv_modal").value = current_ds_state;
-document.getElementById("id_data_source").value = current_ds_state;
 
 // Functions to show/hide buttons on modals depending on the action.
 function showAddButtons() {
