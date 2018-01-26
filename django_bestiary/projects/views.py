@@ -475,8 +475,9 @@ def add_project(request):
                 eco_orm = Ecosystem.objects.get(name=eco_name)
                 eco_orm.projects.add(project_orm)
                 eco_orm.save()
+            context = EditorState(projects=[project_name], form=form)
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(form=form)))
+                                    build_forms_context(context))
         else:
             # TODO: Show error
             raise Http404
@@ -568,7 +569,7 @@ def import_from_file(request):
         print("Projects loaded", nprojects)
         print("Repositories loaded", nrepos)
 
-    return editor(request)
+    return editor_select_ecosystem(request)
 
 
 def export_to_file(request, ecosystem=None):
