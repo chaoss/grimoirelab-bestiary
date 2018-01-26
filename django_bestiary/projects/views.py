@@ -112,6 +112,9 @@ def select_ecosystem(request, template, context=None):
         form = forms.EcosystemsForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
+            if not name:
+                # TODO: Show error when ecosystem name is empty
+                return shortcuts.render(request, template, build_forms_context())
             # Select and ecosystem reset the state. Don't pass form=form
             state = build_forms_context(EditorState(eco_name=name))
             if context:
@@ -120,9 +123,8 @@ def select_ecosystem(request, template, context=None):
                 context = build_forms_context(EditorState(eco_name=name))
             return shortcuts.render(request, template, context)
         else:
-            # TODO: Show error
-            print("FORM errors", form.errors)
-            raise Http404
+            # Ignore when the empty option is selected
+            return shortcuts.render(request, template, build_forms_context())
     # if a GET (or any other method) we'll create a blank form
     else:
         # TODO: Show error
