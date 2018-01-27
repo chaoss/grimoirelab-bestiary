@@ -26,15 +26,11 @@ kibiter:
 redis:
   image: redis:latest
   command: redis-server --save "" --appendonly no
-  ports:
-        - 6379:6379
 
 arthur:
   image: acsdocker/arthur
   links:
         - redis
-  ports:
-        - 8080:8080
 
 mordred:
   image: bitergia/mordred:elasticgirl.29
@@ -56,8 +52,6 @@ mariadb:
     environment:
         - MYSQL_ROOT_PASSWORD=
         - MYSQL_ALLOW_EMPTY_PASSWORD=yes
-    ports:
-        - 3306:3306
 
 bestiary:
   image: acsdocker/bestiary
