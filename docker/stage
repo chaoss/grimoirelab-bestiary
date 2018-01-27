@@ -13,7 +13,7 @@ python3 manage.py migrate
 PYTHONPATH=. django_bestiary/create_admin_superuser.py
 
 # Import some projects files as samples
-PYTHONPATH=. projects/bestiary_import.py -o Release -f projects/projects-release.json 
+# PYTHONPATH=. projects/bestiary_import.py -o Release -f projects/projects-release.json 
 
 # Run the MEditor service
 # python3 manage.py runserver 0.0.0.0:8000
