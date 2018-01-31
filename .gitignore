@@ -11,3 +11,10 @@ __pycache__
 .project
 .pydevproject
 .settings
+
+# Virtual env files and directories
+bin
+lib
+lib64
+share
+pyvenv.cfg
