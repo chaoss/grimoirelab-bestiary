@@ -19,7 +19,7 @@
     <!-- LEFT COLUMN: Ecosystem and Projects selectors -->
     <div class="col-sm-2">
       <div class="row">
-        <form action="/status_select_ecosystem" method="post">
+        <form action="./status_select_ecosystem" method="post">
           {% csrf_token %}
           {% for field in ecosystems_form.state_fields %}
             {{ field }}
@@ -34,7 +34,7 @@
         </form>
       </div>
       <div class="row">
-        <form action="/status_select_project" method="post">
+        <form action="./status_select_project" method="post">
           {% csrf_token %}
           {% for field in projects_form.state_fields %}
             {{ field }}
