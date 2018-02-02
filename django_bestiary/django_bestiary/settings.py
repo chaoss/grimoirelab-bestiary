@@ -55,7 +55,7 @@ ROOT_URLCONF = 'django_bestiary.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['django_bestiary/templates', 'projects/templates'],
+        'DIRS': ['django_bestiary/templates', 'projects/templates', 'custodian/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
