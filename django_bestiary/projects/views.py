@@ -8,7 +8,7 @@ from time import time
 import requests
 
 import redis
-from rq import Queue, use_connection
+from rq import Queue, Worker, use_connection
 from rq.job import Job, JobStatus
 from arthur.common import Q_STORAGE_ITEMS, Q_CREATION_JOBS, Q_UPDATING_JOBS
 
@@ -107,6 +107,28 @@ class ServicesState():
                 tasks += 1
         return tasks
 
+    def list_rq_queues(self):
+        queues = []
+        use_connection(self.redis_con)
+        for queue in Queue.all():
+            queues.append(queue.name)
+        print(queues)
+        return queues
+
+    def list_rq_workers(self):
+        workers = []
+        use_connection(self.redis_con)
+        for worker in Worker.all():
+            workers.append(worker.name)
+        return workers
+
+    def list_rq_workers_state(self):
+        states = []
+        use_connection(self.redis_con)
+        for worker in Worker.all():
+            states.append(worker.get_state())
+        return states
+
     def collect_redis_items(self):
         pipe = self.redis_con.pipeline()
         pipe.lrange(Q_UPDATING_JOBS, 0, -1)
@@ -133,6 +155,9 @@ class ServicesState():
         waiting_tasks = arthur_tasks - rq_tasks - running_tasks
         return {
            "arthur_tasks": arthur_tasks,
+           "queues_list": ",".join(self.list_rq_queues()),
+           "workers_list": self.list_rq_workers(),
+           "workers_status": self.list_rq_workers_state(),
            "queued_tasks": rq_tasks,
            "running_tasks": running_tasks,
            "waiting_tasks": waiting_tasks,
