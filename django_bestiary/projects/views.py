@@ -1,6 +1,5 @@
 import functools
 import json
-import pickle
 
 from datetime import datetime
 from time import time
@@ -18,8 +17,6 @@ from django.http import Http404
 
 from projects.bestiary_import import load_projects
 from projects.models import DataSource, Ecosystem, Project, Repository, RepositoryView
-
-from grimoirelab.toolkit.datetime import unixtime_to_datetime
 
 from . import forms
 from . import data
