@@ -33,10 +33,11 @@ arthur:
         - redis
 
 mordred:
-  image: bitergia/mordred:elasticgirl.29
+  image: bitergia/mordred:elasticgirl.30
   links:
     - arthur
     - bestiary
+    - hatstall
     - elasticsearch
     - kibiter
     - mariadb
