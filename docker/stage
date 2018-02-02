@@ -1,9 +1,11 @@
 #!/bin/bash
 
-echo "Running Bestiary"
+echo "Running Custodian"
 
 git clone https://github.com/acs/bestiary.git
-cd bestiary/django_bestiary
+cd bestiary
+git checkout custodian
+cd django_bestiary
 
 # Create the data models
 python3 manage.py makemigrations
