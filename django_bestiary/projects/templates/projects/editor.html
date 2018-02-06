@@ -37,7 +37,6 @@
             </div>
             <div class="modal-footer">
               <button type="submit" class="btn btn-primary">Import</button>
-              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
           </form>
           </div>
@@ -62,7 +61,6 @@
             </div>
             <div class="modal-footer">
               <button type="submit" class="btn btn-primary">Download</button>
-              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
             </div>
           </form>
           </div>
@@ -99,29 +97,32 @@
       <div class="modal-dialog">
       <!-- Modal content-->
           <div class="modal-content">
-            <div class="modal-header">
-                <form>
-                    <div class="modal-title">Add project for <strong>{{ ecosystems_form.initial.name }}</strong></div>
-                </form>
-              <button type="button" class="close" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form action="./add_project" method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {% for field in project_form.state_fields %}
-                      {{ field }}
-                    {% endfor %}
-                    {{ project_form.name.errors }}
-                <div class="input-group">
-                    <span class="input-group-addon"><i class="fa fa-suitcase"></i></span>
-                    {{ project_form.project_name }}
+                <div class="modal-header">
+                    <form>
+                        <div class="modal-title">Add project for <strong>{{ ecosystems_form.initial.name }}</strong></div>
+                    </form>
+                  <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
-            </div>
-            <div class="modal-footer">
-              <button type="submit" class="btn btn-primary">Add project</button>
-              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-          </form>
+                <div class="container">
+                    <form action="./add_project" method="post" enctype="multipart/form-data">
+                        <fieldset id="add-project">
+                            <div class="modal-body">
+                                {% csrf_token %}
+                                {% for field in project_form.state_fields %}
+                                  {{ field }}
+                                {% endfor %}
+                                {{ project_form.name.errors }}
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-suitcase"></i></span>
+                                    {{ project_form.project_name }}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="submit" class="btn btn-primary">Add project</button>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
           </div>
       </div>
   </div>
@@ -132,43 +133,45 @@
       <!-- Modal content-->
           <div class="modal-content">
             <form method="post">
-                {% csrf_token %}
-                {% for field in repository_view_form.state_fields %}
-                  {{ field }}
-                {% endfor %}
-                {{ repository_view_form.repository_view_id }}
-                {{ repository_view_form.name.errors }}
-            <div class="modal-header">
-              <div class="modal-title">Data source for <strong>{{ projects_form.initial.name }}</strong> in <strong>{{ ecosystems_form.initial.name }}</strong></div>
-              <button type="button" class="close" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group"><span class="input-group-addon">Data source type</span>{{ repository_view_form.data_source }}</div>
-                <div class="input-group">
-                  <span class="input-group-addon"><i class="fa fa-external-link"></i></span>
-                  {{ repository_view_form.repository }}
+                <fieldset id="add-data-source">
+                    {% csrf_token %}
+                    {% for field in repository_view_form.state_fields %}
+                      {{ field }}
+                    {% endfor %}
+                    {{ repository_view_form.repository_view_id }}
+                    {{ repository_view_form.name.errors }}
+                <div class="modal-header">
+                  <div class="modal-title">Data source for <strong>{{ projects_form.initial.name }}</strong> in <strong>{{ ecosystems_form.initial.name }}</strong></div>
+                  <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
-                <div class="input-group">
-                    <span class="input-group-addon"><i class="fa fa-cogs"></i></span>
-                    {{ repository_view_form.params }}
-                </div>
-                <div class="input-group"> <!-- Hidden field with selected project -->
-                    {{ repository_view_form.project }}
-                </div>
-                </div>
-            <div class="modal-footer">
-                <div class="form-actions pull-right">
+                <div class="modal-body">
+                    <div class="input-group"><span class="input-group-addon">Data source type</span>{{ repository_view_form.data_source }}</div>
                     <div class="input-group">
-                        <div id="add-btn-group-rv_modal" class="button-group">
-                            <button type="submit" formaction='./add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
-                        </div>
-                        <div id="edit-btn-group-rv_modal" class="button-group">
-                            <button type="submit" formaction="./update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
-                            <button type="submit" formaction='./remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
+                      <span class="input-group-addon"><i class="fa fa-external-link"></i></span>
+                      {{ repository_view_form.repository }}
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-addon"><i class="fa fa-cogs"></i></span>
+                        {{ repository_view_form.params }}
+                    </div>
+                    <div class="input-group"> <!-- Hidden field with selected project -->
+                        {{ repository_view_form.project }}
+                    </div>
+                    </div>
+                <div class="modal-footer">
+                    <div class="form-actions pull-right">
+                        <div class="input-group">
+                            <div id="add-btn-group-rv_modal" class="button-group">
+                                <button type="submit" formaction='./add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
+                            </div>
+                            <div id="edit-btn-group-rv_modal" class="button-group">
+                                <button type="submit" formaction="./update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
+                                <button type="submit" formaction='./remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </fieldset>
           </form>
           </div>
       </div>
@@ -194,19 +197,21 @@
           </form>
         </div>
         <div class="col-md-5">
-          
+
         </div>
         <div class="col-md-3">
-          <div class="button-group text-right">
+          <div class="button-group text-right row">
             <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#addEcosystemModal">
               <i class="fa fa-plus"></i> Add <span class="sr-only">ecosystem</span>
             </button>
-            <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#importModal">
-              <i class="fa fa-upload"></i> Import <span class="sr-only">ecosystem</span>
-            </button>
-            <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#exportModal">
-              <i class="fa fa-download"></i> Export <span class="sr-only">ecosystem</span>
-            </button>
+            <fieldset>
+                <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#importModal">
+                  <i class="fa fa-upload"></i> Import <span class="sr-only">ecosystem</span>
+                </button>
+                <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#exportModal">
+                  <i class="fa fa-download"></i> Export <span class="sr-only">ecosystem</span>
+                </button>
+            </fieldset>
           </div>
         </div>
       </div>
@@ -222,7 +227,7 @@
               <h2>Projects</h2>
             </div>
             <div class="col-sm-4">
-              <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#addProjectModal">
+              <button type="submit" class="btn btn-primary" id="add-project-btn" data-toggle="modal" data-target="#addProjectModal">
                 <i class="fa fa-plus"></i> Add<span class="sr-only"> project</span>
               </button>
             </div>
@@ -231,19 +236,21 @@
           <div class="row">
             <div class="col-sm-12">
               <form action="./editor_select_project" method="post">
-                {% csrf_token %}
-                {% for field in projects_form.state_fields %}
-                  {{ field }}
-                {% endfor %}
-                {{ projects_form.name.errors }}
-                <div class="form-group form-group-lg">
-                  {{ projects_form.name }}
-                </div>
-                <div class="form-group">
-                  <button type="submit" class="btn btn-primary">
-                    <i class="fa fa-check"></i> Select <span class="sr-only"> project</span>
-                  </button>
-                </div>
+                <fieldset id="select-project">
+                    {% csrf_token %}
+                    {% for field in projects_form.state_fields %}
+                      {{ field }}
+                    {% endfor %}
+                    {{ projects_form.name.errors }}
+                    <div class="form-group form-group-lg">
+                      {{ projects_form.name }}
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" id="select-project-btn">
+                          <i class="fa fa-check"></i> Select <span class="sr-only"> project</span>
+                        </button>
+                    </div>
+                </fieldset>
               </form>
             </div>
           </div>
@@ -252,16 +259,17 @@
             <div class="col-sm-12">
               <h3>Remove project</h3>
                 <form action="./remove_project" method="post">
-                  {% csrf_token %}
-                  {% for field in project_remove_form.state_fields %}
-                    {{ field }}
-                  {% endfor %}
-                  {{ project_remove_form.name.errors }}
-                    <div class="input-group">
-                        {{ project_remove_form.project_name }}
-                        <button type="submit" class="btn btn-danger"><span><i class="fa fa-trash-o"></i></span> Remove<span class="sr-only"> project</span></button>
-                    </div>
-
+                    <fieldset id="remove-project">
+                      {% csrf_token %}
+                      {% for field in project_remove_form.state_fields %}
+                        {{ field }}
+                      {% endfor %}
+                      {{ project_remove_form.name.errors }}
+                        <div class="input-group">
+                            {{ project_remove_form.project_name }}
+                            <button type="submit" class="btn btn-danger" id="remove-project-btn"><span><i class="fa fa-trash-o"></i></span> Remove<span class="sr-only"> project</span></button>
+                        </div>
+                    </fieldset>
                 </form>
             </div>
           </div>
@@ -276,40 +284,44 @@
             </div>
             <div class="col-sm-8">
               <div class="button-group">
-                <button type="submit" class="btn btn-primary" onclick="showAddButtons();"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> repository view</span></button>
-                <button type="submit" class="btn btn-primary" onclick="showEditButtons();"><span><i class="fa fa-pencil"></i> Edit<span class="sr-only"> repository view</span></button>
+                <button type="submit" class="btn btn-primary" id="add-repoView-btn" onclick="showAddButtons();"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> repository view</span></button>
+                <button type="submit" class="btn btn-primary" id="edit-repoView-btn" onclick="showEditButtons();"><span><i class="fa fa-pencil"></i> Edit<span class="sr-only"> repository view</span></button>
               </div>
             </div>
           </div>
           <div class="row">
             <div class="col-sm-4">
                 <form action="./select_data_source" method="post">
-                  {% csrf_token %}
-                  {% for field in data_sources_form.state_fields %}
-                    {{ field }}
-                  {% endfor %}
-                  {{ data_sources_form.name.errors }}
-                  <div class="form-group">
-                    {{ data_sources_form.name }}
-                  </div>
-                  <div class="form-group">
-                    <button type="submit" class="btn btn-primary"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> data source type</span></button>
-                  </div>
-                  </form>
+                    <fieldset id="select-data-source">
+                      {% csrf_token %}
+                      {% for field in data_sources_form.state_fields %}
+                        {{ field }}
+                      {% endfor %}
+                      {{ data_sources_form.name.errors }}
+                      <div class="form-group">
+                        {{ data_sources_form.name }}
+                      </div>
+                      <div class="form-group">
+                        <button type="submit" class="btn btn-primary" id="select-dataSource-btn"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> data source type</span></button>
+                      </div>
+                  </fieldset>
+                </form>
             </div>
             <div class="col-sm-8">
                 <form action="./select_repository_view" method="post">
-                  {% csrf_token %}
-                  {% for field in repository_views_form.state_fields %}
-                    {{ field }}
-                  {% endfor %}
-                  {{ repository_views_form.name.errors }}
-                  <div class="form-group">
-                    {{ repository_views_form.id }}
-                  </div>
-                  <div class="form-group">
-                    <button type="submit" class="btn btn-primary"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> Repo View<span></button>
-                  </div>
+                    <fieldset id="select-repository-view">
+                      {% csrf_token %}
+                      {% for field in repository_views_form.state_fields %}
+                        {{ field }}
+                      {% endfor %}
+                      {{ repository_views_form.name.errors }}
+                      <div class="form-group">
+                        {{ repository_views_form.id }}
+                      </div>
+                      <div class="form-group">
+                        <button type="submit" class="btn btn-primary" id="select-repoView-btn"><span><i class="fa fa-check"></i></span> Select<span class="sr-only"> Repo View<span></button>
+                      </div>
+                    </fieldset>
                 </form>
             </div>
           </div>
@@ -338,34 +350,69 @@
         <!-- End: Scope block -->
       </div>
       <!-- End: Editor body -->
-
     </div>
 
+    <script>
 
-<script>
+    // Disable "onclick" event when selecting an ecosystem on
+    // Import and Download modals.
+    eco_download_form = document.getElementById("ecosystem_download");
+    eco_download_form["name"].removeAttribute("onclick");
+    eco_download_form = document.getElementById("ecosystem_import");
+    eco_download_form["name"].removeAttribute("onclick");
 
-// Disable "onclick" event when selecting an ecosystem on
-// Import and Download modals.
-eco_download_form = document.getElementById("ecosystem_download");
-eco_download_form["name"].removeAttribute("onclick");
-eco_download_form = document.getElementById("ecosystem_import");
-eco_download_form["name"].removeAttribute("onclick");
+    // Functions to show/hide buttons on modals depending on the action.
+    function showAddButtons() {
+        document.getElementById("add-btn-group-rv_modal").style.display = "block";
+        document.getElementById("edit-btn-group-rv_modal").style.display = "none";
+        $('#DSModal').modal('show');
+    }
 
-// Functions to show/hide buttons on modals depending on the action.
-function showAddButtons() {
-    document.getElementById("add-btn-group-rv_modal").style.display = "block";
-    document.getElementById("edit-btn-group-rv_modal").style.display = "none";
-    $('#DSModal').modal('show');
-}
+    function showEditButtons(){
+        document.getElementById("add-btn-group-rv_modal").style.display = "none";
+        document.getElementById("edit-btn-group-rv_modal").style.display = "block";
+        $('#DSModal').modal('show');
+    }
 
-function showEditButtons(){
-    document.getElementById("add-btn-group-rv_modal").style.display = "none";
-    document.getElementById("edit-btn-group-rv_modal").style.display = "block";
-    $('#DSModal').modal('show');
-}
+    // Disable element
+    function disableElement(element_id) {
+        document.getElementById(element_id).disabled = true;
+    }
 
-
-</script>
-
+    </script>
+    <!-- Element disabling control-->
+    {% if not ecosystems_form.initial.name %}
+        <script>
+            disableElement("add-project");
+            disableElement("select-project");
+            disableElement("remove-project");
+            disableElement("select-data-source");
+            disableElement("select-repository-view");
+            disableElement("add-data-source");
+        </script>
+    {% elif not projects_form.initial.name %}
+        {% if projects_form.name|length == 0 %}
+            <script>
+                disableElement("select-project");
+            </script>
+        {% endif %}
+        <script>
+            disableElement("remove-project");
+            disableElement("select-data-source");
+            disableElement("select-repository-view");
+            disableElement("add-data-source");
+        </script>
+    {% elif not repository_view_form.initial.repository %}
+        {% if repository_views_form.id|length == 0 %}
+            <script>
+                disableElement("select-data-source");
+                disableElement("select-repository-view");
+            </script>
+        {% endif %}
+        <script>
+            disableElement("edit-repoView-btn");
+        </script>
+    {% endif %}
+    <!-- End of element disabling control-->
 {% endblock %}
-{% endwith  %}
+{% endwith %}
