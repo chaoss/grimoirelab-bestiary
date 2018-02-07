@@ -16,6 +16,8 @@ from projects.views import build_forms_context, EditorState, select_ecosystem, s
 
 from grimoirelab.toolkit.datetime import unixtime_to_datetime
 
+# TODO: move this definition to mordred lib
+Q_MORDRED_TASKS = 'mordred'
 
 class ServicesState():
     def __init__(self):
@@ -89,21 +91,33 @@ class ServicesState():
 
         return len(items)
 
+    def collect_mordred_tasks(self):
+        """ Retrieve from redis information about the mordred tasks """
+        pipe = self.redis_con.pipeline()
+        pipe.lrange(Q_MORDRED_TASKS, 0, -1)
+        mordred_tasks = pipe.execute()[0]
+        for task in mordred_tasks:
+            print(" ** mordred_tasks", pickle.loads(task))
+            # print(" ** mordred_tasks date", pickle.loads(task)['date'].isoformat())
+        return len(mordred_tasks)
+
     def collect(self):
         arthur_tasks = self.collect_arthur_tasks()
+        mordred_tasks = self.collect_mordred_tasks()
         rq_tasks = self.collect_rq_tasks()
         running_tasks = 0  # number of workers active
         waiting_tasks = arthur_tasks - rq_tasks - running_tasks
         return {
-           "arthur_tasks": arthur_tasks,
-           "queues_list": ",".join(self.list_rq_queues()),
-           "workers_list": self.list_rq_workers(),
-           "workers_status": self.list_rq_workers_state(),
-           "queued_tasks": rq_tasks,
-           "running_tasks": running_tasks,
-           "waiting_tasks": waiting_tasks,
-           "redis_items": self.collect_redis_items()
-           }
+            "arthur_tasks": arthur_tasks,
+            "mordred_tasks": mordred_tasks,
+            "queues_list": ",".join(self.list_rq_queues()),
+            "workers_list": self.list_rq_workers(),
+            "workers_status": self.list_rq_workers_state(),
+            "queued_tasks": rq_tasks,
+            "running_tasks": running_tasks,
+            "waiting_tasks": waiting_tasks,
+            "redis_items": self.collect_redis_items()
+        }
 
 ##
 # status page methods
