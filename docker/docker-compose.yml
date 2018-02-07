@@ -40,7 +40,7 @@ mordred:
   image: bitergia/mordred:elasticgirl.30
   links:
     - arthur
-    - bestiary
+    # - bestiary
     - hatstall
     - elasticsearch
     - kibiter
@@ -59,13 +59,17 @@ mariadb:
         - MYSQL_ALLOW_EMPTY_PASSWORD=yes
 
 bestiary:
-  image: acsdocker/bestiary:status-panel-docker
-  # image: acsdocker/bestiary
+  image: acsdocker/bestiary
+  ports:
+        - 8000:8000
+
+custodian:
+  image: acsdocker/custodian
   links:
         - redis
         - arthur
   ports:
-        - 8000:8000
+        - 8002:8000
 
 hatstall:
   image: acsdocker/hatstall
