@@ -382,6 +382,13 @@
     </script>
     <!-- Element disabling control-->
     {% if not ecosystems_form.initial.name %}
+        {% if ecosystems_form.name|length == 1 %}
+            <script>
+            // If there are no ecosystems, open `add` modal
+            // ecosystems length is 1 because of the empty option
+                $('#addEcosystemModal').modal('show');
+            </script>
+        {% endif %}
         <script>
             disableElement("add-project");
             disableElement("select-project");
@@ -394,6 +401,8 @@
         {% if projects_form.name|length == 0 %}
             <script>
                 disableElement("select-project");
+                // If there are no projects, open `add` modal
+                $('#addProjectModal').modal('show');
             </script>
         {% endif %}
         <script>
@@ -407,6 +416,8 @@
             <script>
                 disableElement("select-data-source");
                 disableElement("select-repository-view");
+                // If there are no data sources, open `add` modal
+                showAddButtons();
             </script>
         {% endif %}
         <script>
