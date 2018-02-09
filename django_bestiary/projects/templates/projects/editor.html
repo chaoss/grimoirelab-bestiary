@@ -13,11 +13,11 @@
 
 <div class="container-fluid">
   <!-- Modal: Import -->
-  <div class="modal fade" id="importModal" role="dialog">
+  <div class="modal fade" id="importModal" role="dialog" tabindex="-1">
       <div class="modal-dialog">
       <!-- Modal content-->
           <div class="modal-content">
-            <form id="ecosystem_import" method="POST" action="./import/" enctype="multipart/form-data">
+            <form id="ecosystem_import" method="POST" action="/projects/import/" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="modal-header">
                 <div class="modal-title">
@@ -44,11 +44,11 @@
   </div>
 
   <!-- Modal: Download -->
-  <div class="modal fade" id="exportModal" role="dialog">
+  <div class="modal fade" id="exportModal" role="dialog" tabindex="-1">
       <div class="modal-dialog">
       <!-- Modal content-->
           <div class="modal-content">
-            <form id="ecosystem_download" method="POST" action="./export/" enctype="multipart/form-data">{% csrf_token %}
+            <form id="ecosystem_download" method="POST" action="/projects/export/" enctype="multipart/form-data">{% csrf_token %}
             <div class="modal-header">
               <div class="modal-title">Download projects file</div>
               <button type="button" class="close" data-dismiss="modal">&times;</button>
@@ -68,44 +68,60 @@
   </div>
 
   <!-- Modal: Add ecosystem -->
-    <div class="modal fade" id="addEcosystemModal" role="dialog">
+    <div class="modal fade" id="ecoModal" role="dialog" tabindex="-1">
         <div class="modal-dialog">
         <!-- Modal content-->
             <div class="modal-content">
-              <form action="./add_ecosystem" method="post">
+              <form method="post">
                   {% csrf_token %}
-              <div class="modal-header">
-                <div class="modal-title">Add ecosystem</div>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-              </div>
-              <div class="modal-body">
-                  <div class="input-group">
-                      <span class="input-group-addon"><i class="fa fa-globe"></i></span>
-                      {{ ecosystem_form.ecosystem_name }}
+                <fieldset id="eco-fieldset">
+                  <div class="modal-header">
+                    <div class="modal-title">Ecosystem</div>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
                   </div>
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">Add</button>
-              </div>
+                  <div class="modal-body">
+                      {% for field in ecosystems_form.state_fields %}
+                      {{ field }}
+                      {% endfor %}
+                      {{ ecosystems_form.name.errors }}
+                      <div class="input-group">
+                          <span class="input-group-addon"><i class="fa fa-globe"></i></span>
+                          {{ ecosystem_form.ecosystem_name }}
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                      <div class="form-actions pull-right">
+                          <div class="input-group">
+                              <div id="add-btn-group-eco_modal" class="button-group">
+                                  <button type="submit" formaction='/projects/add_ecosystem' class="btn"><i class="fa fa-plus"></i> Add</button>
+                              </div>
+                              <div id="edit-btn-group-eco_modal" class="button-group">
+                                  <button type="submit" formaction="/projects/update_ecosystem" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
+                                  <button type="submit" formaction='/projects/remove_ecosystem' class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                </fieldset>
             </form>
             </div>
         </div>
     </div>
 
   <!-- Modal: Add project -->
-  <div class="modal fade" id="addProjectModal" role="dialog">
+  <div class="modal fade" id="projectsModal" role="dialog" tabindex="-1">
       <div class="modal-dialog">
       <!-- Modal content-->
           <div class="modal-content">
                 <div class="modal-header">
                     <form>
-                        <div class="modal-title">Add project for <strong>{{ ecosystems_form.initial.name }}</strong></div>
+                        <div class="modal-title">Project for <strong>{{ ecosystems_form.initial.name }}</strong></div>
                     </form>
                   <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="container">
-                    <form action="./add_project" method="post" enctype="multipart/form-data">
-                        <fieldset id="add-project">
+                    <form method="post" enctype="multipart/form-data">
+                        <fieldset id="add-project-fieldset">
                             <div class="modal-body">
                                 {% csrf_token %}
                                 {% for field in project_form.state_fields %}
@@ -118,7 +134,17 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                              <button type="submit" class="btn btn-primary">Add project</button>
+                                <div class="form-actions pull-right">
+                                    <div class="input-group">
+                                        <div id="add-btn-group-proj_modal" class="button-group">
+                                            <button type="submit" formaction='/projects/add_project' class="btn"><i class="fa fa-plus"></i> Add</button>
+                                        </div>
+                                        <div id="edit-btn-group-proj_modal" class="button-group">
+                                            <button type="submit" formaction="/projects/update_project" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
+                                            <button type="submit" formaction='/projects/remove_project' class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </fieldset>
                     </form>
@@ -128,12 +154,12 @@
   </div>
 
   <!-- Modal: Add data source -->
-  <div class="modal fade" id="DSModal" role="dialog">
+  <div class="modal fade" id="DSModal" role="dialog" tabindex="-1">
       <div class="modal-dialog">
       <!-- Modal content-->
           <div class="modal-content">
             <form method="post">
-                <fieldset id="add-data-source">
+                <fieldset id="add-data-source-fieldset">
                     {% csrf_token %}
                     {% for field in repository_view_form.state_fields %}
                       {{ field }}
@@ -162,11 +188,11 @@
                     <div class="form-actions pull-right">
                         <div class="input-group">
                             <div id="add-btn-group-rv_modal" class="button-group">
-                                <button type="submit" formaction='./add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
+                                <button type="submit" formaction='/projects/add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
                             </div>
                             <div id="edit-btn-group-rv_modal" class="button-group">
-                                <button type="submit" formaction="./update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
-                                <button type="submit" formaction='./remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
+                                <button type="submit" formaction="/projects/update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
+                                <button type="submit" formaction='/projects/remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
                             </div>
                         </div>
                     </div>
@@ -183,28 +209,32 @@
     <div class="container-fluid">
       <!-- Start: Editor header -->
       <div class="row">
-        <div class="col-md-4">
-          <form class="form-inline" action="./editor_select_ecosystem" method="post">
-            {% csrf_token %}
-            {% for field in ecosystems_form.state_fields %}
-            {{ field }}
-            {% endfor %}
-            {{ ecosystems_form.name.errors }}
-            <div class="form-group mb-2">
-              <label for="id_name"><h1>Ecosystem:</h1></label>
-              {{ ecosystems_form.name }}
+        <div class="col-md-6">
+            <div class="row">
+              <form class="form-inline" action="/projects/editor_select_ecosystem" method="post">
+                {% csrf_token %}
+                {% for field in ecosystems_form.state_fields %}
+                {{ field }}
+                {% endfor %}
+                {{ ecosystems_form.name.errors }}
+                <div class="form-group md-2">
+                  <label for="id_name"><h2>Ecosystem:</h2></label>
+                  {{ ecosystems_form.name }}
+                </div>
+              </form>
+              <button id="edit-eco-btn" type="submit" class="btn btn-primary btn-md" onclick="showEditButtons('ecosystems');">
+                <i class="fa fa-pencil"></i> Edit <span class="sr-only">ecosystem</span>
+              </button>
             </div>
-          </form>
         </div>
-        <div class="col-md-5">
-
+        <div class="col-md-3">
         </div>
         <div class="col-md-3">
           <div class="button-group text-right row">
-            <button type="submit" class="btn btn-primary" data-toggle="modal" data-target="#addEcosystemModal">
+            <button id="add-eco-btn" type="submit" class="btn btn-primary" onclick="showAddButtons('ecosystems');">
               <i class="fa fa-plus"></i> Add <span class="sr-only">ecosystem</span>
             </button>
-            <fieldset>
+            <fieldset id="import-export-eco-fieldset">
                 <button type="submit" class="btn btn-default" data-toggle="modal" data-target="#importModal">
                   <i class="fa fa-upload"></i> Import <span class="sr-only">ecosystem</span>
                 </button>
@@ -217,26 +247,30 @@
       </div>
       <!-- End: Editor header -->
     </div>
+
     <div class="container-fluid">
       <!-- Start: Editor body -->
       <div class="row">
         <!-- Start: Projects block -->
         <div class="col-md-2">
           <div class="row">
-            <div class="col-sm-8">
-              <h2>Projects</h2>
-            </div>
             <div class="col-sm-4">
-              <button type="submit" class="btn btn-primary" id="add-project-btn" data-toggle="modal" data-target="#addProjectModal">
+              <h3>Projects</h3>
+            </div>
+            <div class="col-sm-8">
+              <button type="submit" class="btn btn-primary" id="add-project-btn" onclick="showAddButtons('projects');">
                 <i class="fa fa-plus"></i> Add<span class="sr-only"> project</span>
+              </button>
+              <button type="submit" class="btn btn-primary" id="edit-project-btn" onclick="showEditButtons('projects');">
+                <i class="fa fa-pencil"></i> Edit<span class="sr-only"> project</span>
               </button>
             </div>
           </div>
 
           <div class="row">
             <div class="col-sm-12">
-              <form action="./editor_select_project" method="post">
-                <fieldset id="select-project">
+              <form action="/projects/editor_select_project" method="post">
+                <fieldset id="select-project-fieldset">
                     {% csrf_token %}
                     {% for field in projects_form.state_fields %}
                       {{ field }}
@@ -255,44 +289,25 @@
             </div>
           </div>
 
-          <div class="row">
-            <div class="col-sm-12">
-              <h3>Remove project</h3>
-                <form action="./remove_project" method="post">
-                    <fieldset id="remove-project">
-                      {% csrf_token %}
-                      {% for field in project_remove_form.state_fields %}
-                        {{ field }}
-                      {% endfor %}
-                      {{ project_remove_form.name.errors }}
-                        <div class="input-group">
-                            {{ project_remove_form.project_name }}
-                            <button type="submit" class="btn btn-danger" id="remove-project-btn"><span><i class="fa fa-trash-o"></i></span> Remove<span class="sr-only"> project</span></button>
-                        </div>
-                    </fieldset>
-                </form>
-            </div>
-          </div>
-
         </div>
         <!-- End: Projects block -->
         <!-- Start: Data sources block -->
         <div class="col-md-7">
           <div class="row">
             <div class="col-sm-4">
-              <h2>Data Sources</h2>
+              <h3>Data Sources</h3>
             </div>
             <div class="col-sm-8">
               <div class="button-group">
-                <button type="submit" class="btn btn-primary" id="add-repoView-btn" onclick="showAddButtons();"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> repository view</span></button>
-                <button type="submit" class="btn btn-primary" id="edit-repoView-btn" onclick="showEditButtons();"><span><i class="fa fa-pencil"></i> Edit<span class="sr-only"> repository view</span></button>
+                <button type="submit" class="btn btn-primary" id="add-repoView-btn" onclick="showAddButtons('data_sources');"><span><i class="fa fa-plus"></i></span> Add<span class="sr-only"> repository view</span></button>
+                <button type="submit" class="btn btn-primary" id="edit-repoView-btn" onclick="showEditButtons('data_sources');"><span><i class="fa fa-pencil"></i> Edit<span class="sr-only"> repository view</span></button>
               </div>
             </div>
           </div>
           <div class="row">
             <div class="col-sm-4">
-                <form action="./select_data_source" method="post">
-                    <fieldset id="select-data-source">
+                <form action="/projects/select_data_source" method="post">
+                    <fieldset id="select-data-source-fieldset">
                       {% csrf_token %}
                       {% for field in data_sources_form.state_fields %}
                         {{ field }}
@@ -308,8 +323,8 @@
                 </form>
             </div>
             <div class="col-sm-8">
-                <form action="./select_repository_view" method="post">
-                    <fieldset id="select-repository-view">
+                <form action="/projects/select_repository_view" method="post">
+                    <fieldset id="select-repository-view-fieldset">
                       {% csrf_token %}
                       {% for field in repository_views_form.state_fields %}
                         {{ field }}
@@ -329,7 +344,7 @@
         <!-- Start: Data sources block -->
         <!-- Start: Scope block -->
         <div class="col-md-3">
-          <h2>Scope</h2>
+          <h3>Scope</h3>
           <table class="table table-hover">
               <tbody>
                 <tr>
@@ -362,16 +377,36 @@
     eco_download_form["name"].removeAttribute("onclick");
 
     // Functions to show/hide buttons on modals depending on the action.
-    function showAddButtons() {
-        document.getElementById("add-btn-group-rv_modal").style.display = "block";
-        document.getElementById("edit-btn-group-rv_modal").style.display = "none";
-        $('#DSModal').modal('show');
+    function showAddButtons(modal_name) {
+        if (modal_name == "ecosystems") {
+            document.getElementById("add-btn-group-eco_modal").style.display = "block";
+            document.getElementById("edit-btn-group-eco_modal").style.display = "none";
+            $('#ecoModal').modal('show');
+        } else if (modal_name == "projects") {
+            document.getElementById("add-btn-group-proj_modal").style.display = "block";
+            document.getElementById("edit-btn-group-proj_modal").style.display = "none";
+            $('#projectsModal').modal('show');
+        } else if (modal_name == "data_sources") {
+            document.getElementById("add-btn-group-rv_modal").style.display = "block";
+            document.getElementById("edit-btn-group-rv_modal").style.display = "none";
+            $('#DSModal').modal('show');
+        }
     }
 
-    function showEditButtons(){
-        document.getElementById("add-btn-group-rv_modal").style.display = "none";
-        document.getElementById("edit-btn-group-rv_modal").style.display = "block";
-        $('#DSModal').modal('show');
+    function showEditButtons(modal_name){
+        if (modal_name == "ecosystems") {
+            document.getElementById("add-btn-group-eco_modal").style.display = "none";
+            document.getElementById("edit-btn-group-eco_modal").style.display = "block";
+            $('#ecoModal').modal('show');
+        } else if (modal_name == "projects") {
+            document.getElementById("add-btn-group-proj_modal").style.display = "none";
+            document.getElementById("edit-btn-group-proj_modal").style.display = "block";
+            $('#projectsModal').modal('show');
+        } else if (modal_name == "data_sources") {
+            document.getElementById("add-btn-group-rv_modal").style.display = "none";
+            document.getElementById("edit-btn-group-rv_modal").style.display = "block";
+            $('#DSModal').modal('show');
+        }
     }
 
     // Disable element
@@ -386,38 +421,38 @@
             <script>
             // If there are no ecosystems, open `add` modal
             // ecosystems length is 1 because of the empty option
-                $('#addEcosystemModal').modal('show');
+                showAddButtons("ecosystems");
             </script>
         {% endif %}
         <script>
-            disableElement("add-project");
-            disableElement("select-project");
-            disableElement("remove-project");
-            disableElement("select-data-source");
-            disableElement("select-repository-view");
-            disableElement("add-data-source");
+            disableElement("add-project-fieldset");
+            disableElement("select-project-fieldset");
+            disableElement("select-data-source-fieldset");
+            disableElement("select-repository-view-fieldset");
+            disableElement("add-data-source-fieldset");
+            disableElement("edit-eco-btn");
         </script>
     {% elif not projects_form.initial.name %}
         {% if projects_form.name|length == 0 %}
             <script>
-                disableElement("select-project");
+                disableElement("select-project-fieldset");
                 // If there are no projects, open `add` modal
-                $('#addProjectModal').modal('show');
+                showAddButtons("projects");
             </script>
         {% endif %}
         <script>
-            disableElement("remove-project");
-            disableElement("select-data-source");
-            disableElement("select-repository-view");
-            disableElement("add-data-source");
+            disableElement("edit-project-btn");
+            disableElement("select-data-source-fieldset");
+            disableElement("select-repository-view-fieldset");
+            disableElement("add-data-source-fieldset");
         </script>
     {% elif not repository_view_form.initial.repository %}
         {% if repository_views_form.id|length == 0 %}
             <script>
-                disableElement("select-data-source");
-                disableElement("select-repository-view");
+                disableElement("select-data-source-fieldset");
+                disableElement("select-repository-view-fieldset");
                 // If there are no data sources, open `add` modal
-                showAddButtons();
+                showAddButtons("data_sources");
             </script>
         {% endif %}
         <script>

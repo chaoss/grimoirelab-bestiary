@@ -30,7 +30,9 @@ class BestiaryEditorForm(forms.Form):
 
     # Hidden widgets to store the state of the BestiaryEditorForm
     eco_name_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
+    eco_id_state = forms.IntegerField(required=False, widget=forms.HiddenInput())
     projects_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
+    project_id_state = forms.IntegerField(required=False, widget=forms.HiddenInput())
     data_sources_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
     repository_views_state = forms.CharField(required=False, max_length=50, widget=forms.HiddenInput())
 
@@ -49,7 +51,9 @@ class BestiaryEditorForm(forms.Form):
         # The state includes the names of objects except for repository_views
         # in which ids are included because there is no name
         self.state_fields = [self['eco_name_state'],
+                             self['eco_id_state'],
                              self['projects_state'],
+                             self['project_id_state'],
                              self['data_sources_state'],
                              self['repository_views_state']
                              ]
