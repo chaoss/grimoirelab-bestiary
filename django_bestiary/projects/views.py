@@ -24,10 +24,12 @@ from . import data
 
 class EditorState():
 
-    def __init__(self, eco_name=None, projects=[], data_sources=[],
-                 repository_views=[], form=None):
+    def __init__(self, eco_name=None, eco_id=None, projects=[], project_id=None,
+                 data_sources=[], repository_views=[], form=None):
         self.eco_name = eco_name
+        self.eco_id = eco_id
         self.projects = projects
+        self.project_id = project_id
         self.data_sources = data_sources
         self.repository_views = repository_views
 
@@ -39,16 +41,20 @@ class EditorState():
 
             if not self.eco_name:
                 self.eco_name = form.cleaned_data['eco_name_state']
+            if not self.eco_id:
+                self.eco_id = form.cleaned_data['eco_id_state']
             if not self.projects:
                 self.projects = [projects_state] if projects_state else []
+            if not self.project_id:
+                self.project_id = form.cleaned_data['project_id_state']
             if not self.data_sources:
                 self.data_sources = [data_sources] if data_sources else []
             if not self.repository_views:
                 self.repository_views = [repository_views] if repository_views else []
 
     def is_empty(self):
-        return not (self.eco_name or self.projects or self.data_sources or
-                    self.repository_views)
+        return not (self.eco_name or self.eco_id or self.projects or self.project_id or
+                    self.data_sources or self.repository_views)
 
     def initial_state(self):
         """ State to be filled in the forms so it is propagated
@@ -59,7 +65,9 @@ class EditorState():
 
         initial = {
             'eco_name_state': self.eco_name,
+            'eco_id_state': self.eco_id,
             'projects_state': ";".join(self.projects),
+            'project_id_state': self.project_id,
             'data_sources_state': ";".join(self.data_sources),
             "repository_views_state": ";".join([str(repo_view_id) for repo_view_id in self.repository_views])
         }
@@ -91,7 +99,8 @@ def select_project(request, template, context=None):
         if form.is_valid():
             name = form.cleaned_data['name']
             projects = [name]
-            state = EditorState(projects=projects, form=form)
+            project_id = form.cleaned_data['eco_id_state']
+            state = EditorState(projects=projects, project_id=project_id, form=form)
             if context:
                 context.update(build_forms_context(state))
             else:
@@ -112,15 +121,22 @@ def select_ecosystem(request, template, context=None):
         form = forms.EcosystemsForm(request.POST)
         if form.is_valid():
             name = form.cleaned_data['name']
+
             if not name:
                 # TODO: Show error when ecosystem name is empty
                 return shortcuts.render(request, template, build_forms_context())
             # Select and ecosystem reset the state. Don't pass form=form
-            state = build_forms_context(EditorState(eco_name=name))
+            try:
+                eco_orm = Ecosystem.objects.get(name=name)
+            except Ecosystem.DoesNotExist:
+                # TODO: Show error
+                return shortcuts.render(request, template, build_forms_context())
+
+            state = build_forms_context(EditorState(eco_name=name, eco_id=eco_orm.id))
             if context:
                 context.update(state)
             else:
-                context = build_forms_context(EditorState(eco_name=name))
+                context = build_forms_context(EditorState(eco_name=name, eco_id=eco_orm.id))
             return shortcuts.render(request, template, context)
         else:
             # Ignore when the empty option is selected
@@ -138,7 +154,6 @@ def build_forms_context(state=None):
     add_eco_form = forms.EcosystemForm(state=state)
     projects_form = forms.ProjectsForm(state=state)
     project_form = forms.ProjectForm(state=state)
-    project_remove_form = forms.ProjectForm(state=state)
     data_source_form = forms.DataSourceForm(state=state)
     data_sources_form = forms.DataSourcesForm(state=state)
     repository_views_form = forms.RepositoryViewsForm(state=state)
@@ -146,18 +161,19 @@ def build_forms_context(state=None):
 
     if state:
         eco_form.initial['name'] = state.eco_name
+        add_eco_form.initial['id'] = state.eco_id
+        add_eco_form.initial['ecosystem_name'] = state.eco_name
         if state.projects:
             projects_form.initial['name'] = state.projects[0]
-            project_remove_form = forms.ProjectForm(state=state)
-            project_remove_form.initial['project_name'] = state.projects[0]
+            project_form.initial['project_name'] = state.projects[0]
         if state.data_sources:
             data_sources_form.initial['name'] = state.data_sources[0]
+            data_source_form.initial['data_source_name'] = state.data_sources[0]
 
     context = {"ecosystems_form": eco_form,
                "ecosystem_form": add_eco_form,
                "projects_form": projects_form,
                "project_form": project_form,
-               "project_remove_form": project_remove_form,
                "data_source_form": data_source_form,
                "data_sources_form": data_sources_form,
                "repository_views_form": repository_views_form,
@@ -254,10 +270,56 @@ def add_ecosystem(request):
 
             # Select and ecosystem reset the state. Don't pass form=form
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(eco_name=ecosystem_name)))
+                                    build_forms_context(EditorState(eco_name=ecosystem_name, eco_id=eco_orm.id)))
         else:
             # TODO: Show error
             print("FORM errors", form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def update_ecosystem(request):
+    if request.method == 'POST':
+        form = forms.EcosystemForm(request.POST)
+        if form.is_valid():
+            eco_id = form.cleaned_data['eco_id_state']
+            ecosystem_name = form.cleaned_data['ecosystem_name']
+
+            try:
+                eco_orm = Ecosystem.objects.get(id=eco_id)
+            except Ecosystem.DoesNotExist:
+                # TODO: Show error
+                return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+            eco_orm.name = ecosystem_name
+            eco_orm.save()
+
+            state = EditorState(eco_name=ecosystem_name, eco_id=eco_id, form=form)
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(state))
+        else:
+            # TODO: Show error
+            print(form.errors)
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+
+
+def remove_ecosystem(request):
+    if request.method == 'POST':
+        form = forms.EcosystemForm(request.POST)
+        if form.is_valid():
+            ecosystem_name = form.cleaned_data['ecosystem_name']
+            Ecosystem.objects.get(name=ecosystem_name).delete()
+            return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+        else:
+            # TODO: Show error
+            print("remove_ecosystem", form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -443,6 +505,37 @@ def select_data_source(request):
 
 def editor_select_project(request):
     return select_project(request, "projects/editor.html")
+
+
+def update_project(request):
+    if request.method == 'POST':
+        form = forms.ProjectForm(request.POST)
+
+        if form.is_valid():
+            project_id = form.cleaned_data["project_id_state"]
+            project_name = form.cleaned_data["project_name"]
+
+            try:
+                project_orm = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                # TODO: Show error
+                print(form.errors)
+                raise Http404
+
+            project_orm.name = project_name
+            project_orm.save()
+
+            state = EditorState(eco_name=eco_name, projects=[project_name],
+                                project_id=project_id, form=form)
+            return shortcuts.render(request, 'projects/editor.html',
+                                    build_forms_context(state))
+        else:
+            # TODO: Show error
+            raise Http404
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        # TODO: Show error
+        return shortcuts.render(request, 'projects/editor.html', build_forms_context())
 
 
 def remove_project(request):

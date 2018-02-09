@@ -3,12 +3,15 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
+    url(r'^add_ecosystem$', views.add_ecosystem),
+    url(r'^editor_select_ecosystem$', views.editor_select_ecosystem),
     url(r'^import/$', views.import_from_file),
     url(r'^export/ecosystem=(?P<ecosystem>[\w ]+)', views.export_to_file),
     url(r'^export/$', views.export_to_file),
-    url(r'^add_ecosystem$', views.add_ecosystem),
-    url(r'^editor_select_ecosystem$', views.editor_select_ecosystem),
+    url(r'^update_ecosystem$', views.update_ecosystem),
+    url(r'^remove_ecosystem$', views.remove_ecosystem),
     url(r'^add_project$', views.add_project),
+    url(r'^update_project$', views.update_project),
     url(r'^remove_project$', views.remove_project),
     url(r'^editor_select_project$', views.editor_select_project),
     url(r'^add_data_source$', views.add_data_source),
