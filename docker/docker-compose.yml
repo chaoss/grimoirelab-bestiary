@@ -10,7 +10,8 @@ elasticsearch:
     - ES_JAVA_OPTS=-Xms2g -Xmx2g
 
 kibiter:
-  image: bitergia/kibiter:6.1.0
+  image: bitergia/kibiter:6.1.0-optimized
+  # image: bitergia/kibiter:6.1.0
   # image: bitergia/kibiter:5.6.0
   # image: bitergia/kibiter:4.4.1
   links:
