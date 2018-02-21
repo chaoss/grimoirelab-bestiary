@@ -93,11 +93,11 @@
                       <div class="form-actions pull-right">
                           <div class="input-group">
                               <div id="add-btn-group-eco_modal" class="button-group">
-                                  <button type="submit" formaction='/projects/add_ecosystem' class="btn"><i class="fa fa-plus"></i> Add</button>
+                                  <button type="submit" formaction="/projects/add_ecosystem" class="btn"><i class="fa fa-plus"></i> Add</button>
                               </div>
                               <div id="edit-btn-group-eco_modal" class="button-group">
                                   <button type="submit" formaction="/projects/update_ecosystem" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
-                                  <button type="submit" formaction='/projects/remove_ecosystem' class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
+                                  <button type="submit" formaction="/projects/remove_ecosystem" class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
                               </div>
                           </div>
                       </div>
@@ -137,11 +137,11 @@
                                 <div class="form-actions pull-right">
                                     <div class="input-group">
                                         <div id="add-btn-group-proj_modal" class="button-group">
-                                            <button type="submit" formaction='/projects/add_project' class="btn"><i class="fa fa-plus"></i> Add</button>
+                                            <button type="submit" formaction="/projects/add_project" class="btn"><i class="fa fa-plus"></i> Add</button>
                                         </div>
                                         <div id="edit-btn-group-proj_modal" class="button-group">
                                             <button type="submit" formaction="/projects/update_project" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
-                                            <button type="submit" formaction='/projects/remove_project' class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
+                                            <button type="submit" formaction="/projects/remove_project" class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
                                         </div>
                                     </div>
                                 </div>
@@ -188,11 +188,11 @@
                     <div class="form-actions pull-right">
                         <div class="input-group">
                             <div id="add-btn-group-rv_modal" class="button-group">
-                                <button type="submit" formaction='/projects/add_repository_view' class="btn"><i class="fa fa-plus"></i> Add</button>
+                                <button type="submit" formaction="/projects/add_repository_view" class="btn"><i class="fa fa-plus"></i> Add</button>
                             </div>
                             <div id="edit-btn-group-rv_modal" class="button-group">
-                                <button type="submit" formaction="/projects/update_repository_view" class="btn"><i class="fa fa-save"></i> Save</button>
-                                <button type="submit" formaction='/projects/remove_repository_view' class="btn"><i class="fa fa-trash-o"></i> Remove</button>
+                                <button type="submit" formaction="/projects/update_repository_view" class="btn btn-success"><i class="fa fa-save"></i> Save</button>
+                                <button type="submit" formaction="/projects/remove_repository_view" class="btn btn-danger"><i class="fa fa-trash-o"></i> Remove</button>
                             </div>
                         </div>
                     </div>
@@ -209,7 +209,7 @@
     <div class="container-fluid">
       <!-- Start: Editor header -->
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-9">
             <div class="row">
               <form class="form-inline" action="/projects/editor_select_ecosystem" method="post">
                 {% csrf_token %}
@@ -217,17 +217,15 @@
                 {{ field }}
                 {% endfor %}
                 {{ ecosystems_form.name.errors }}
-                <div class="form-group md-2">
-                  <label for="id_name"><h2>Ecosystem:</h2></label>
+                <div class="form-group">
+                  <label for="id_name"> <h3>Ecosystem: </h3></label>
                   {{ ecosystems_form.name }}
                 </div>
               </form>
-              <button id="edit-eco-btn" type="submit" class="btn btn-primary btn-md" onclick="showEditButtons('ecosystems');">
+              <button id="edit-eco-btn" type="submit" class="btn btn-primary" onclick="showEditButtons('ecosystems');">
                 <i class="fa fa-pencil"></i> Edit <span class="sr-only">ecosystem</span>
               </button>
             </div>
-        </div>
-        <div class="col-md-3">
         </div>
         <div class="col-md-3">
           <div class="button-group text-right row">
@@ -425,6 +423,10 @@
             </script>
         {% endif %}
         <script>
+            disableElement("add-project-btn");
+            disableElement("edit-project-btn");
+            disableElement("add-repoView-btn");
+            disableElement("edit-repoView-btn");
             disableElement("add-project-fieldset");
             disableElement("select-project-fieldset");
             disableElement("select-data-source-fieldset");

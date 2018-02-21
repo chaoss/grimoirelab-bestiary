@@ -25,13 +25,14 @@ from . import data
 class EditorState():
 
     def __init__(self, eco_name=None, eco_id=None, projects=[], project_id=None,
-                 data_sources=[], repository_views=[], form=None):
+                 data_sources=[], repository_views=[], form=None, msg=None):
         self.eco_name = eco_name
         self.eco_id = eco_id
         self.projects = projects
         self.project_id = project_id
         self.data_sources = data_sources
         self.repository_views = repository_views
+        self.msg = msg
 
         if form:
             # The form includes the state not chnaged to be propagated
@@ -97,10 +98,14 @@ def select_project(request, template, context=None):
     if request.method == 'POST':
         form = forms.ProjectsForm(request.POST)
         if form.is_valid():
-            name = form.cleaned_data['name']
-            projects = [name]
-            project_id = form.cleaned_data['eco_id_state']
-            state = EditorState(projects=projects, project_id=project_id, form=form)
+            project_name = form.cleaned_data['name']
+            try:
+                project_orm = Project.objects.get(name=project_name)
+            except Project.DoesNotExist:
+                # TODO: Show error
+                return shortcuts.render(request, template, build_forms_context())
+            projects = [project_name]
+            state = EditorState(projects=projects, project_id=project_orm.id, form=form)
             if context:
                 context.update(build_forms_context(state))
             else:
@@ -158,6 +163,7 @@ def build_forms_context(state=None):
     data_sources_form = forms.DataSourcesForm(state=state)
     repository_views_form = forms.RepositoryViewsForm(state=state)
     repository_view_form = forms.RepositoryViewForm(state=state)
+    msg = None
 
     if state:
         eco_form.initial['name'] = state.eco_name
@@ -169,6 +175,7 @@ def build_forms_context(state=None):
         if state.data_sources:
             data_sources_form.initial['name'] = state.data_sources[0]
             data_source_form.initial['data_source_name'] = state.data_sources[0]
+        msg = state.msg
 
     context = {"ecosystems_form": eco_form,
                "ecosystem_form": add_eco_form,
@@ -177,7 +184,8 @@ def build_forms_context(state=None):
                "data_source_form": data_source_form,
                "data_sources_form": data_sources_form,
                "repository_views_form": repository_views_form,
-               "repository_view_form": repository_view_form
+               "repository_view_form": repository_view_form,
+               "msg": msg
                }
     return context
 
@@ -264,16 +272,17 @@ def add_ecosystem(request):
 
             try:
                 eco_orm = Ecosystem.objects.get(name=ecosystem_name)
+                msg = 'Ecosystem \"%s\" already exists' % ecosystem_name
             except Ecosystem.DoesNotExist:
                 eco_orm = Ecosystem(name=ecosystem_name)
                 eco_orm.save()
+                msg = 'Ecosystem \"%s\" has been added' % ecosystem_name
 
             # Select and ecosystem reset the state. Don't pass form=form
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(eco_name=ecosystem_name, eco_id=eco_orm.id)))
+                                    build_forms_context(EditorState(eco_name=ecosystem_name, eco_id=eco_orm.id, msg=msg)))
         else:
             # TODO: Show error
-            print("FORM errors", form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -291,18 +300,18 @@ def update_ecosystem(request):
             try:
                 eco_orm = Ecosystem.objects.get(id=eco_id)
             except Ecosystem.DoesNotExist:
-                # TODO: Show error
-                return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+                msg = 'Ecosystem does not exist'
+                return shortcuts.render(request, 'projects/editor.html', build_forms_context(EditorState(msg=msg)))
 
             eco_orm.name = ecosystem_name
             eco_orm.save()
 
-            state = EditorState(eco_name=ecosystem_name, eco_id=eco_id, form=form)
+            msg = 'Ecosystem \"%s\" has been updated' % ecosystem_name
+            state = EditorState(eco_name=ecosystem_name, eco_id=eco_id, form=form, msg=msg)
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(state))
         else:
             # TODO: Show error
-            print(form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -316,10 +325,11 @@ def remove_ecosystem(request):
         if form.is_valid():
             ecosystem_name = form.cleaned_data['ecosystem_name']
             Ecosystem.objects.get(name=ecosystem_name).delete()
-            return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+            msg = 'Ecosystem \"%s\" has been deleted' % ecosystem_name
+            state = EditorState(msg=msg)
+            return shortcuts.render(request, 'projects/editor.html', build_forms_context(state))
         else:
             # TODO: Show error
-            print("remove_ecosystem", form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -366,12 +376,12 @@ def add_repository_view(request):
             repository_view_orm.save()
 
             form.cleaned_data['repository_views_state'] = []
-            state = EditorState(form=form)
+            msg = 'Data source has been added'
+            state = EditorState(form=form, msg=msg)
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(state))
         else:
             # TODO: Show error
-            print(form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -405,12 +415,12 @@ def update_repository_view(request):
 
             repository_view_orm.save()
 
-            state = EditorState(repository_views=[repository_view_id], form=form)
+            msg = 'Data source has been updated'
+            state = EditorState(repository_views=[repository_view_id], form=form, msg=msg)
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(state))
         else:
             # TODO: Show error
-            print(form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -427,11 +437,11 @@ def remove_repository_view(request):
                 RepositoryView.objects.get(id=repository_view_id).delete()
             # Clean from the state the removed repository view
             form.cleaned_data['repository_views_state'] = []
+            msg = 'Data source has been removed'
             return shortcuts.render(request, 'projects/editor.html',
-                                    build_forms_context(EditorState(form=form)))
+                                    build_forms_context(EditorState(form=form, msg=msg)))
         else:
             # TODO: Show error
-            print(form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -510,23 +520,24 @@ def editor_select_project(request):
 def update_project(request):
     if request.method == 'POST':
         form = forms.ProjectForm(request.POST)
-
         if form.is_valid():
             project_id = form.cleaned_data["project_id_state"]
             project_name = form.cleaned_data["project_name"]
-
+            eco_name = form.cleaned_data['eco_name_state']
+            eco_orm = None
             try:
                 project_orm = Project.objects.get(id=project_id)
             except Project.DoesNotExist:
-                # TODO: Show error
-                print(form.errors)
-                raise Http404
+                msg = 'Project \"%s\" does not exist' % project_name
+                state = EditorState(eco_name=eco_name, msg=msg)
+                return shortcuts.render(request, 'projects/editor.html',
+                                        build_forms_context(state))
 
             project_orm.name = project_name
             project_orm.save()
-
+            msg = 'Project \"%s\" has been updated' % project_name
             state = EditorState(eco_name=eco_name, projects=[project_name],
-                                project_id=project_id, form=form)
+                                project_id=project_id, form=form, msg=msg)
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(state))
         else:
@@ -544,10 +555,10 @@ def remove_project(request):
         if form.is_valid():
             project_name = form.cleaned_data['project_name']
             Project.objects.get(name=project_name).delete()
-            return shortcuts.render(request, 'projects/editor.html', build_forms_context())
+            msg = 'Project \"%s\" has been removed' % project_name
+            return shortcuts.render(request, 'projects/editor.html', build_forms_context(EditorState(msg=msg)))
         else:
             # TODO: Show error
-            print("remove_project", form.errors)
             raise Http404
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -562,13 +573,20 @@ def add_project(request):
             eco_name = form.cleaned_data['eco_name_state']
             eco_orm = None
             project_name = form.cleaned_data['project_name']
-            project_orm = Project(name=project_name)
-            project_orm.save()
+            try:
+                project_orm = Project.objects.get(name=project_name)
+                msg = 'Project \"%s\" already exists' % project_name
+            except Project.DoesNotExist:
+                project_orm = Project(name=project_name)
+                project_orm.save()
+                msg = 'Project \"%s\" has been added' % project_name
+
             if eco_name:
                 eco_orm = Ecosystem.objects.get(name=eco_name)
                 eco_orm.projects.add(project_orm)
                 eco_orm.save()
-            context = EditorState(projects=[project_name], form=form)
+
+            context = EditorState(projects=[project_name], project_id=project_orm.id, form=form, msg=msg)
             return shortcuts.render(request, 'projects/editor.html',
                                     build_forms_context(context))
         else:
