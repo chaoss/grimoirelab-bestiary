@@ -1,4 +1,7 @@
-# Bestiary [![Build Status](https://travis-ci.org/acs/bestiary.svg?branch=master)](https://travis-ci.org/acs/bestiary)
+# Bestiary
+
+**Warning**: This is the developing branch of the new version of Bestiary. We're moving Bestiary into a service.
+The documentation below would be totally incorrect or inaccurate. 
 
 A tool to visually manage software development ecosystems description.
 
