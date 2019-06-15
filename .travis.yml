@@ -24,4 +24,5 @@ script:
 
 branches:
   except:
+  - master
   - unicorn
