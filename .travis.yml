@@ -21,3 +21,7 @@ script:
   - cd django_bestiary && python manage.py test && cd ..
 # These tests needs ssh host verify and ssh public keys
 #  - cd pathfinder/tests/ && ./run_tests.py && cd ../..
+
+branches:
+  except:
+  - unicorn
