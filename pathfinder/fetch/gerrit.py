@@ -75,7 +75,7 @@ class GerritFetcher(Fetcher):
                 retries += 1
 
         if stdout is None:
-            raise RuntimeError(' '.join(cmd) + " failed " +
-                               str(self.MAX_RETRIES) + " times. Giving up!")
+            msg = ' '.join(cmd) + " failed " + str(self.MAX_RETRIES) + " times. Giving up!"
+            raise RuntimeError(msg)
 
         return stdout.decode("utf8")
