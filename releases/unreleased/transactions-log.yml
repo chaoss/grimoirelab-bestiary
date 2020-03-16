@@ -1,0 +1,22 @@
+---
+title: Transactions log
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 36
+notes: >
+    The purpose of this feature is to store in a log
+    each successful operation run by Bestiary adding,
+    deleting or modifying any entity in the database.
+
+    There are new queries allowing to retrieve the
+    information about the transactions and the
+    individual operations in each of these transactions.
+
+    The query getting the transaction objects includes
+    information like the transaction id, its name,
+    its creation date and its author, among other fields.
+
+    The query getting the operation objects includes
+    information like the parent transaction, the operation
+    id, its type, its creation date and its the target
+    entity, among other fields.
