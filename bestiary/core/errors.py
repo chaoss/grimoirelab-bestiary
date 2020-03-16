@@ -31,6 +31,7 @@ class ErrorCode(enum.Enum):
     ALREADY_EXISTS_ERROR = 2
     NOT_FOUND_ERROR = 3
     VALUE_ERROR = 4
+    CLOSED_TRANSACTION_ERROR = 5
 
 
 class BaseError(Exception):
@@ -76,4 +77,11 @@ class InvalidValueError(BaseError):
     """Exception raised when a value is invalid"""
 
     code = ErrorCode.VALUE_ERROR
+    message = "%(msg)s"
+
+
+class ClosedTransactionError(BaseError):
+    """Exception raised when performing a change on a closed transaction"""
+
+    code = ErrorCode.CLOSED_TRANSACTION_ERROR
     message = "%(msg)s"
