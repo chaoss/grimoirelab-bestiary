@@ -28,5 +28,5 @@ import bestiary.core.schema
 
 logging.getLogger("graphql.execution.utils").setLevel(logging.CRITICAL)
 
-schema = graphene.Schema(query=None,
+schema = graphene.Schema(query=bestiary.core.schema.BestiaryQuery,
                          mutation=bestiary.core.schema.BestiaryMutation)
