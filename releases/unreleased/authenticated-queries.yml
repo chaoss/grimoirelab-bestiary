@@ -1,0 +1,19 @@
+---
+title: Authenticated queries
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 35
+notes: >
+    This feature allows to perform authenticated queries
+    to Bestiary. For doing so, a JWT (JSON Web Token)
+    has to be generated and then included within the
+    `Authorization` header in the HTTP requests.
+
+    This feature includes the following methods:
+    * `tokenAuth`: for creating new tokens, taking as input an existing
+    username and its password.
+    * `verifyToken`: for verifying existing tokens.
+    * `refreshToken`: for generating a new valid token from another existing invalid one.
+
+    These methods have to be used with their corresponding
+    GraphQL mutations.
