@@ -61,6 +61,8 @@ DATABASES = {
     }
 }
 
+DEFAULT_GRAPHQL_PAGE_SIZE = 10
+
 AUTHENTICATION_BACKENDS = [
     'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
