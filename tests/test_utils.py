@@ -22,13 +22,17 @@
 
 from django.test import TestCase
 
-from bestiary.core.utils import validate_field
+from bestiary.core.utils import validate_field, validate_name
 
 
 FIELD_NONE_ERROR = "'{name}' cannot be None"
 FIELD_EMPTY_ERROR = "'{name}' cannot be an empty string"
 FIELD_WHITESPACES_ERROR = "'{name}' cannot be composed by whitespaces only"
-FIELD_TYPE_ERROR = "field value must be a string; int given"
+FIELD_TYPE_ERROR = "field '{name}' value must be a string; int given"
+FIELD_START_ALPHANUM_ERROR = "'{name}' must start with an alphanumeric character"
+FIELD_MAX_LENGTH_ERROR = "'{name}' length is exceeded"
+FIELD_CONTAINS_WHITESPACES_ERROR = "'{name}' cannot contain whitespace characters"
+FIELD_CONTAINS_PUNCTUATION_ERROR = "'{name}' cannot contain punctuation characters except hyphens"
 
 
 class TestValidateField(TestCase):
@@ -75,5 +79,64 @@ class TestValidateField(TestCase):
     def test_no_string(self):
         """Check if an exception is raised when the value type is not a string"""
 
-        with self.assertRaisesRegex(TypeError, FIELD_TYPE_ERROR):
+        with self.assertRaisesRegex(TypeError, FIELD_TYPE_ERROR.format(name='test_field')):
             validate_field('test_field', 42)
+
+
+class TestValidateName(TestCase):
+    """Unit tests for validate_name"""
+
+    def test_validate_name(self):
+        """Check valid value"""
+
+        # If the field is valid, the method does not raise any exception
+        validate_name('Test-Value')
+
+    def test_name_empty(self):
+        """Check if it fails when name is an empty string"""
+
+        expected = FIELD_EMPTY_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name('')
+
+    def test_name_none(self):
+        """Check if it fails when name is `None`"""
+
+        expected = FIELD_NONE_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name(None)
+
+    def test_name_int(self):
+        """Check if an exception is raised when the value type is not a string"""
+
+        with self.assertRaisesRegex(TypeError, FIELD_TYPE_ERROR.format(name='name')):
+            validate_name(42)
+
+    def test_name_not_alphanum(self):
+        """Check if it fails when name does not start with an alphanumeric character"""
+
+        expected = FIELD_START_ALPHANUM_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name('-Test')
+
+    def test_name_contains_whitespace(self):
+        """Check if it fails when name contains any whitespace characters"""
+
+        expected = FIELD_CONTAINS_WHITESPACES_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name('Test example')
+
+        expected = FIELD_WHITESPACES_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name(' ')
+
+        expected = FIELD_WHITESPACES_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name('\t')
+
+    def test_name_contains_punctuation(self):
+        """Check if it fails when name contains any punctuation characters distinct from hyphens"""
+
+        expected = FIELD_CONTAINS_PUNCTUATION_ERROR.format(name='name')
+        with self.assertRaisesRegex(ValueError, expected):
+            validate_name('Test-example(2)')

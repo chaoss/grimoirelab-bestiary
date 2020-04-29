@@ -21,6 +21,7 @@
 #
 
 import re
+import string
 
 
 def validate_field(name, value, allow_none=False):
@@ -44,7 +45,7 @@ def validate_field(name, value, allow_none=False):
             return
 
     if not isinstance(value, str):
-        msg = "field value must be a string; {} given".format(value.__class__.__name__)
+        msg = "field '{}' value must be a string; {} given".format(name, value.__class__.__name__)
         raise TypeError(msg)
 
     if value == '':
@@ -53,3 +54,46 @@ def validate_field(name, value, allow_none=False):
     m = re.match(r"^\s+$", value)
     if m:
         raise ValueError("'{}' cannot be composed by whitespaces only".format(name))
+
+
+def validate_name(name):
+    """Validate a string field checking if it follows a set of rules
+
+    The conditions to validate `name` consists on:
+     - Checking the conditions from `validate_field`.
+     - Checking if the first character is alphanumeric.
+     - Checking if the string contains whitespace characters.
+     - Checking if the string punctuation characters, different from hyphens.
+
+    :param name: string to validate
+
+    :raises ValueError: when a condition to validate the string is not satisfied
+    :raises TypeError: when the input value is not a string and not `None`
+    """
+
+    def contains_whitespace(s):
+        """Check if a string contains any whitespace characters"""
+
+        for c in s:
+            if c in string.whitespace:
+                return True
+        return False
+
+    def contains_punctuation(s):
+        """Check if a string contains any punctuation characters
+        distinct from hyphens
+        """
+        unaccepted_chars = string.punctuation.replace('-', '')
+        for c in s:
+            if c in unaccepted_chars:
+                return True
+        return False
+
+    validate_field('name', name)
+
+    if not name[0].isalnum():
+        raise ValueError("'name' must start with an alphanumeric character")
+    if contains_whitespace(name):
+        raise ValueError("'name' cannot contain whitespace characters")
+    if contains_punctuation(name):
+        raise ValueError("'name' cannot contain punctuation characters except hyphens")
