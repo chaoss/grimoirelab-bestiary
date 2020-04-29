@@ -1,0 +1,18 @@
+---
+title: Support Ecosystems
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 41
+notes: >
+    This feature allows to add, update and delete Ecosystems
+    to Bestiary. 
+
+    Ecosystems are meant to represent an abstract set of projects
+    which may share a common context.
+
+    An Ecosystem has an identifier and a name. Optionally, they may have
+    a title and a description text. There is a new query allowing to get
+    Ecosystems, including an optional filter to look for an specific ID or name. 
+
+    There are three new mutations: `addEcosystem`, `updateEcosystem` and `deleteEcosystem`.
+
