@@ -20,9 +20,6 @@
 #     Miguel Ángel Fernández <mafesan@bitergia.com>
 #
 
-import datetime
-
-from dateutil import tz
 
 from django.db.models import (CASCADE,
                               Model,
@@ -35,17 +32,47 @@ from django_mysql.models import JSONField
 
 from enum import Enum
 
-# Default dates for periods
-MIN_PERIOD_DATE = datetime.datetime(1900, 1, 1, 0, 0, 0,
-                                    tzinfo=tz.tzutc())
-MAX_PERIOD_DATE = datetime.datetime(2100, 1, 1, 0, 0, 0,
-                                    tzinfo=tz.tzutc())
+from grimoirelab_toolkit.datetime import datetime_utcnow
+
 
 # Innodb and utf8mb4 can only index 191 characters
 # For more information regarding this topic see:
 # https://dev.mysql.com/doc/refman/5.5/en/charset-unicode-conversion.html
 MAX_SIZE_CHAR_INDEX = 191
 MAX_SIZE_CHAR_FIELD = 128
+MAX_SIZE_NAME_FIELD = 32
+MAX_SIZE_TITLE_FIELD = 80
+
+
+class CreationDateTimeField(DateTimeField):
+    """Field automatically set to the current date when an object is created."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('editable', False)
+        kwargs.setdefault('default', datetime_utcnow)
+        super().__init__(*args, **kwargs)
+
+
+class LastModificationDateTimeField(DateTimeField):
+    """Field automatically set to the current date on each save() call."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('editable', False)
+        kwargs.setdefault('default', datetime_utcnow)
+        super().__init__(*args, **kwargs)
+
+    def pre_save(self, model_instance, add):
+        value = datetime_utcnow()
+        setattr(model_instance, self.attname, value)
+        return value
+
+
+class EntityBase(Model):
+    created_at = CreationDateTimeField()
+    last_modified = LastModificationDateTimeField()
+
+    class Meta:
+        abstract = True
 
 
 class Transaction(Model):
@@ -149,3 +176,37 @@ class Operation(Model):
 
     def __str__(self):
         return '%s - %s - %s - %s - %s' % (self.ouid, self.trx, self.op_type, self.entity_type, self.target)
+
+
+class Ecosystem(EntityBase):
+    """Model class for Ecosystem objects.
+
+    This class is meant to represent an abstract set of projects
+    which may share a common context.
+
+    Every ecosystem object must have a unique name (`name`).
+    Optionally, it may have a title (`title`) and a `description`
+    field containing a brief text describing what
+    the ecosystem is about.
+
+    :param name: Name of the ecosystem
+    :param title: Title of the ecosystem
+    :param description: Description of the ecosystem
+    """
+    name = CharField(unique=True,
+                     max_length=MAX_SIZE_NAME_FIELD,
+                     help_text='Ecosystem name')
+    title = CharField(max_length=MAX_SIZE_TITLE_FIELD,
+                      null=True,
+                      help_text='Ecosystem title')
+    description = CharField(max_length=MAX_SIZE_CHAR_FIELD,
+                            null=True,
+                            help_text='Brief text describing the ecosystem')
+
+    class Meta:
+        db_table = 'ecosystems'
+        unique_together = ('name', )
+        ordering = ('name', )
+
+    def __str__(self):
+        return '%s' % self.name

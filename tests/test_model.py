@@ -27,12 +27,78 @@ from django.test import TransactionTestCase
 
 from grimoirelab_toolkit.datetime import datetime_utcnow
 
-from bestiary.core.models import (Transaction,
+from bestiary.core.models import (Ecosystem,
+                                  Transaction,
                                   Operation)
 
 # Test check errors messages
 DUPLICATE_CHECK_ERROR = "Duplicate entry .+"
 NULL_VALUE_CHECK_ERROR = "Column .+ cannot be null"
+
+
+class TestEcosystem(TransactionTestCase):
+    """Unit tests for Ecosystem class"""
+
+    def test_unique_ecosystems(self):
+        """Check whether ecosystems are unique based on the id"""
+
+        with self.assertRaises(IntegrityError):
+            Ecosystem.objects.create(id=128)
+            Ecosystem.objects.create(id=128)
+
+    def test_unique_name(self):
+        """Check whether ecosystems are unique based on the name"""
+
+        with self.assertRaises(IntegrityError):
+            Ecosystem.objects.create(name='Test')
+            Ecosystem.objects.create(name='Test')
+
+    def test_charset(self):
+        """Check encoding charset"""
+
+        # With an invalid encoding both names wouldn't be inserted;
+        # In MySQL, chars 'ı' and 'i' are considered the same with a
+        # collation distinct to <charset>_unicode_ci
+        Ecosystem.objects.create(name='ıEcosystem')
+        Ecosystem.objects.create(name='iEcosystem')
+
+        eco1 = Ecosystem.objects.get(name='ıEcosystem')
+        eco2 = Ecosystem.objects.get(name='iEcosystem')
+
+        self.assertEqual(eco1.name, 'ıEcosystem')
+        self.assertEqual(eco2.name, 'iEcosystem')
+
+    def test_created_at(self):
+        """Check creation date is only set when the object is created"""
+
+        before_dt = datetime_utcnow()
+        eco = Ecosystem.objects.create(name='example')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(eco.created_at, before_dt)
+        self.assertLessEqual(eco.created_at, after_dt)
+
+        eco.save()
+
+        self.assertGreaterEqual(eco.created_at, before_dt)
+        self.assertLessEqual(eco.created_at, after_dt)
+
+    def test_last_modified(self):
+        """Check last modification date is set when the object is updated"""
+
+        before_dt = datetime_utcnow()
+        eco = Ecosystem.objects.create(name='example')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(eco.last_modified, before_dt)
+        self.assertLessEqual(eco.last_modified, after_dt)
+
+        before_modified_dt = datetime_utcnow()
+        eco.save()
+        after_modified_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(eco.last_modified, before_modified_dt)
+        self.assertLessEqual(eco.last_modified, after_modified_dt)
 
 
 class TestTransaction(TransactionTestCase):

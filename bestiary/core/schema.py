@@ -35,8 +35,13 @@ from graphene.types.generic import GenericScalar
 from graphene_django.converter import convert_django_field
 from graphene_django.types import DjangoObjectType
 
+from .api import (add_ecosystem,
+                  update_ecosystem,
+                  delete_ecosystem)
+from .context import BestiaryContext
 from .decorators import check_auth
-from .models import (Transaction,
+from .models import (Ecosystem,
+                     Transaction,
                      Operation)
 
 
@@ -97,7 +102,7 @@ class OperationType(DjangoObjectType):
 
     class Meta:
         model = Operation
-        description = "Operation objects representing atomic operations modifying the database."
+        description = "Operation objects representing atomic operations modifying the registry."
 
 
 class TransactionType(DjangoObjectType):
@@ -105,7 +110,22 @@ class TransactionType(DjangoObjectType):
 
     class Meta:
         model = Transaction
-        description = "Transaction objects representing atomic sets of operations modifying the database."
+        description = "Transaction objects representing atomic sets of operations modifying the registry."
+
+
+class EcosystemType(DjangoObjectType):
+    """Ecosystem objects are meant to gather a set of projects sharing a common context"""
+
+    class Meta:
+        model = Ecosystem
+
+
+class EcosystemInputType(graphene.InputObjectType):
+    """Fieds which can be used as an input for Ecosystem-related mutations"""
+
+    name = graphene.String(required=False)
+    title = graphene.String(required=False)
+    description = graphene.String(required=False)
 
 
 class TransactionFilterType(graphene.InputObjectType):
@@ -176,6 +196,13 @@ class OperationFilterType(graphene.InputObjectType):
     )
 
 
+class EcosystemFilterType(graphene.InputObjectType):
+    """Fields which can be used as a filter for EcosystemPaginatedType objects"""
+
+    id = graphene.ID(required=False)
+    name = graphene.String(required=False)
+
+
 class AbstractPaginatedType(graphene.ObjectType):
     """Generic class for objects returning paginated results
 
@@ -231,7 +258,7 @@ class TransactionPaginatedType(AbstractPaginatedType):
 
 
 class OperationPaginatedType(AbstractPaginatedType):
-    """Type returning paginated results of OperationType objects."""
+    """Type returning paginated results of OperationType objects"""
 
     class Meta:
         description = "Type returning paginated results of OperationType objects."
@@ -246,9 +273,91 @@ class OperationPaginatedType(AbstractPaginatedType):
     )
 
 
+class EcosystemPaginatedType(AbstractPaginatedType):
+    """Type returning paginated results of EcosystemType objects"""
+
+    entities = graphene.List(EcosystemType)
+    page_info = graphene.Field(PaginationType)
+
+
+class AddEcosystem(graphene.Mutation):
+    """Mutation which adds a new Ecosystem on the registry"""
+
+    class Arguments:
+        name = graphene.String()
+        title = graphene.String(required=False)
+        description = graphene.String(required=False)
+
+    ecosystem = graphene.Field(lambda: EcosystemType)
+
+    @check_auth
+    def mutate(self, info, name, title=None, description=None):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        ecosystem = add_ecosystem(ctx, name, title=title, description=description)
+
+        return AddEcosystem(
+            ecosystem=ecosystem
+        )
+
+
+class UpdateEcosystem(graphene.Mutation):
+    """Mutation which updates an existing Ecosystem"""
+
+    class Arguments:
+        id = graphene.ID()
+        data = EcosystemInputType()
+
+    ecosystem = graphene.Field(lambda: EcosystemType)
+
+    @check_auth
+    def mutate(self, info, id, data):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        ecosystem = update_ecosystem(ctx, id_value, **data)
+
+        return UpdateEcosystem(
+            ecosystem=ecosystem
+        )
+
+
+class DeleteEcosystem(graphene.Mutation):
+    """Mutation which deletes an existing Ecosystem from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    ecosystem = graphene.Field(lambda: EcosystemType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        ecosystem = delete_ecosystem(ctx, id_value)
+
+        return DeleteEcosystem(
+            ecosystem=ecosystem
+        )
+
+
 class BestiaryQuery(graphene.ObjectType):
     """Queries supported by Bestiary"""
 
+    ecosystems = graphene.Field(
+        EcosystemPaginatedType,
+        page_size=graphene.Int(),
+        page=graphene.Int(),
+        filters=EcosystemFilterType(required=False)
+    )
     transactions = graphene.Field(
         TransactionPaginatedType,
         page_size=graphene.Int(),
@@ -261,6 +370,22 @@ class BestiaryQuery(graphene.ObjectType):
         page=graphene.Int(),
         filters=OperationFilterType(required=False),
     )
+
+    @check_auth
+    def resolve_ecosystems(self, info, filters=None,
+                           page=1,
+                           page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE,
+                           **kwargs):
+        query = Ecosystem.objects.order_by('name')
+
+        if filters and 'id' in filters:
+            query = query.filter(id=filters['id'])
+        if filters and 'name' in filters:
+            query = query.filter(name=filters['name'])
+
+        return EcosystemPaginatedType.create_paginated_result(query,
+                                                              page,
+                                                              page_size=page_size)
 
     @check_auth
     def resolve_transactions(self, info, filters=None,
@@ -313,6 +438,9 @@ class BestiaryQuery(graphene.ObjectType):
 
 class BestiaryMutation(graphene.ObjectType):
     """Mutations supported by Bestiary"""
+    add_ecosystem = AddEcosystem.Field()
+    update_ecosystem = UpdateEcosystem.Field()
+    delete_ecosystem = DeleteEcosystem.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
