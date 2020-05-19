@@ -36,11 +36,13 @@ from graphene_django.converter import convert_django_field
 from graphene_django.types import DjangoObjectType
 
 from .api import (add_ecosystem,
+                  add_project,
                   update_ecosystem,
                   delete_ecosystem)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
+                     Project,
                      Transaction,
                      Operation)
 
@@ -120,8 +122,15 @@ class EcosystemType(DjangoObjectType):
         model = Ecosystem
 
 
+class ProjectType(DjangoObjectType):
+    """Project objects are meant to group a set of data locations"""
+
+    class Meta:
+        model = Project
+
+
 class EcosystemInputType(graphene.InputObjectType):
-    """Fieds which can be used as an input for Ecosystem-related mutations"""
+    """Fields which can be used as an input for Ecosystem-related mutations"""
 
     name = graphene.String(required=False)
     title = graphene.String(required=False)
@@ -203,6 +212,15 @@ class EcosystemFilterType(graphene.InputObjectType):
     name = graphene.String(required=False)
 
 
+class ProjectFilterType(graphene.InputObjectType):
+    """Fields which can be used as a filter for ProjectPaginatedType objects"""
+
+    id = graphene.ID(required=False)
+    name = graphene.String(required=False)
+    ecosystem_id = graphene.ID(required=False)
+    has_parent = graphene.Boolean(required=False)
+
+
 class AbstractPaginatedType(graphene.ObjectType):
     """Generic class for objects returning paginated results
 
@@ -280,6 +298,13 @@ class EcosystemPaginatedType(AbstractPaginatedType):
     page_info = graphene.Field(PaginationType)
 
 
+class ProjectPaginatedType(AbstractPaginatedType):
+    """Type returning paginated results of ProjectType objects"""
+
+    entities = graphene.List(ProjectType)
+    page_info = graphene.Field(PaginationType)
+
+
 class AddEcosystem(graphene.Mutation):
     """Mutation which adds a new Ecosystem on the registry"""
 
@@ -299,6 +324,30 @@ class AddEcosystem(graphene.Mutation):
 
         return AddEcosystem(
             ecosystem=ecosystem
+        )
+
+
+class AddProject(graphene.Mutation):
+    """Mutation which adds a new Project on the registry"""
+
+    class Arguments:
+        ecosystem_id = graphene.ID()
+        name = graphene.String()
+        title = graphene.String(required=False)
+
+    project = graphene.Field(lambda: ProjectType)
+
+    @check_auth
+    def mutate(self, info, ecosystem_id, name, title=None):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        ecosystem_id_value = int(ecosystem_id) if ecosystem_id else None
+
+        project = add_project(ctx, ecosystem_id_value, name, title)
+
+        return AddProject(
+            project=project
         )
 
 
@@ -358,6 +407,12 @@ class BestiaryQuery(graphene.ObjectType):
         page=graphene.Int(),
         filters=EcosystemFilterType(required=False)
     )
+    projects = graphene.Field(
+        ProjectPaginatedType,
+        page_size=graphene.Int(),
+        page=graphene.Int(),
+        filters=ProjectFilterType(required=False)
+    )
     transactions = graphene.Field(
         TransactionPaginatedType,
         page_size=graphene.Int(),
@@ -386,6 +441,24 @@ class BestiaryQuery(graphene.ObjectType):
         return EcosystemPaginatedType.create_paginated_result(query,
                                                               page,
                                                               page_size=page_size)
+
+    @check_auth
+    def resolve_projects(self, info, filters=None,
+                         page=1,
+                         page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE,
+                         **kwargs):
+        query = Project.objects.order_by('name')
+
+        if filters and 'id' in filters:
+            query = query.filter(id=filters['id'])
+        if filters and 'name' in filters:
+            query = query.filter(name=filters['name'])
+        if filters and 'title' in filters:
+            query = query.filter(title=filters['title'])
+
+        return ProjectPaginatedType.create_paginated_result(query,
+                                                            page,
+                                                            page_size=page_size)
 
     @check_auth
     def resolve_transactions(self, info, filters=None,
@@ -439,6 +512,7 @@ class BestiaryQuery(graphene.ObjectType):
 class BestiaryMutation(graphene.ObjectType):
     """Mutations supported by Bestiary"""
     add_ecosystem = AddEcosystem.Field()
+    add_project = AddProject.Field()
     update_ecosystem = UpdateEcosystem.Field()
     delete_ecosystem = DeleteEcosystem.Field()
 
