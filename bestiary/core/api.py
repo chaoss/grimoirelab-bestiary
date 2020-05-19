@@ -24,6 +24,7 @@ import django.db.transaction
 
 from .db import (find_ecosystem,
                  add_ecosystem as add_ecosystem_db,
+                 add_project as add_project_db,
                  update_ecosystem as update_ecosystem_db,
                  delete_ecosystem as delete_ecosystem_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
@@ -74,6 +75,59 @@ def add_ecosystem(ctx, name, title=None, description=None):
     trxl.close()
 
     return ecosystem
+
+
+@django.db.transaction.atomic
+def add_project(ctx, ecosystem_id, name, title=None):
+    """Add a project to the registry.
+
+    This function adds a project to the registry.
+    It checks first whether the project is already on the registry.
+    When it is not found, the new project is added. Otherwise,
+    it raises a 'AlreadyExistsError' exception to notify that the project
+    already exists.
+
+    :param ctx: context from where this method is called
+    :param ecosystem_id: ID of the ecosystem where this project belongs to
+    :param name: name of the project
+    :param title: title of the project
+
+    :raises InvalidValueError: raised when name is None or an empty string
+    :raises TypeError: raised when name is not a string or a NoneType
+    :raises AlreadyExistsError: raised when the project already exists
+        in the registry
+    """
+    if name is None:
+        raise InvalidValueError(msg="'name' cannot be None")
+    if ecosystem_id is None:
+        raise InvalidValueError(msg="'ecosystem_id' cannot be None")
+    if name == '':
+        raise InvalidValueError(msg="'name' cannot be an empty string")
+    if title == '':
+        raise InvalidValueError(msg="'title' cannot be an empty string")
+
+    trxl = TransactionsLog.open('add_project', ctx)
+
+    try:
+        ecosystem = find_ecosystem(ecosystem_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    try:
+        project = add_project_db(trxl,
+                                 ecosystem=ecosystem,
+                                 name=name,
+                                 title=title)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except AlreadyExistsError as exc:
+        raise exc
+
+    trxl.close()
+
+    return project
 
 
 @django.db.transaction.atomic
