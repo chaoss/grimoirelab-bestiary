@@ -28,6 +28,7 @@ from django.test import TransactionTestCase
 from grimoirelab_toolkit.datetime import datetime_utcnow
 
 from bestiary.core.models import (Ecosystem,
+                                  Project,
                                   Transaction,
                                   Operation)
 
@@ -99,6 +100,81 @@ class TestEcosystem(TransactionTestCase):
 
         self.assertGreaterEqual(eco.last_modified, before_modified_dt)
         self.assertLessEqual(eco.last_modified, after_modified_dt)
+
+
+class TestProject(TransactionTestCase):
+    """Unit tests for Project class"""
+
+    def test_unique_ecosystems(self):
+        """Check whether projects are unique based on the id"""
+
+        with self.assertRaises(IntegrityError):
+            Project.objects.create(id=128)
+            Project.objects.create(id=128)
+
+    def test_unique_name(self):
+        """Check whether projects are unique based on the name"""
+
+        with self.assertRaises(IntegrityError):
+            Project.objects.create(name='Test')
+            Project.objects.create(name='Test')
+
+    def test_add_parent(self):
+        """Check whether parent projects can be added to projects"""
+
+        proj_parent = Project.objects.create(name='Test-parent')
+        Project.objects.create(name='Test', parent_project=proj_parent)
+
+        proj = Project.objects.get(name='Test')
+
+        self.assertEqual(proj.parent_project, proj_parent)
+
+    def test_charset(self):
+        """Check encoding charset"""
+
+        # With an invalid encoding both names wouldn't be inserted;
+        # In MySQL, chars 'ı' and 'i' are considered the same with a
+        # collation distinct to <charset>_unicode_ci
+        Project.objects.create(name='ıProject')
+        Project.objects.create(name='iProject')
+
+        proj1 = Project.objects.get(name='ıProject')
+        proj2 = Project.objects.get(name='iProject')
+
+        self.assertEqual(proj1.name, 'ıProject')
+        self.assertEqual(proj2.name, 'iProject')
+
+    def test_created_at(self):
+        """Check creation date is only set when the object is created"""
+
+        before_dt = datetime_utcnow()
+        proj = Project.objects.create(name='example')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(proj.created_at, before_dt)
+        self.assertLessEqual(proj.created_at, after_dt)
+
+        proj.save()
+
+        self.assertGreaterEqual(proj.created_at, before_dt)
+        self.assertLessEqual(proj.created_at, after_dt)
+
+    def test_last_modified(self):
+        """Check last modification date is set when the object is updated"""
+
+        before_dt = datetime_utcnow()
+        proj = Project.objects.create(name='example')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(proj.last_modified, before_dt)
+        self.assertLessEqual(proj.last_modified, after_dt)
+
+        before_modified_dt = datetime_utcnow()
+        proj.save()
+        after_modified_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(proj.last_modified, before_modified_dt)
+        self.assertLessEqual(proj.last_modified, after_modified_dt)
 
 
 class TestTransaction(TransactionTestCase):
