@@ -31,26 +31,32 @@ from grimoirelab_toolkit.datetime import datetime_utcnow
 
 from bestiary.core import db
 from bestiary.core.context import BestiaryContext
-from bestiary.core.errors import AlreadyExistsError, NotFoundError
+from bestiary.core.errors import (AlreadyExistsError,
+                                  NotFoundError)
 from bestiary.core.log import TransactionsLog
 from bestiary.core.models import (Ecosystem,
+                                  Project,
                                   Transaction,
                                   Operation)
 
 
 DUPLICATED_ECOSYSTEM_ERROR = "Ecosystem 'Example' already exists in the registry"
-ECOSYSTEM_NAME_NONE_ERROR = "'name' cannot be None"
-ECOSYSTEM_NAME_EMPTY_ERROR = "'name' cannot be an empty string"
-ECOSYSTEM_NAME_WHITESPACES_ERROR = "'name' cannot be composed by whitespaces only"
-ECOSYSTEM_NAME_CONTAIN_WHITESPACES_ERROR = "'name' cannot contain whitespace characters"
-ECOSYSTEM_NAME_VALUE_ERROR = "field 'name' value must be a string; int given"
-ECOSYSTEM_TITLE_VALUE_ERROR = "field 'title' value must be a string; int given"
-ECOSYSTEM_TITLE_EMPTY_ERROR = "'title' cannot be an empty string"
-ECOSYSTEM_TITLE_WHITESPACES_ERROR = "'title' cannot be composed by whitespaces only"
-ECOSYSTEM_DESC_EMPTY_ERROR = "'description' cannot be an empty string"
-ECOSYSTEM_DESC_WHITESPACES_ERROR = "'description' cannot be composed by whitespaces only"
-ECOSYSTEM_DESC_VALUE_ERROR = "field 'description' value must be a string; int given"
+DUPLICATED_PROJECT_ERROR = "Project 'example' already exists in the registry"
+NAME_NONE_ERROR = "'name' cannot be None"
+NAME_EMPTY_ERROR = "'name' cannot be an empty string"
+ECOSYSTEM_ID_NONE_ERROR = "AttributeError: 'NoneType' object has no attribute 'id'"
+NAME_WHITESPACES_ERROR = "'name' cannot be composed by whitespaces only"
+NAME_CONTAIN_WHITESPACES_ERROR = "'name' cannot contain whitespace characters"
+NAME_VALUE_ERROR = "field 'name' value must be a string; int given"
+TITLE_VALUE_ERROR = "field 'title' value must be a string; int given"
+TITLE_EMPTY_ERROR = "'title' cannot be an empty string"
+TITLE_WHITESPACES_ERROR = "'title' cannot be composed by whitespaces only"
+DESC_EMPTY_ERROR = "'description' cannot be an empty string"
+DESC_WHITESPACES_ERROR = "'description' cannot be composed by whitespaces only"
+DESC_VALUE_ERROR = "field 'description' value must be a string; int given"
 ECOSYSTEM_NOT_FOUND_ERROR = "Ecosystem ID 2 not found in the registry"
+PROJECT_NOT_FOUND_ERROR = "Project ID 2 not found in the registry"
+PROJECT_PARENT_EQUAL_ERROR = "Project 'example' cannot be added as parent project"
 
 NAME_ALPHANUMERIC_ERROR = "'name' must start with an alphanumeric character"
 
@@ -122,7 +128,7 @@ class TestAddEcosystem(TestCase):
     def test_name_none(self):
         """Check whether ecosystems with None as name cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_NONE_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_NONE_ERROR):
             db.add_ecosystem(self.trxl,
                              None,
                              title='Example title',
@@ -134,7 +140,7 @@ class TestAddEcosystem(TestCase):
     def test_name_empty(self):
         """Check whether ecosystems with empty names cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_EMPTY_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_EMPTY_ERROR):
             db.add_ecosystem(self.trxl,
                              '',
                              title='Example title',
@@ -146,7 +152,7 @@ class TestAddEcosystem(TestCase):
     def test_name_whitespaces(self):
         """Check whether ecosystems containing whitespaces cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_CONTAIN_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_CONTAIN_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'my ecosystem',
                              title='Example title',
@@ -158,19 +164,19 @@ class TestAddEcosystem(TestCase):
                              title='Example title',
                              description='Example desc.')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              '  ',
                              title='Example title',
                              description='Example desc.')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              '\t',
                              title='Example title',
                              description='Example desc.')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_NAME_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              ' \t  ',
                              title='Example title',
@@ -201,7 +207,7 @@ class TestAddEcosystem(TestCase):
     def test_title_empty(self):
         """Check whether ecosystems with empty titles cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_TITLE_EMPTY_ERROR):
+        with self.assertRaisesRegex(ValueError, TITLE_EMPTY_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='',
@@ -213,19 +219,19 @@ class TestAddEcosystem(TestCase):
     def test_title_whitespaces(self):
         """Check whether ecosystem titles composed by whitespaces cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_TITLE_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='  ',
                              description='Example desc.')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_TITLE_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='\t',
                              description='Example desc.')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_TITLE_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title=' \t  ',
@@ -256,7 +262,7 @@ class TestAddEcosystem(TestCase):
     def test_description_empty(self):
         """Check whether ecosystems with empty descriptions cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_DESC_EMPTY_ERROR):
+        with self.assertRaisesRegex(ValueError, DESC_EMPTY_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='Example title',
@@ -268,19 +274,19 @@ class TestAddEcosystem(TestCase):
     def test_description_whitespaces(self):
         """Check whether ecosystem descriptions composed by whitespaces cannot be added"""
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_DESC_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, DESC_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='Example title',
                              description='  ')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_DESC_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, DESC_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='Example title',
                              description='\t')
 
-        with self.assertRaisesRegex(ValueError, ECOSYSTEM_DESC_WHITESPACES_ERROR):
+        with self.assertRaisesRegex(ValueError, DESC_WHITESPACES_ERROR):
             db.add_ecosystem(self.trxl,
                              'Example',
                              title='Example title',
@@ -333,6 +339,199 @@ class TestAddEcosystem(TestCase):
         self.assertEqual(op1_args['name'], 'Example')
         self.assertEqual(op1_args['title'], 'Example title')
         self.assertEqual(op1_args['description'], 'Example description')
+
+
+class TestAddProject(TestCase):
+    """Unit tests for add_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.trxl = TransactionsLog.open('add_project', self.ctx)
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+
+    def test_add_project(self):
+        """Check if a new project is added"""
+
+        proj = db.add_project(self.trxl,
+                              self.eco,
+                              'example',
+                              title='Project title')
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.parent_project, None)
+
+        proj_db = Project.objects.get(id=proj.id)
+        self.assertIsInstance(proj_db, Project)
+        self.assertEqual(proj_db.id, proj.id)
+        self.assertEqual(proj_db.ecosystem, proj.ecosystem)
+        self.assertEqual(proj_db.name, 'example')
+        self.assertEqual(proj_db.title, 'Project title')
+        self.assertEqual(proj_db.parent_project, None)
+
+    def test_name_none(self):
+        """Check whether projects with None as name cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, NAME_NONE_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           None,
+                           title='Project title')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_name_empty(self):
+        """Check whether projects with empty names cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, NAME_EMPTY_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           '',
+                           title='Project title')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_name_whitespaces(self):
+        """Check whether projects containing whitespaces cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, NAME_CONTAIN_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'my project',
+                           title='Project title')
+
+        with self.assertRaisesRegex(ValueError, NAME_ALPHANUMERIC_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           ' project',
+                           title='Project title')
+
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           '  ',
+                           title='Project title')
+
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           '\t',
+                           title='Project title')
+
+        with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           ' \t  ',
+                           title='Project title')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_title_none(self):
+        """Check whether projects with None as title can be added"""
+
+        proj = db.add_project(self.trxl,
+                              self.eco,
+                              'example',
+                              title=None)
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, None)
+        self.assertEqual(proj.parent_project, None)
+
+        proj_db = Project.objects.get(id=proj.id)
+        self.assertIsInstance(proj_db, Project)
+        self.assertEqual(proj_db.ecosystem, proj.ecosystem)
+        self.assertEqual(proj_db.id, proj.id)
+        self.assertEqual(proj_db.name, 'example')
+        self.assertEqual(proj_db.title, None)
+        self.assertEqual(proj_db.parent_project, None)
+
+    def test_title_empty(self):
+        """Check whether projects with empty titles cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, TITLE_EMPTY_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'example',
+                           title='')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_title_whitespaces(self):
+        """Check whether project titles composed by whitespaces cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'example',
+                           title='  ')
+
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'example',
+                           title='\t')
+
+        with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'example',
+                           title=' \t  ')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_integrity_error(self):
+        """Check whether projects with the same name cannot be inserted"""
+
+        name = 'example'
+        title1 = 'Project title 1'
+        title2 = 'Project title 2'
+
+        with self.assertRaisesRegex(AlreadyExistsError, DUPLICATED_PROJECT_ERROR):
+            db.add_project(self.trxl, self.eco, name, title=title1)
+            db.add_project(self.trxl, self.eco, name, title=title2)
+
+    def test_operations(self):
+        """Check if the right operations are created when adding a project"""
+
+        timestamp = datetime_utcnow()
+
+        db.add_project(self.trxl,
+                       self.eco,
+                       'example',
+                       title='Project title')
+
+        transactions = Transaction.objects.all()
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, 'example')
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(op1_args['name'], 'example')
+        self.assertEqual(op1_args['title'], 'Project title')
+        self.assertEqual(op1_args['ecosystem'], self.eco.id)
 
 
 class TestDeleteEcosystem(TestCase):
@@ -467,7 +666,7 @@ class TestUpdateEcosystem(TestCase):
         """Check type values of name parameter"""
 
         args = {'name': 12345}
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_NAME_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
             db.update_ecosystem(self.trxl, self.ecosystem, **args)
 
         # Check if operations have not been generated after the failure
@@ -487,7 +686,7 @@ class TestUpdateEcosystem(TestCase):
         """Check type values of title parameter"""
 
         args = {'title': 12345}
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_TITLE_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
             db.update_ecosystem(self.trxl, self.ecosystem, **args)
 
         # Check if operations have not been generated after the failure
@@ -507,7 +706,7 @@ class TestUpdateEcosystem(TestCase):
         """Check type values of description parameter"""
 
         args = {'description': 12345}
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_DESC_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, DESC_VALUE_ERROR):
             db.update_ecosystem(self.trxl, self.ecosystem, **args)
 
         # Check if operations have not been generated after the failure
