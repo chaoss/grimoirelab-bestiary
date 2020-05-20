@@ -820,3 +820,130 @@ class TestUpdateEcosystem(TestCase):
         self.assertEqual(op1_args['name'], 'Example-updated')
         self.assertEqual(op1_args['title'], 'Example title updated')
         self.assertEqual(op1_args['description'], 'Example desc. updated')
+
+
+class TestUpdateProject(TestCase):
+    """Unit tests for update_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.trxl = TransactionsLog.open('update_project', self.ctx)
+
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title')
+
+    def test_update_project(self):
+        """Check if it updates a project"""
+
+        proj_id = self.project.id
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        up_project = db.update_project(self.trxl, self.project, **args)
+
+        # Tests
+        self.assertIsInstance(up_project, Project)
+        self.assertEqual(self.project, up_project)
+
+        self.assertEqual(up_project.name, 'example-updated')
+        self.assertEqual(up_project.title, 'Project title updated')
+        self.assertEqual(up_project.id, proj_id)
+
+        # Check database object
+        project_db = Project.objects.get(name='example-updated')
+        self.assertEqual(up_project, project_db)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        db.update_project(self.trxl, self.project, **args)
+        after_dt = datetime_utcnow()
+
+        # Tests
+        project = Project.objects.get(id=1)
+        self.assertLessEqual(before_dt, project.last_modified)
+        self.assertGreaterEqual(after_dt, project.last_modified)
+
+    def test_name_empty(self):
+        """Check if it fails when name is set to None when an empty string is given"""
+
+        args = {'name': ''}
+        with self.assertRaisesRegex(ValueError, ''):
+            db.update_project(self.trxl, self.project, **args)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_name_invalid_type(self):
+        """Check type values of name parameter"""
+
+        args = {'name': 12345}
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
+            db.update_project(self.trxl, self.project, **args)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_title_empty(self):
+        """Check if the title is set to None when an empty string is given"""
+
+        args = {'title': ''}
+        up_project = db.update_project(self.trxl, self.project, **args)
+        self.assertEqual(up_project.name, 'example')
+        self.assertEqual(up_project.title, None)
+
+    def test_title_invalid_type(self):
+        """Check type values of title parameter"""
+
+        args = {'title': 12345}
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
+            db.update_project(self.trxl, self.project, **args)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_operations(self):
+        """Check if the right operations are created when updating a project"""
+
+        timestamp = datetime_utcnow()
+
+        # Update the project
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        db.update_project(self.trxl, self.project, **args)
+
+        transactions = Transaction.objects.filter(name='update_project')
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, str(self.project.id))
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(op1_args['id'], self.project.id)
+        self.assertEqual(op1_args['name'], 'example-updated')
+        self.assertEqual(op1_args['title'], 'Project title updated')
