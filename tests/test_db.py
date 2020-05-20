@@ -594,6 +594,80 @@ class TestDeleteEcosystem(TestCase):
         self.assertEqual(op1_args['id'], 1)
 
 
+class TestDeleteProject(TestCase):
+    """Unit tests for delete_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.trxl = TransactionsLog.open('delete_project', self.ctx)
+
+    def test_delete_project(self):
+        """Check whether it deletes a project and its related data"""
+
+        proj = Project.objects.create(id=1,
+                                      name='example',
+                                      title='Project title')
+
+        # Check data and remove project
+        self.assertEqual(proj.id, 1)
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.parent_project, None)
+        db.delete_project(self.trxl, proj)
+
+        # Tests
+        with self.assertRaises(ObjectDoesNotExist):
+            Project.objects.get(id=1)
+
+    def test_delete_parent(self):
+        """Check if the project is deleted when a parent project is removed"""
+
+        parent_proj = Project.objects.create(name='example-parent',
+                                             title='Project title')
+        proj = Project.objects.create(name='example',
+                                      title='Project title',
+                                      parent_project=parent_proj)
+
+        # Remove project
+        db.delete_project(self.trxl, parent_proj)
+
+        # Tests
+        with self.assertRaises(ObjectDoesNotExist):
+            Project.objects.get(id=proj.id)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a project"""
+
+        timestamp = datetime_utcnow()
+        proj = Project.objects.create(id=1,
+                                      name='example',
+                                      title='Project title')
+
+        transactions = Transaction.objects.filter(name='delete_project')
+        trx = transactions[0]
+
+        db.delete_project(self.trxl, proj)
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.DELETE.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, '1')
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], 1)
+
+
 class TestUpdateEcosystem(TestCase):
     """Unit tests for update_ecosystem"""
 
