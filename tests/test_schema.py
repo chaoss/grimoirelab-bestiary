@@ -1511,6 +1511,92 @@ class TestDeleteEcosystemMutation(django.test.TestCase):
         self.assertEqual(msg, AUTHENTICATION_ERROR)
 
 
+class TestDeleteProjectMutation(django.test.TestCase):
+    """Unit tests for mutation to delete projects"""
+
+    BT_DELETE_PROJECT = """
+      mutation delProj($id: ID) {
+        deleteProject(id: $id) {
+          project{
+            id
+            name
+            title
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.proj_ex = Project.objects.create(id=1,
+                                              name='Example')
+
+        self.proj_bit = Project.objects.create(id=2,
+                                               name='Bitergia')
+
+    def test_delete_project(self):
+        """Check whether it deletes a project"""
+
+        # Delete project
+        params = {
+            'id': 1
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        proj = executed['data']['deleteProject']['project']
+        self.assertEqual(proj['id'], '1')
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], None)
+
+        # Tests
+        with self.assertRaises(django.core.exceptions.ObjectDoesNotExist):
+            Project.objects.get(id=1)
+
+        projects = Project.objects.filter(id=2)
+        self.assertEqual(len(projects), 1)
+
+    def test_not_found_project(self):
+        """Check if it returns an error when a project does not exist"""
+
+        params = {
+            'id': 11111111
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+        projects = Project.objects.all()
+        self.assertEqual(len(projects), 2)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_DELETE_PROJECT,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
 class TestUpdateEcosystemMutation(django.test.TestCase):
     """Unit tests for mutation to update ecosystems"""
 

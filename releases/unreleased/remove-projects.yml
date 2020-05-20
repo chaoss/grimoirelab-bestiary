@@ -1,0 +1,11 @@
+---
+title: Delete projects
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 42
+notes: >
+    This feature allows to delete projects from Bestiary.
+
+    There is a new mutation: `deleteProject` which allows
+    to remove projects based on the projects ID.
+

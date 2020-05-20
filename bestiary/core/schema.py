@@ -38,7 +38,8 @@ from graphene_django.types import DjangoObjectType
 from .api import (add_ecosystem,
                   add_project,
                   update_ecosystem,
-                  delete_ecosystem)
+                  delete_ecosystem,
+                  delete_project)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
@@ -398,6 +399,29 @@ class DeleteEcosystem(graphene.Mutation):
         )
 
 
+class DeleteProject(graphene.Mutation):
+    """Mutation which deletes an existing Project from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    project = graphene.Field(lambda: ProjectType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        project = delete_project(ctx, id_value)
+
+        return DeleteProject(
+            project=project
+        )
+
+
 class BestiaryQuery(graphene.ObjectType):
     """Queries supported by Bestiary"""
 
@@ -515,6 +539,7 @@ class BestiaryMutation(graphene.ObjectType):
     add_project = AddProject.Field()
     update_ecosystem = UpdateEcosystem.Field()
     delete_ecosystem = DeleteEcosystem.Field()
+    delete_project = DeleteProject.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
