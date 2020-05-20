@@ -1786,3 +1786,186 @@ class TestUpdateEcosystemMutation(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestUpdateProjectMutation(django.test.TestCase):
+    """Unit tests for mutation to update projects"""
+
+    BT_UPDATE_PROJECT = """
+      mutation updateProj($id: ID, $data: ProjectInputType) {
+        updateProject(id: $id, data: $data) {
+          project {
+            id
+            name
+            title
+            parentProject {
+              id
+              name
+            }
+            ecosystem {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Load initial dataset and set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.ctx = BestiaryContext(self.user)
+
+        self.ecosystem = Ecosystem.objects.create(id=1,
+                                                  name='Example',
+                                                  title='Example title',
+                                                  description='Example desc.')
+
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.ecosystem)
+
+    def test_update_project(self):
+        """Check if it updates a project"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 1,
+            'data': {
+                'name': 'example-updated',
+                'title': 'Project title updated'
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check results, project was updated
+        project = executed['data']['updateProject']['project']
+        self.assertEqual(project['id'], '1')
+        self.assertEqual(project['name'], 'example-updated')
+        self.assertEqual(project['title'], 'Project title updated')
+        self.assertEqual(project['parentProject'], None)
+
+        ecosystem = project['ecosystem']
+        self.assertEqual(ecosystem['id'], str(self.ecosystem.id))
+        self.assertEqual(ecosystem['name'], 'Example')
+
+        # Check database
+        project_db = Project.objects.get(id=1)
+        self.assertEqual(project_db.id, 1)
+        self.assertEqual(project_db.name, 'example-updated')
+        self.assertEqual(project_db.title, 'Project title updated')
+        self.assertEqual(project_db.parent_project, None)
+        self.assertEqual(project_db.ecosystem, self.ecosystem)
+
+    def test_non_existing_project(self):
+        """Check if it fails updating projects that do not exist"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 11111111,
+            'data': {
+                'name': 'example-updated',
+                'title': 'Project title updated'
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+    def test_title_empty(self):
+        """Check if title is set to None when an empty string is given"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 1,
+            'data': {
+                'name': 'example-updated',
+                'title': ''
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        project = executed['data']['updateProject']['project']
+        self.assertEqual(project['id'], '1')
+        self.assertEqual(project['name'], 'example-updated')
+        self.assertEqual(project['title'], None)
+        self.assertEqual(project['parentProject'], None)
+
+        ecosystem = project['ecosystem']
+        self.assertEqual(ecosystem['id'], str(self.ecosystem.id))
+        self.assertEqual(ecosystem['name'], 'Example')
+
+    def test_name_empty(self):
+        """Check if it fails when name is set to an empty string"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 1,
+            'data': {
+                'name': '',
+                'title': 'Example title updated'
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, NAME_EMPTY_ERROR)
+
+    def test_name_invalid(self):
+        """Check if it fails updating projects with an invalid name"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 1,
+            'data': {
+                'name': 'Example updated',
+                'title': 'Example title updated'
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, INVALID_NAME_WHITESPACES)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'id': 1,
+            'data': {
+                'name': 'example-updated',
+                'title': 'Project title updated'
+            }
+        }
+        executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
