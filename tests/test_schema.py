@@ -822,6 +822,31 @@ class TestQueryEcosystems(django.test.TestCase):
         self.assertEqual(pag_data['endIndex'], 2)
         self.assertEqual(pag_data['totalResults'], 3)
 
+        # Testing whether it returns different results in the second page
+        test_query = BT_ECOSYSTEMS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        ecosystems = executed['data']['ecosystems']['entities']
+        self.assertEqual(len(ecosystems), 1)
+
+        eco = ecosystems[0]
+        self.assertEqual(eco['id'], str(eco2.id))
+        self.assertEqual(eco['name'], 'Example-2')
+        self.assertEqual(eco['title'], 'Example title 2')
+        self.assertEqual(eco['description'], 'Example desc. 2')
+
+        pag_data = executed['data']['ecosystems']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 2)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertFalse(pag_data['hasNext'])
+        self.assertTrue(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 3)
+        self.assertEqual(pag_data['endIndex'], 3)
+        self.assertEqual(pag_data['totalResults'], 3)
+
     def test_empty_registry(self):
         """Check whether it returns an empty list when the registry is empty"""
 
