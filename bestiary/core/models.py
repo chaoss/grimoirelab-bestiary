@@ -178,6 +178,49 @@ class Operation(Model):
         return '%s - %s - %s - %s - %s' % (self.ouid, self.trx, self.op_type, self.entity_type, self.target)
 
 
+class Project(EntityBase):
+    """Model class for Project objects.
+
+    This class is meant to represent a set of data locations which
+    have to be grouped under the same entity. Moreover, this grouping
+    may have a hierarchy by defining n sub-projects.
+
+    Every project object must have a name (`name`) and must belong
+    to one single Ecosystem (`ecosystem`).
+    Optionally, it may have a title (`title`), and a relation with
+    a parent project (`parent_project`).
+
+    :param name: Name of the project
+    :param title: Title of the project
+    :param parent_project: Parent project object
+    :param ecosystem: Ecosystem which the project belongs to
+    """
+    name = CharField(unique=True,
+                     max_length=MAX_SIZE_NAME_FIELD,
+                     help_text='Project name')
+    title = CharField(max_length=MAX_SIZE_TITLE_FIELD,
+                      null=True,
+                      help_text='Project title')
+    parent_project = ForeignKey("Project",
+                                parent_link=True,
+                                null=True,
+                                on_delete=CASCADE,
+                                related_name='subprojects',
+                                help_text='Parent project')
+    ecosystem = ForeignKey("Ecosystem",
+                           null=True,
+                           on_delete=CASCADE,
+                           help_text='Ecosystem')
+
+    class Meta:
+        db_table = 'projects'
+        unique_together = ('name',)
+        ordering = ('name',)
+
+    def __str__(self):
+        return '%s' % self.name
+
+
 class Ecosystem(EntityBase):
     """Model class for Ecosystem objects.
 

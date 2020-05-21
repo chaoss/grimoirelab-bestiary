@@ -33,6 +33,7 @@ from grimoirelab_toolkit.datetime import datetime_utcnow, str_to_datetime
 from bestiary.core.context import BestiaryContext
 from bestiary.core.log import TransactionsLog
 from bestiary.core.models import (Ecosystem,
+                                  Project,
                                   Transaction,
                                   Operation)
 from bestiary.core.schema import BestiaryQuery, BestiaryMutation
@@ -40,12 +41,16 @@ from bestiary.core.schema import BestiaryQuery, BestiaryMutation
 
 AUTHENTICATION_ERROR = "You do not have permission to perform this action"
 DUPLICATED_ECO_ERROR = "Ecosystem 'Example' already exists in the registry"
+DUPLICATED_PROJECT_ERROR = "Project 'Example' already exists in the registry"
 NAME_EMPTY_ERROR = "'name' cannot be an empty string"
 NAME_NONE_ERROR = "'name' cannot be None"
+ECOSYSTEM_ID_NONE_ERROR = "'ecosystem_id' cannot be None"
 TITLE_EMPTY_ERROR = "'title' cannot be an empty string"
 DESC_EMPTY_ERROR = "'description' cannot be an empty string"
 ECOSYSTEM_DOES_NOT_EXIST_ERROR = "Ecosystem ID 11111111 not found in the registry"
-ECOSYSTEM_INVALID_NAME_WHITESPACES = "'name' cannot contain whitespace characters"
+PROJECT_DOES_NOT_EXIST_ERROR = "Project ID 11111111 not found in the registry"
+PARENT_PROJECT_ERROR = "Project 'example' cannot be added as parent project"
+INVALID_NAME_WHITESPACES = "'name' cannot contain whitespace characters"
 
 # Test queries
 BT_TRANSACTIONS_QUERY = """{
@@ -267,6 +272,77 @@ BT_ECOSYSTEMS_QUERY_PAGINATION = """{
       name
       title
       description
+    }
+    pageInfo{
+      page
+      pageSize
+      numPages
+      hasNext
+      hasPrev
+      startIndex
+      endIndex
+      totalResults
+    }
+  }
+}"""
+BT_PROJECTS_QUERY = """{
+  projects {
+    entities {
+      id
+      name
+      title
+      parentProject {
+        id
+        name
+      }
+      ecosystem {
+        id
+        name
+        title
+        description
+      }
+    }
+  }
+}"""
+BT_PROJECTS_QUERY_FILTER = """{
+  projects (
+    filters: {
+      id: "%d",
+      name: "%s"
+    }
+  ){
+    entities {
+      id
+      name
+      title
+      parentProject {
+        id
+        name
+      }
+      ecosystem {
+        id
+        name
+      }
+    }
+  }
+}"""
+BT_PROJECTS_QUERY_PAGINATION = """{
+  projects (
+    page: %d
+    pageSize: %d
+  ){
+    entities {
+      id
+      name
+      title
+      parentProject {
+        id
+        name
+      }
+      ecosystem {
+        id
+        name
+      }
     }
     pageInfo{
       page
@@ -746,6 +822,31 @@ class TestQueryEcosystems(django.test.TestCase):
         self.assertEqual(pag_data['endIndex'], 2)
         self.assertEqual(pag_data['totalResults'], 3)
 
+        # Testing whether it returns different results in the second page
+        test_query = BT_ECOSYSTEMS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        ecosystems = executed['data']['ecosystems']['entities']
+        self.assertEqual(len(ecosystems), 1)
+
+        eco = ecosystems[0]
+        self.assertEqual(eco['id'], str(eco2.id))
+        self.assertEqual(eco['name'], 'Example-2')
+        self.assertEqual(eco['title'], 'Example title 2')
+        self.assertEqual(eco['description'], 'Example desc. 2')
+
+        pag_data = executed['data']['ecosystems']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 2)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertFalse(pag_data['hasNext'])
+        self.assertTrue(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 3)
+        self.assertEqual(pag_data['endIndex'], 3)
+        self.assertEqual(pag_data['totalResults'], 3)
+
     def test_empty_registry(self):
         """Check whether it returns an empty list when the registry is empty"""
 
@@ -772,6 +873,169 @@ class TestQueryEcosystems(django.test.TestCase):
         client = graphene.test.Client(schema)
 
         executed = client.execute(BT_ECOSYSTEMS_QUERY,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestQueryProjects(django.test.TestCase):
+    """Unit tests for project queries"""
+
+    def setUp(self):
+        """Load initial dataset and set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.proj = Project(name='Example',
+                            title='Example title')
+        self.proj.save()
+
+    def test_project(self):
+        """Check if it returns the list of projects"""
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_PROJECTS_QUERY,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertEqual(len(projects), 1)
+
+        proj = projects[0]
+        self.assertEqual(proj['id'], str(self.proj.id))
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], 'Example title')
+        self.assertEqual(proj['parentProject'], None)
+        self.assertEqual(proj['ecosystem'], None)
+
+    def test_filter_registry(self):
+        """Check whether it returns the project searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_PROJECTS_QUERY_FILTER % (self.proj.id, 'Example')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertEqual(len(projects), 1)
+
+        proj = projects[0]
+        self.assertEqual(proj['id'], str(self.proj.id))
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], 'Example title')
+        self.assertEqual(proj['parentProject'], None)
+        self.assertEqual(proj['ecosystem'], None)
+
+    def test_filter_non_existing_registry(self):
+        """Check whether it returns an empty list when searched with a non existing project"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_PROJECTS_QUERY_FILTER % (11111111, 'Ghost-Project')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertListEqual(projects, [])
+
+    def test_pagination(self):
+        """Check whether it returns the projects searched when using pagination"""
+
+        # Creating additional projects
+        proj1 = Project(name='Example-1',
+                        title='Example title 1')
+        proj1.save()
+
+        proj2 = Project(name='Example-2',
+                        title='Example title 2')
+        proj2.save()
+
+        client = graphene.test.Client(schema)
+        test_query = BT_PROJECTS_QUERY_PAGINATION % (1, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertEqual(len(projects), 2)
+
+        proj = projects[0]
+        self.assertEqual(proj['id'], str(self.proj.id))
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], 'Example title')
+        self.assertEqual(proj['parentProject'], None)
+        self.assertEqual(proj['ecosystem'], None)
+
+        proj = projects[1]
+        self.assertEqual(proj['id'], str(proj1.id))
+        self.assertEqual(proj['name'], 'Example-1')
+        self.assertEqual(proj['title'], 'Example title 1')
+        self.assertEqual(proj['parentProject'], None)
+        self.assertEqual(proj['ecosystem'], None)
+
+        pag_data = executed['data']['projects']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 1)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertTrue(pag_data['hasNext'])
+        self.assertFalse(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 1)
+        self.assertEqual(pag_data['endIndex'], 2)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+        # Testing whether it returns different results in the second page
+        test_query = BT_PROJECTS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertEqual(len(projects), 1)
+
+        proj = projects[0]
+        self.assertEqual(proj['id'], str(proj2.id))
+        self.assertEqual(proj['name'], 'Example-2')
+        self.assertEqual(proj['title'], 'Example title 2')
+        self.assertEqual(proj['parentProject'], None)
+        self.assertEqual(proj['ecosystem'], None)
+
+        pag_data = executed['data']['projects']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 2)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertFalse(pag_data['hasNext'])
+        self.assertTrue(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 3)
+        self.assertEqual(pag_data['endIndex'], 3)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+    def test_empty_registry(self):
+        """Check whether it returns an empty list when the registry is empty"""
+
+        # Delete Projects created in `setUp` method
+        Project.objects.all().delete()
+        projects = Project.objects.all()
+
+        self.assertEqual(len(projects), 0)
+
+        # Test query
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_PROJECTS_QUERY,
+                                  context_value=self.context_value)
+
+        q_projects = executed['data']['projects']['entities']
+        self.assertListEqual(q_projects, [])
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_PROJECTS_QUERY,
                                   context_value=context_value)
 
         msg = executed['errors'][0]['message']
@@ -896,7 +1160,7 @@ class TestAddEcosystemMutation(django.test.TestCase):
 
         # Check error
         msg = executed['errors'][0]['message']
-        self.assertEqual(msg, ECOSYSTEM_INVALID_NAME_WHITESPACES)
+        self.assertEqual(msg, INVALID_NAME_WHITESPACES)
 
         # Check database
         ecosystems = Ecosystem.objects.all()
@@ -1016,6 +1280,141 @@ class TestAddEcosystemMutation(django.test.TestCase):
         client = graphene.test.Client(schema)
 
         executed = client.execute(self.BT_ADD_ECO,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestAddProjectMutation(django.test.TestCase):
+    """Unit tests for mutation to add projects"""
+
+    BT_ADD_PROJECT = """
+      mutation addEco ($name: String,
+                       $title: String,
+                       $ecosystemId: ID) {
+        addProject(name: $name,
+                   title: $title,
+                   ecosystemId: $ecosystemId)
+        {
+          project {
+            id
+            name
+            title
+            parentProject {
+              id
+              name
+            }
+            ecosystem {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+
+    def test_add_project(self):
+        """Check if a new project is added"""
+
+        params = {
+            'name': 'Example',
+            'title': 'Example title',
+            'ecosystemId': self.eco.id
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        proj = executed['data']['addProject']['project']
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], 'Example title')
+        self.assertEqual(proj['parentProject'], None)
+
+        eco = proj['ecosystem']
+        self.assertEqual(eco['id'], str(self.eco.id))
+        self.assertEqual(eco['name'], 'Eco-example')
+
+        # Check database
+        proj_db = Project.objects.get(id=int(proj['id']))
+        self.assertEqual(proj_db.id, int(proj['id']))
+        self.assertEqual(proj_db.name, 'Example')
+        self.assertEqual(proj_db.title, 'Example title')
+        self.assertEqual(proj_db.parent_project, None)
+        self.assertEqual(proj_db.ecosystem, self.eco)
+
+    def test_not_found_ecosystem(self):
+        """Check whether projects cannot be added when the ecosystem is not found"""
+
+        params = {
+            'name': 'Test example',
+            'title': 'Example title',
+            'ecosystemId': '11111111'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, ECOSYSTEM_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        projects = Project.objects.all()
+        self.assertEqual(len(projects), 0)
+
+    def test_integrity_error(self):
+        """Check whether projects with the same name cannot be inserted"""
+
+        params = {
+            'name': 'Example',
+            'title': 'Example title',
+            'ecosystemId': self.eco.id
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+        proj = executed['data']['addProject']['project']
+        proj_id = int(proj['id'])
+
+        # Check database
+        proj_db = Project.objects.get(id=proj_id)
+        self.assertEqual(proj_db.id, proj_id)
+        self.assertEqual(proj_db.name, 'Example')
+        self.assertEqual(proj_db.title, 'Example title')
+        self.assertEqual(proj_db.parent_project, None)
+
+        # Try to insert it twice
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, DUPLICATED_PROJECT_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_ADD_PROJECT,
                                   context_value=context_value)
 
         msg = executed['errors'][0]['message']
@@ -1277,7 +1676,7 @@ class TestUpdateEcosystemMutation(django.test.TestCase):
                                   variables=params)
 
         msg = executed['errors'][0]['message']
-        self.assertEqual(msg, ECOSYSTEM_INVALID_NAME_WHITESPACES)
+        self.assertEqual(msg, INVALID_NAME_WHITESPACES)
 
     def test_authentication(self):
         """Check if it fails when a non-authenticated user executes the query"""

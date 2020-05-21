@@ -1,0 +1,19 @@
+---
+title: Support Projects
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 42
+notes: >
+    This feature allows to add Projects to Bestiary.
+
+    Projects are defined as a set of data locations which have
+    to be grouped under the same entity. Moreover, this grouping
+    may have a hierarchy by defining sub-projects.
+
+    A Project has an identifier and a name, and it must belong to
+    one single ecosystem . Optionally, they may have a title.
+    There is a new query allowing to get Projects, including an
+    optional filter to look for an specific ID or name.
+
+    There is one new mutation: `addProject`.
+

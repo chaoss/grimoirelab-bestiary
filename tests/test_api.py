@@ -23,6 +23,7 @@
 import json
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.test import TestCase
 
 from grimoirelab_toolkit.datetime import datetime_utcnow
@@ -33,24 +34,30 @@ from bestiary.core.errors import (AlreadyExistsError,
                                   InvalidValueError,
                                   NotFoundError)
 from bestiary.core.models import (Ecosystem,
+                                  Project,
                                   Transaction,
                                   Operation)
 
-ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR = "'name' cannot be"
+NAME_NONE_OR_EMPTY_ERROR = "'name' cannot be"
 ECOSYSTEM_ID_NONE_OR_EMPTY_ERROR = "'ecosystem_id' cannot be"
-ECOSYSTEM_NAME_VALUE_ERROR = "field 'name' value must be a string;"
+PROJECT_ID_NONE_OR_EMPTY_ERROR = "'project_id' cannot be"
+PROJECT_FROM_ID_NONE_OR_EMPTY_ERROR = "'from_project_id' cannot be"
+NAME_VALUE_ERROR = "field 'name' value must be a string;"
 ECOSYSTEM_NOT_FOUND_ERROR = "Ecosystem ID {eco_id} not found in the registry"
 ECOSYSTEM_ALREADY_EXISTS_ERROR = "Ecosystem '{name}' already exists in the registry"
-ECOSYSTEM_TITLE_EMPTY_ERROR = "'title' cannot be"
-ECOSYSTEM_TITLE_VALUE_ERROR = "field 'title' value must be a string;"
-ECOSYSTEM_DESCRIPTION_EMPTY_ERROR = "'description' cannot be"
-ECOSYSTEM_DESCRIPTION_VALUE_ERROR = "field 'description' value must be a string;"
-ECOSYSTEM_TITLE_VALUE_ERROR = "field 'title' value must be a string;"
-ECOSYSTEM_VALUE_ERROR = "field value must be a string; int given"
-ECOSYSTEM_ID_INVALID_LITERAL = "invalid literal for int()"
-ECOSYSTEM_NAME_LENGTH_ERROR = "'name' cannot have more than"
-ECOSYSTEM_NAME_START_ERROR = "'name' must start with an alphanumeric character"
-ECOSYSTEM_NAME_CONTAIN_ERROR = "'name' cannot contain"
+PROJECT_NOT_FOUND_ERROR = "Project ID {proj_id} not found in the registry"
+PROJECT_ALREADY_EXISTS_ERROR = "Project '{name}' already exists in the registry"
+PROJECT_INVALID_PARENT_ERROR = "Project '{name}' cannot be added as parent project"
+TITLE_EMPTY_ERROR = "'title' cannot be"
+TITLE_VALUE_ERROR = "field 'title' value must be a string;"
+DESCRIPTION_EMPTY_ERROR = "'description' cannot be"
+DESCRIPTION_VALUE_ERROR = "field 'description' value must be a string;"
+TITLE_VALUE_ERROR = "field 'title' value must be a string;"
+FIELD_VALUE_ERROR_INT = "field value must be a string; int given"
+ID_INVALID_LITERAL = "invalid literal for int()"
+NAME_LENGTH_ERROR = "'name' cannot have more than"
+NAME_START_ERROR = "'name' must start with an alphanumeric character"
+NAME_CONTAIN_ERROR = "'name' cannot contain"
 
 
 class TestAddEcosystem(TestCase):
@@ -66,7 +73,7 @@ class TestAddEcosystem(TestCase):
         """Check if everything goes OK when adding a new ecosystem"""
 
         eco = api.add_ecosystem(self.ctx,
-                                name='Example-name',
+                                'Example-name',
                                 title='Example title',
                                 description='Example desc.')
 
@@ -86,7 +93,7 @@ class TestAddEcosystem(TestCase):
         """Check if it fails when adding a duplicate ecosystem"""
 
         eco = api.add_ecosystem(self.ctx,
-                                name='Example',
+                                'Example',
                                 title='Example title',
                                 description='Example desc.')
 
@@ -95,7 +102,7 @@ class TestAddEcosystem(TestCase):
         with self.assertRaisesRegex(AlreadyExistsError,
                                     ECOSYSTEM_ALREADY_EXISTS_ERROR.format(name='Example')):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description='Example desc. 2')
 
@@ -112,9 +119,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_name_none(self):
         """Check if it fails when ecosystem name is `None`"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name=None,
+                              None,
                               title='Example title',
                               description='Example desc.')
 
@@ -125,9 +132,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_name_empty(self):
         """Check if it fails when ecosystem name is empty"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='',
+                              '',
                               title='Example title',
                               description='Example desc.')
 
@@ -138,21 +145,21 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_name_whitespaces(self):
         """Check if it fails when ecosystem name is composed by whitespaces only"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='   ',
+                              '   ',
                               title='Example title',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='\t',
+                              '\t',
                               title='Example title',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name=' \t  ',
+                              ' \t  ',
                               title='Example title',
                               description='Example desc.')
 
@@ -163,9 +170,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_name_int(self):
         """Check if it fails when ecosystem name is an integer"""
 
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_NAME_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
             api.add_ecosystem(self.ctx,
-                              name=12345,
+                              12345,
                               title='Example title',
                               description='Example desc.')
 
@@ -176,21 +183,21 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_name_invalid(self):
         """Check if it fails when ecosystem name is invalid"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_START_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_START_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='-Test',
+                              '-Test',
                               title='Example title',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_CONTAIN_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Test example',
+                              'Test example',
                               title='Example title',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_CONTAIN_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Test-example(2)',
+                              'Test-example(2)',
                               title='Example title',
                               description='Example desc.')
 
@@ -202,7 +209,7 @@ class TestAddEcosystem(TestCase):
         """Check if it works when ecosystem title is `None`"""
 
         eco = api.add_ecosystem(self.ctx,
-                                name='Example',
+                                'Example',
                                 title=None,
                                 description='Example desc.')
 
@@ -221,9 +228,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_title_empty(self):
         """Check if it fails when ecosystem title is empty"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_TITLE_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='',
                               description='Example desc.')
 
@@ -234,21 +241,21 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_title_whitespaces(self):
         """Check if it fails when ecosystem title is composed by whitespaces only"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_TITLE_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='   ',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_TITLE_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='\t',
                               description='Example desc.')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_TITLE_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title=' \t  ',
                               description='Example desc.')
 
@@ -259,9 +266,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_title_int(self):
         """Check if it fails when ecosystem title is an integer"""
 
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_TITLE_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title=12345,
                               description='Example desc.')
 
@@ -273,7 +280,7 @@ class TestAddEcosystem(TestCase):
         """Check if it works when ecosystem description is `None`"""
 
         eco = api.add_ecosystem(self.ctx,
-                                name='Example',
+                                'Example',
                                 title='Example title',
                                 description=None)
 
@@ -292,9 +299,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_description_empty(self):
         """Check if it fails when ecosystem description is empty"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_DESCRIPTION_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, DESCRIPTION_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description='')
 
@@ -305,21 +312,21 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_description_whitespaces(self):
         """Check if it fails when ecosystem description is composed by whitespaces only"""
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_DESCRIPTION_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, DESCRIPTION_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description='   ')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_DESCRIPTION_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, DESCRIPTION_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description='\t')
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_DESCRIPTION_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, DESCRIPTION_EMPTY_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description=' \t  ')
 
@@ -330,9 +337,9 @@ class TestAddEcosystem(TestCase):
     def test_ecosystem_description_int(self):
         """Check if it fails when ecosystem description is an integer"""
 
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_DESCRIPTION_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, DESCRIPTION_VALUE_ERROR):
             api.add_ecosystem(self.ctx,
-                              name='Example',
+                              'Example',
                               title='Example title',
                               description=12345)
 
@@ -346,7 +353,7 @@ class TestAddEcosystem(TestCase):
         timestamp = datetime_utcnow()
 
         api.add_ecosystem(self.ctx,
-                          name='Example',
+                          'Example',
                           title='Example title',
                           description='Example desc.')
 
@@ -365,7 +372,7 @@ class TestAddEcosystem(TestCase):
         timestamp = datetime_utcnow()
 
         api.add_ecosystem(self.ctx,
-                          name='Example',
+                          'Example',
                           title='Example title',
                           description='Example desc.')
 
@@ -390,6 +397,293 @@ class TestAddEcosystem(TestCase):
         self.assertEqual(op1_args['description'], 'Example desc.')
 
 
+class TestAddProject(TestCase):
+    """Unit tests for add_project"""
+
+    def setUp(self):
+        """Load initial values"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+
+    def test_add_new_project(self):
+        """Check if everything goes OK when adding a new project"""
+
+        proj = api.add_project(self.ctx,
+                               self.eco.id,
+                               'example-name',
+                               title='Project title')
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example-name')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.parent_project, None)
+
+        projects_db = Project.objects.filter(id=proj.id)
+        self.assertEqual(len(projects_db), 1)
+
+        proj1 = projects_db[0]
+        self.assertEqual(proj, proj1)
+
+    def test_add_duplicate_project(self):
+        """Check if it fails when adding a duplicate project"""
+
+        proj = api.add_project(self.ctx,
+                               self.eco.id,
+                               'example',
+                               title='Project title')
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(AlreadyExistsError,
+                                    PROJECT_ALREADY_EXISTS_ERROR.format(name='example')):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title='Project title')
+
+        projects = Project.objects.filter(id=proj.id)
+        self.assertEqual(len(projects), 1)
+
+        projects = Project.objects.all()
+        self.assertEqual(len(projects), 1)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_eco_none(self):
+        """Check if it fails when ecosystem is `None`"""
+
+        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_ID_NONE_OR_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            None,
+                            'example',
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_eco_not_exists(self):
+        """Check if it fails when ecosystem is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, ECOSYSTEM_NOT_FOUND_ERROR.format(eco_id='11111111')):
+            api.add_project(self.ctx,
+                            11111111,
+                            'example',
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_name_empty(self):
+        """Check if it fails when project name is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            '',
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_name_whitespaces(self):
+        """Check if it fails when project name is composed by whitespaces only"""
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            '   ',
+                            title='Project title')
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            '\t',
+                            title='Project title')
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            ' \t  ',
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_name_int(self):
+        """Check if it fails when project name is an integer"""
+
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            12345,
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_name_invalid(self):
+        """Check if it fails when project name is invalid"""
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_START_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            '-Test',
+                            title='Project title')
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'Test example',
+                            title='Project title')
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'Test-example(2)',
+                            title='Project title')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_title_none(self):
+        """Check if it works when project title is `None`"""
+
+        proj = api.add_project(self.ctx,
+                               self.eco.id,
+                               'example',
+                               title=None)
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, None)
+        self.assertEqual(proj.parent_project, None)
+
+        projects_db = Project.objects.filter(name='example')
+        self.assertEqual(len(projects_db), 1)
+
+        proj1 = projects_db[0]
+        self.assertEqual(proj, proj1)
+
+    def test_project_title_empty(self):
+        """Check if it fails when project title is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title='')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_title_whitespaces(self):
+        """Check if it fails when project title is composed by whitespaces only"""
+
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title='   ')
+
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title='\t')
+
+        with self.assertRaisesRegex(InvalidValueError, TITLE_EMPTY_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title=' \t  ')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_title_int(self):
+        """Check if it fails when project title is an integer"""
+
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title=12345)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when adding a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.add_project(self.ctx,
+                        self.eco.id,
+                        'example',
+                        title='Project title')
+
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'add_project')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when adding a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.add_project(self.ctx,
+                        self.eco.id,
+                        'example',
+                        title='Project title')
+
+        transactions = Transaction.objects.all()
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.target, 'example')
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(op1_args['name'], 'example')
+        self.assertEqual(op1_args['title'], 'Project title')
+        self.assertEqual(op1_args['ecosystem'], self.eco.id)
+
+
 class TestDeleteEcosystem(TestCase):
     """Unit tests for delete_ecosystem"""
 
@@ -399,9 +693,13 @@ class TestDeleteEcosystem(TestCase):
         self.user = get_user_model().objects.create(username='test')
         self.ctx = BestiaryContext(self.user)
 
-        self.eco_example = api.add_ecosystem(self.ctx, name='Example')
-        self.eco_bitergia = api.add_ecosystem(self.ctx, name='Bitergia')
-        self.eco_libresoft = api.add_ecosystem(self.ctx, name='Libresoft')
+        self.eco_example = api.add_ecosystem(self.ctx, 'Example')
+        self.eco_bitergia = api.add_ecosystem(self.ctx, 'Bitergia')
+        self.eco_libresoft = api.add_ecosystem(self.ctx, 'Libresoft')
+
+        self.project = api.add_project(self.ctx,
+                                       self.eco_example.id,
+                                       'example-project')
 
     def test_delete_ecosystem(self):
         """Check if everything goes OK when deleting an ecosystem"""
@@ -421,6 +719,9 @@ class TestDeleteEcosystem(TestCase):
         eco2 = ecosystems[1]
         self.assertEqual(eco2.id, self.eco_libresoft.id)
         self.assertEqual(eco2.name, 'Libresoft')
+
+        with self.assertRaises(ObjectDoesNotExist):
+            Project.objects.get(name='example-project')
 
     def test_delete_non_existing_ecosystem(self):
         """Check if it fails when deleting a non existing ecosystem"""
@@ -498,7 +799,7 @@ class TestUpdateEcosystem(TestCase):
         self.ctx = BestiaryContext(self.user)
 
         self.ecosystem = api.add_ecosystem(self.ctx,
-                                           name='Example',
+                                           'Example',
                                            title='Example title',
                                            description='Example desc.')
 
@@ -566,12 +867,12 @@ class TestUpdateEcosystem(TestCase):
             'title': 'Example title updated',
             'description': 'Example desc. updated'
         }
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         args['name'] = None
 
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_NONE_OR_EMPTY_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         # Check if there are no transactions created when there is an error
@@ -588,7 +889,7 @@ class TestUpdateEcosystem(TestCase):
             'title': 'Example title updated',
             'description': 'Example desc. updated'
         }
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_NAME_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         # Check if there are no transactions created when there is an error
@@ -605,15 +906,15 @@ class TestUpdateEcosystem(TestCase):
             'title': 'Example title updated',
             'description': 'Example desc. updated'
         }
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_START_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_START_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         args['name'] = 'Test example'
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_CONTAIN_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         args['name'] = 'Test-example(2)'
-        with self.assertRaisesRegex(InvalidValueError, ECOSYSTEM_NAME_CONTAIN_ERROR):
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         # Check if there are no transactions created when there is an error
@@ -648,7 +949,7 @@ class TestUpdateEcosystem(TestCase):
         self.assertEqual(len(transactions), 1)
 
     def test_title_none(self):
-        """Check if it works when description field is set to None when it is set to `None`"""
+        """Check if it works when description field is set to None"""
 
         timestamp = datetime_utcnow()
 
@@ -684,7 +985,7 @@ class TestUpdateEcosystem(TestCase):
             'title': 12345,
             'description': 'Example desc. updated'
         }
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_TITLE_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         # Check if there are no transactions created when there is an error
@@ -755,7 +1056,7 @@ class TestUpdateEcosystem(TestCase):
             'title': 'Example title updated',
             'description': 12345
         }
-        with self.assertRaisesRegex(TypeError, ECOSYSTEM_DESCRIPTION_VALUE_ERROR):
+        with self.assertRaisesRegex(TypeError, DESCRIPTION_VALUE_ERROR):
             api.update_ecosystem(self.ctx, self.ecosystem.id, **args)
 
         # Check if there are no transactions created when there is an error

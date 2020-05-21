@@ -29,6 +29,7 @@ from grimoirelab_toolkit.datetime import datetime_utcnow
 
 from .errors import AlreadyExistsError, NotFoundError
 from .models import (Ecosystem,
+                     Project,
                      Operation)
 from .utils import validate_field, validate_name
 
@@ -45,7 +46,7 @@ def find_ecosystem(ecosystem_id):
     :returns: an ecosystem object
 
     :raises NotFoundError: when the ecosystem with the
-        given `ecosystem_id` does not exist.
+        given `ecosystem_id` does not exist
     """
 
     try:
@@ -54,6 +55,28 @@ def find_ecosystem(ecosystem_id):
         raise NotFoundError(entity='Ecosystem ID {}'.format(ecosystem_id))
     else:
         return ecosystem
+
+
+def find_project(project_id):
+    """Find a project.
+
+    Find a project by its id in the database. When the
+    project does not exist the function will raise
+    a `NotFoundError`.
+
+    :param project_id: id of the project to find
+
+    :returns: a project object
+
+    :raises NotFoundError: when the project with the
+        given `project_id` does not exist
+    """
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        raise NotFoundError(entity='Project ID {}'.format(project_id))
+    else:
+        return project
 
 
 def add_ecosystem(trxl, name, title, description):
@@ -74,9 +97,9 @@ def add_ecosystem(trxl, name, title, description):
     :returns: a new ecosystem
 
     :raises ValueError: when `name` is `None` or empty, when `title` or
-        `description` is empty.
+        `description` is empty
     :raises AlreadyExistsError: when an instance with the same name
-        already exists in the database.
+        already exists in the database
     """
     # Setting operation arguments before they are modified
     op_args = {
@@ -104,6 +127,52 @@ def add_ecosystem(trxl, name, title, description):
                        target=op_args['name'])
 
     return ecosystem
+
+
+def add_project(trxl, ecosystem, name, title):
+    """Add an project to the database.
+
+    This function adds a new project to the database,
+    using the given `name` as an identifier and an optional title. Name cannot
+    be empty or `None`, the title cannot be empty.
+
+    It returns a new `Project` object.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param name: name of the project
+    :param title: title of the project
+
+    :returns: a new project
+
+    :raises ValueError: when `name` is `None` or empty or when `title` is empty
+    :raises AlreadyExistsError: when an instance with the same name
+        already exists in the database
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'name': name,
+        'title': title,
+        'ecosystem': ecosystem.id
+    }
+
+    # Check if the name fulfills the requirements
+    validate_name(name)
+    validate_field('title', title, allow_none=True)
+
+    project = Project(name=name,
+                      title=title,
+                      ecosystem=ecosystem)
+
+    try:
+        project.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(Project, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.ADD, entity_type='project',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=op_args['name'])
+
+    return project
 
 
 def update_ecosystem(trxl, ecosystem, **kwargs):
