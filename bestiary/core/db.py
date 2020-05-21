@@ -254,6 +254,27 @@ def delete_ecosystem(trxl, ecosystem):
                        target=str(op_args['id']))
 
 
+def delete_project(trxl, project):
+    """Remove an project from the database.
+
+    Function that removes from the database the project
+    given in `project`.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param project: project to remove
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'id': project.id
+    }
+
+    project.delete()
+
+    trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='project',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+
 _MYSQL_DUPLICATE_ENTRY_ERROR_REGEX = re.compile(r"Duplicate entry '(?P<value>.+)' for key")
 
 

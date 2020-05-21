@@ -23,10 +23,12 @@
 import django.db.transaction
 
 from .db import (find_ecosystem,
+                 find_project,
                  add_ecosystem as add_ecosystem_db,
                  add_project as add_project_db,
                  update_ecosystem as update_ecosystem_db,
-                 delete_ecosystem as delete_ecosystem_db)
+                 delete_ecosystem as delete_ecosystem_db,
+                 delete_project as delete_project_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -211,3 +213,41 @@ def delete_ecosystem(ctx, ecosystem_id):
     ecosystem.id = ecosystem_id
 
     return ecosystem
+
+
+@django.db.transaction.atomic
+def delete_project(ctx, project_id):
+    """Remove a project from the registry.
+
+    This function removes the given project from the registry.
+    It checks first whether the project is already on the registry.
+    When it is found, the project is removed. Otherwise,
+    it will raise a 'NotFoundError'.
+
+    :param ctx: context from where this method is called
+    :param project_id: id of the project to remove
+
+    :raises InvalidValueError: raised when project is None or an empty string
+    :raises NotFoundError: raised when the project does not exist
+        in the registry
+    """
+    if project_id is None:
+        raise InvalidValueError(msg="'project_id' cannot be None")
+
+    trxl = TransactionsLog.open('delete_project', ctx)
+
+    try:
+        project = find_project(project_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    delete_project_db(trxl, project=project)
+
+    trxl.close()
+
+    # Setting former ID manually, as it can't be referenced once it has been removed
+    project.id = project_id
+
+    return project

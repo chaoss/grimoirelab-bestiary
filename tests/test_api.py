@@ -789,6 +789,124 @@ class TestDeleteEcosystem(TestCase):
         self.assertEqual(op1_args['id'], self.eco_example.id)
 
 
+class TestDeleteProject(TestCase):
+    """Unit tests for delete_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+
+        self.proj_example = api.add_project(self.ctx,
+                                            self.eco.id,
+                                            'example')
+        self.proj_bitergia = api.add_project(self.ctx,
+                                             self.eco.id,
+                                             'bitergia')
+        self.proj_libresoft = api.add_project(self.ctx,
+                                              self.eco.id,
+                                              'libresoft')
+
+    def test_delete_project(self):
+        """Check if everything goes OK when deleting a project"""
+
+        api.delete_project(self.ctx, project_id=self.proj_example.id)
+
+        projects = Project.objects.filter(id=self.proj_example.id)
+        self.assertEqual(len(projects), 0)
+
+        projects = Project.objects.all()
+        self.assertEqual(len(projects), 2)
+
+        proj1 = projects[0]
+        self.assertEqual(proj1.id, self.proj_bitergia.id)
+        self.assertEqual(proj1.name, 'bitergia')
+
+        proj2 = projects[1]
+        self.assertEqual(proj2.id, self.proj_libresoft.id)
+        self.assertEqual(proj2.name, 'libresoft')
+
+    def test_delete_non_existing_project(self):
+        """Check if it fails when deleting a non existing project"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(NotFoundError, PROJECT_NOT_FOUND_ERROR.format(proj_id='11111111')):
+            api.delete_project(self.ctx, 11111111)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_delete_parent_project(self):
+        """Check if child projects are deleted when removing a parent"""
+
+        Project.objects.create(name='example-project',
+                               parent_project=self.proj_bitergia,
+                               ecosystem=self.eco)
+
+        api.delete_project(self.ctx, project_id=self.proj_bitergia.id)
+
+        with self.assertRaises(ObjectDoesNotExist):
+            Project.objects.get(name='example-project')
+
+    def test_project_id_none(self):
+        """Check if it fails when project id is `None`"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(InvalidValueError, PROJECT_ID_NONE_OR_EMPTY_ERROR):
+            api.delete_project(self.ctx, project_id=None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when deleting a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_project(self.ctx, project_id=self.proj_example.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'delete_project')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_project(self.ctx, project_id=self.proj_example.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.DELETE.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.target, str(self.proj_example.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], self.proj_example.id)
+
+
 class TestUpdateEcosystem(TestCase):
     """Unit tests for update_ecosystem"""
 
