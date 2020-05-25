@@ -197,9 +197,9 @@ def update_ecosystem(trxl, ecosystem, **kwargs):
     :returns: the updated ecosystem object
 
     :raises ValueError: raised either when the given ecosystem name is None
-        or empty.
+        or empty
     :raises TypeError: raised either when the given ecosystem name, title or
-        description are not a string.
+        description are not a string
     """
     def to_none_if_empty(x):
         return None if not x else x
@@ -231,6 +231,59 @@ def update_ecosystem(trxl, ecosystem, **kwargs):
                        target=str(op_args['id']))
 
     return ecosystem
+
+
+def update_project(trxl, project, **kwargs):
+    """Update project information.
+
+    This function allows to edit or update the information of the
+    given project. The values to update are given
+    as keyword arguments. The allowed keys are listed below
+    (other keywords will be ignored):
+
+       - `name`: name of the project
+       - `title`: title of the project
+
+    As a result, it will return the `Project` object with
+    the updated data.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param project: project which will be updated
+    :param kwargs: parameters to edit the project
+
+    :returns: the updated project object
+
+    :raises ValueError: raised either when the given project name is None
+        or empty
+    :raises TypeError: raised either when the given project name or title are
+        not a string
+    """
+    def to_none_if_empty(x):
+        return None if not x else x
+
+    # Setting operation arguments before they are modified
+    op_args = copy.deepcopy(kwargs)
+    op_args.update({'id': project.id})
+
+    if 'name' in kwargs:
+        # Check if the name fulfills the requirements
+        validate_name(kwargs['name'])
+        project.name = kwargs['name']
+    if 'title' in kwargs:
+        title = to_none_if_empty(kwargs['title'])
+        validate_field('title', title, allow_none=True)
+        project.title = title
+
+    try:
+        project.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(Project, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.UPDATE, entity_type='project',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+    return project
 
 
 def delete_ecosystem(trxl, ecosystem):

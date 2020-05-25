@@ -38,6 +38,7 @@ from graphene_django.types import DjangoObjectType
 from .api import (add_ecosystem,
                   add_project,
                   update_ecosystem,
+                  update_project,
                   delete_ecosystem,
                   delete_project)
 from .context import BestiaryContext
@@ -136,6 +137,14 @@ class EcosystemInputType(graphene.InputObjectType):
     name = graphene.String(required=False)
     title = graphene.String(required=False)
     description = graphene.String(required=False)
+
+
+class ProjectInputType(graphene.InputObjectType):
+    """Fields which can be used as an input for Project-related mutations"""
+
+    name = graphene.String(required=False)
+    title = graphene.String(required=False)
+    parent_project = graphene.ID(required=False)
 
 
 class TransactionFilterType(graphene.InputObjectType):
@@ -376,6 +385,30 @@ class UpdateEcosystem(graphene.Mutation):
         )
 
 
+class UpdateProject(graphene.Mutation):
+    """Mutation which updates an existing Project"""
+
+    class Arguments:
+        id = graphene.ID()
+        data = ProjectInputType()
+
+    project = graphene.Field(lambda: ProjectType)
+
+    @check_auth
+    def mutate(self, info, id, data):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        project = update_project(ctx, id_value, **data)
+
+        return UpdateProject(
+            project=project
+        )
+
+
 class DeleteEcosystem(graphene.Mutation):
     """Mutation which deletes an existing Ecosystem from the registry"""
 
@@ -538,6 +571,7 @@ class BestiaryMutation(graphene.ObjectType):
     add_ecosystem = AddEcosystem.Field()
     add_project = AddProject.Field()
     update_ecosystem = UpdateEcosystem.Field()
+    update_project = UpdateProject.Field()
     delete_ecosystem = DeleteEcosystem.Field()
     delete_project = DeleteProject.Field()
 

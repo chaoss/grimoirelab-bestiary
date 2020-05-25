@@ -27,6 +27,7 @@ from .db import (find_ecosystem,
                  add_ecosystem as add_ecosystem_db,
                  add_project as add_project_db,
                  update_ecosystem as update_ecosystem_db,
+                 update_project as update_project_db,
                  delete_ecosystem as delete_ecosystem_db,
                  delete_project as delete_project_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
@@ -175,6 +176,50 @@ def update_ecosystem(ctx, ecosystem_id, **kwargs):
     trxl.close()
 
     return ecosystem
+
+
+@django.db.transaction.atomic
+def update_project(ctx, project_id, **kwargs):
+    """Update the information of a given project.
+
+    This function allows to edit or update the project information
+    of the `Project` object identified by `id`.
+
+    The values to update are given as keyword arguments. The allowed
+    keys are listed below (other keywords will be ignored):
+
+       - `name`: unique name of the project
+       - `title`: title of the project
+
+    The result of calling this function will be the updated
+    `Project` object.
+
+    :param ctx: context from where this method is called
+    :param project_id: identifier of the project to be updated
+    :param kwargs: keyword arguments with data to update the project
+
+    :returns: an updated project
+
+    :raises NotFoundError: raised when either project do not exist in
+        the registry.
+    :raises InvalidValueError: raised when any of the keyword arguments
+        has an invalid value.
+    """
+    if project_id is None:
+        raise InvalidValueError(msg="'project_id' cannot be None")
+
+    trxl = TransactionsLog.open('update_project', ctx)
+
+    project = find_project(project_id)
+
+    try:
+        project = update_project_db(trxl, project, **kwargs)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+
+    trxl.close()
+
+    return project
 
 
 @django.db.transaction.atomic

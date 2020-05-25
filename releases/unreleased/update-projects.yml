@@ -1,0 +1,12 @@
+---
+title: Update Projects
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 42
+notes: >
+    This feature allows to update basin information from
+    existing Bestiary projects.
+
+    There is a new mutation: `updateProject`, which allows
+    to update the name and the title of Projects based on the
+    Project ID.

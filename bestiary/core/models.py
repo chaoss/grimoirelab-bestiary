@@ -214,7 +214,6 @@ class Project(EntityBase):
 
     class Meta:
         db_table = 'projects'
-        unique_together = ('name',)
         ordering = ('name',)
 
     def __str__(self):
@@ -248,7 +247,6 @@ class Ecosystem(EntityBase):
 
     class Meta:
         db_table = 'ecosystems'
-        unique_together = ('name', )
         ordering = ('name', )
 
     def __str__(self):

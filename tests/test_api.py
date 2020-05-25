@@ -1234,3 +1234,254 @@ class TestUpdateEcosystem(TestCase):
         self.assertEqual(op1_args['name'], 'Example-updated')
         self.assertEqual(op1_args['title'], 'Example title updated')
         self.assertEqual(op1_args['description'], 'Example desc. updated')
+
+
+class TestUpdateProject(TestCase):
+    """Unit tests for update_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.ecosystem = api.add_ecosystem(self.ctx,
+                                           'Example',
+                                           title='Example title',
+                                           description='Example desc.')
+
+        self.project = api.add_project(self.ctx,
+                                       self.ecosystem.id,
+                                       'example',
+                                       title='Project title')
+
+    def test_update_project(self):
+        """Check if it updates a project"""
+
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        project = api.update_project(self.ctx, self.project.id, **args)
+
+        # Tests
+        self.assertIsInstance(project, Project)
+
+        self.assertEqual(project.name, 'example-updated')
+        self.assertEqual(project.title, 'Project title updated')
+        self.assertEqual(project.parent_project, None)
+
+        # Check database object
+        project_db = Project.objects.get(id=self.project.id)
+        self.assertEqual(project, project_db)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        project = api.update_project(self.ctx, self.project.id, **args)
+        after_dt = datetime_utcnow()
+
+        self.assertLessEqual(before_dt, project.last_modified)
+        self.assertGreaterEqual(after_dt, project.last_modified)
+
+    def test_non_existing_project(self):
+        """Check if it fails updating a project that does not exist"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+
+        with self.assertRaises(NotFoundError):
+            api.update_project(self.ctx, 11111111, **args)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_name_none_or_empty(self):
+        """Check if it fails when name is set to None or to an empty string"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': '',
+            'title': 'Project title updated'
+        }
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        args['name'] = None
+
+        with self.assertRaisesRegex(InvalidValueError, NAME_NONE_OR_EMPTY_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_name_invalid_type(self):
+        """Check if it fails when name parameter is an integer"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 12345,
+            'title': 'Project title updated'
+        }
+        with self.assertRaisesRegex(TypeError, NAME_VALUE_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_name_invalid_string(self):
+        """Check if it fails when project name is invalid"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': '-Test',
+            'title': 'Project title updated'
+        }
+        with self.assertRaisesRegex(InvalidValueError, NAME_START_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        args['name'] = 'Test example'
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        args['name'] = 'Test-example(2)'
+        with self.assertRaisesRegex(InvalidValueError, NAME_CONTAIN_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_title_empty(self):
+        """Check if title is set to None when it is set to an empty string"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': ''
+        }
+        project = api.update_project(self.ctx, self.project.id, **args)
+
+        # Tests
+        self.assertIsInstance(project, Project)
+
+        self.assertEqual(project.name, 'example-updated')
+        self.assertEqual(project.title, None)
+        self.assertEqual(project.parent_project, None)
+
+        # Check database object
+        project_db = Project.objects.get(id=self.project.id)
+        self.assertEqual(project, project_db)
+
+        # Check if the transaction is created
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+    def test_title_none(self):
+        """Check if it works when title field is set to None"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': None
+        }
+        project = api.update_project(self.ctx, self.project.id, **args)
+
+        # Tests
+        self.assertIsInstance(project, Project)
+
+        self.assertEqual(project.name, 'example-updated')
+        self.assertEqual(project.title, None)
+        self.assertEqual(project.parent_project, None)
+
+        # Check database object
+        project_db = Project.objects.get(id=self.project.id)
+        self.assertEqual(project, project_db)
+
+        # Check if the transaction is created
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+    def test_title_invalid_type(self):
+        """Check if it fails when title parameter is an integer"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': 12345
+        }
+        with self.assertRaisesRegex(TypeError, TITLE_VALUE_ERROR):
+            api.update_project(self.ctx, self.project.id, **args)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when updating a project"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        api.update_project(self.ctx, self.project.id, **args)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'update_project')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when updating a project"""
+
+        timestamp = datetime_utcnow()
+
+        args = {
+            'name': 'example-updated',
+            'title': 'Project title updated'
+        }
+        api.update_project(self.ctx, self.project.id, **args)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.target, str(self.project.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(op1_args['id'], self.project.id)
+        self.assertEqual(op1_args['name'], 'example-updated')
+        self.assertEqual(op1_args['title'], 'Project title updated')
