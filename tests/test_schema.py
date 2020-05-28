@@ -1290,12 +1290,14 @@ class TestAddProjectMutation(django.test.TestCase):
     """Unit tests for mutation to add projects"""
 
     BT_ADD_PROJECT = """
-      mutation addEco ($name: String,
+      mutation addProj ($name: String,
                        $title: String,
-                       $ecosystemId: ID) {
+                       $ecosystemId: ID,
+                       $parentId: ID) {
         addProject(name: $name,
                    title: $title,
-                   ecosystemId: $ecosystemId)
+                   ecosystemId: $ecosystemId,
+                   parentId: $parentId)
         {
           project {
             id
@@ -1323,13 +1325,17 @@ class TestAddProjectMutation(django.test.TestCase):
 
         self.eco = Ecosystem.objects.create(name='Eco-example')
 
+        self.parent = Project.objects.create(name='parent-project',
+                                             ecosystem=self.eco)
+
     def test_add_project(self):
         """Check if a new project is added"""
 
         params = {
             'name': 'Example',
             'title': 'Example title',
-            'ecosystemId': self.eco.id
+            'ecosystemId': self.eco.id,
+            'parentId': self.parent.id
         }
         client = graphene.test.Client(schema)
         executed = client.execute(self.BT_ADD_PROJECT,
@@ -1340,25 +1346,28 @@ class TestAddProjectMutation(django.test.TestCase):
         proj = executed['data']['addProject']['project']
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
-        self.assertEqual(proj['parentProject'], None)
 
         eco = proj['ecosystem']
         self.assertEqual(eco['id'], str(self.eco.id))
         self.assertEqual(eco['name'], 'Eco-example')
+
+        parent = proj['parentProject']
+        self.assertEqual(parent['id'], str(self.parent.id))
+        self.assertEqual(parent['name'], 'parent-project')
 
         # Check database
         proj_db = Project.objects.get(id=int(proj['id']))
         self.assertEqual(proj_db.id, int(proj['id']))
         self.assertEqual(proj_db.name, 'Example')
         self.assertEqual(proj_db.title, 'Example title')
-        self.assertEqual(proj_db.parent_project, None)
+        self.assertEqual(proj_db.parent_project, self.parent)
         self.assertEqual(proj_db.ecosystem, self.eco)
 
     def test_not_found_ecosystem(self):
         """Check whether projects cannot be added when the ecosystem is not found"""
 
         params = {
-            'name': 'Test example',
+            'name': 'test-example',
             'title': 'Example title',
             'ecosystemId': '11111111'
         }
@@ -1372,7 +1381,29 @@ class TestAddProjectMutation(django.test.TestCase):
         self.assertEqual(msg, ECOSYSTEM_DOES_NOT_EXIST_ERROR)
 
         # Check database
-        projects = Project.objects.all()
+        projects = Project.objects.filter(name='test-example')
+        self.assertEqual(len(projects), 0)
+
+    def test_not_found_parent(self):
+        """Check whether projects cannot be added when the parent is not found"""
+
+        params = {
+            'name': 'test-example',
+            'title': 'Example title',
+            'ecosystemId': self.eco.id,
+            'parentId': '11111111'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        projects = Project.objects.filter(name='test-example')
         self.assertEqual(len(projects), 0)
 
     def test_integrity_error(self):

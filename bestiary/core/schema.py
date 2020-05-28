@@ -344,17 +344,19 @@ class AddProject(graphene.Mutation):
         ecosystem_id = graphene.ID()
         name = graphene.String()
         title = graphene.String(required=False)
+        parent_id = graphene.ID(required=False)
 
     project = graphene.Field(lambda: ProjectType)
 
     @check_auth
-    def mutate(self, info, ecosystem_id, name, title=None):
+    def mutate(self, info, ecosystem_id, name, title=None, parent_id=None):
         user = info.context.user
         ctx = BestiaryContext(user)
 
         ecosystem_id_value = int(ecosystem_id) if ecosystem_id else None
+        parent_id_value = int(parent_id) if parent_id else None
 
-        project = add_project(ctx, ecosystem_id_value, name, title)
+        project = add_project(ctx, ecosystem_id_value, name, title, parent_id_value)
 
         return AddProject(
             project=project
