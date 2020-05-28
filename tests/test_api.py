@@ -47,8 +47,11 @@ ECOSYSTEM_NOT_FOUND_ERROR = "Ecosystem ID {eco_id} not found in the registry"
 ECOSYSTEM_ALREADY_EXISTS_ERROR = "Ecosystem '{name}' already exists in the registry"
 PROJECT_NOT_FOUND_ERROR = "Project ID {proj_id} not found in the registry"
 PROJECT_ALREADY_EXISTS_ERROR = "Project '{name}' already exists in the registry"
-PROJECT_INVALID_PARENT_ERROR = "Project '{name}' cannot be added as parent project"
+PROJECT_INVALID_PARENT_ALREADY_SET = "Parent is already set to the project"
+PROJECT_INVALID_PARENT_EQUAL_ERROR = "Project cannot be its own parent"
+PROJECT_INVALID_PARENT_DIFFERENT_ROOT = "Parent cannot belong to a different root project"
 PROJECT_INVALID_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
+PROJECT_INVALID_PARENT_DESCENDANT_ERROR = "Parent cannot be a descendant"
 TITLE_EMPTY_ERROR = "'title' cannot be"
 TITLE_VALUE_ERROR = "field 'title' value must be a string;"
 DESCRIPTION_EMPTY_ERROR = "'description' cannot be"
@@ -1543,3 +1546,253 @@ class TestUpdateProject(TestCase):
         self.assertEqual(op1_args['id'], self.project.id)
         self.assertEqual(op1_args['name'], 'example-updated')
         self.assertEqual(op1_args['title'], 'Project title updated')
+
+
+class TestMoveProject(TestCase):
+    """Unit tests for move_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.origin_eco = api.add_ecosystem(self.ctx,
+                                            name='Example-origin',
+                                            title='Eco title')
+
+        self.project = api.add_project(self.ctx,
+                                       ecosystem_id=self.origin_eco.id,
+                                       name='example',
+                                       title='Project title')
+        self.parent_project = api.add_project(self.ctx,
+                                              ecosystem_id=self.origin_eco.id,
+                                              name='example-parent',
+                                              title='Project title')
+
+        self.ecosystem = api.add_ecosystem(self.ctx,
+                                           name='Example',
+                                           title='Eco title')
+
+    def test_move_project(self):
+        """Check if it moves a project to another one and to a given ecosystem"""
+
+        project = api.move_project(self.ctx,
+                                   self.project.id,
+                                   to_project_id=self.parent_project.id)
+
+        # Tests
+        self.assertIsInstance(project, Project)
+
+        self.assertEqual(project.name, 'example')
+        self.assertEqual(project.title, 'Project title')
+        self.assertEqual(project.parent_project, self.parent_project)
+        self.assertEqual(project.ecosystem, self.origin_eco)
+
+        # Check database object
+        project_db = Project.objects.get(id=self.project.id)
+        self.assertEqual(project, project_db)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        project = api.move_project(self.ctx,
+                                   self.project.id,
+                                   to_project_id=self.parent_project.id)
+        after_dt = datetime_utcnow()
+
+        self.assertLessEqual(before_dt, project.last_modified)
+        self.assertGreaterEqual(after_dt, project.last_modified)
+
+    def test_from_project_none(self):
+        """Check if it fails when source project id is `None`"""
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(InvalidValueError, PROJECT_FROM_ID_NONE_OR_EMPTY_ERROR):
+            api.move_project(self.ctx,
+                             None,
+                             to_project_id=self.parent_project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_from_project_not_exists(self):
+        """Check if it fails when source project does not exist"""
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(NotFoundError, PROJECT_NOT_FOUND_ERROR.format(proj_id='11111111')):
+            api.move_project(self.ctx,
+                             11111111,
+                             to_project_id=self.parent_project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_to_project_not_exists(self):
+        """Check if it fails when the destination parent project does not exist"""
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(NotFoundError, PROJECT_NOT_FOUND_ERROR.format(proj_id='11111111')):
+            api.move_project(self.ctx,
+                             self.project.id,
+                             to_project_id=11111111)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_parent_different_root_project(self):
+        """Check if it fails when trying set as parent a project from a different root project"""
+
+        root1 = api.add_project(self.ctx,
+                                ecosystem_id=self.origin_eco.id,
+                                name='root-1')
+        child1 = api.add_project(self.ctx,
+                                 ecosystem_id=self.origin_eco.id,
+                                 name='example-child',
+                                 parent_id=root1.id)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_DIFFERENT_ROOT):
+            api.move_project(self.ctx,
+                             child1.id,
+                             self.parent_project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_parent_already_set(self):
+        """Check if it fails when the project already has that parent"""
+
+        project = api.move_project(self.ctx,
+                                   self.project.id,
+                                   to_project_id=self.parent_project.id)
+
+        # Tests
+        self.assertIsInstance(project, Project)
+
+        self.assertEqual(project.name, 'example')
+        self.assertEqual(project.title, 'Project title')
+        self.assertEqual(project.parent_project, self.parent_project)
+        self.assertEqual(project.ecosystem, self.origin_eco)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_ALREADY_SET):
+            api.move_project(self.ctx,
+                             self.project.id,
+                             to_project_id=self.parent_project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_parent_equal(self):
+        """Check if it fails when trying set as parent the project itself"""
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_EQUAL_ERROR):
+            api.move_project(self.ctx,
+                             self.project.id,
+                             self.project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_set_descendant_as_parent(self):
+        """Check if it fails when trying set as parent a child project"""
+
+        parent = api.add_project(self.ctx,
+                                 ecosystem_id=self.origin_eco.id,
+                                 name='parent',
+                                 title='Project title',
+                                 parent_id=self.parent_project.id)
+        child = api.add_project(self.ctx,
+                                ecosystem_id=self.origin_eco.id,
+                                name='child',
+                                title='Project title',
+                                parent_id=parent.id)
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_DESCENDANT_ERROR):
+            api.move_project(self.ctx,
+                             parent.id,
+                             child.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_parent_different_ecosystem(self):
+        """Check if it fails when trying set as parent a project from a different ecosystem"""
+
+        root1 = api.add_project(self.ctx,
+                                ecosystem_id=self.ecosystem.id,
+                                name='root-1')
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_DIFFERENT_ECO):
+            api.move_project(self.ctx,
+                             root1.id,
+                             self.parent_project.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when moving a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.move_project(self.ctx,
+                         self.project.id,
+                         to_project_id=self.parent_project.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'move_project')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when moving a project"""
+
+        timestamp = datetime_utcnow()
+
+        api.move_project(self.ctx,
+                         self.project.id,
+                         to_project_id=self.parent_project.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.LINK.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.target, str(self.project.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 2)
+        self.assertEqual(op1_args['id'], self.project.id)
+        self.assertEqual(op1_args['parent_id'], self.parent_project.id)

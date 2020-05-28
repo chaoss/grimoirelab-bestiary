@@ -29,7 +29,8 @@ from .db import (find_ecosystem,
                  update_ecosystem as update_ecosystem_db,
                  update_project as update_project_db,
                  delete_ecosystem as delete_ecosystem_db,
-                 delete_project as delete_project_db)
+                 delete_project as delete_project_db,
+                 link_parent_project as link_parent_project_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -306,3 +307,48 @@ def delete_project(ctx, project_id):
     project.id = project_id
 
     return project
+
+
+@django.db.transaction.atomic
+def move_project(ctx, from_project_id, to_project_id):
+    """Move a project to a parent project.
+
+    Link a project with another one with a child-parent relation. If a project
+    is not linked to any project, it is a root project. Once the project is linked
+    with another one, it won't be a root project anymore.
+    If the source project was already linked to a parent project, it will be
+    overwritten.
+
+    :param ctx: context from where this method is called
+    :param from_project_id: Project to be linked to another project or to an ecosystem
+    :param to_project_id: Destination project which will be linked as a parent project
+
+    :returns: the updated project object
+
+    :raises InvalidValueError: raised when from_project_id is None or any of the
+        other IDs are invalid, or when the parent project to be set is invalid
+    :raises NotFoundError: raised when the any of the projects or the ecosystem
+        do not exist in the registry
+    """
+    if from_project_id is None:
+        raise InvalidValueError(msg="'from_project_id' cannot be None")
+
+    trxl = TransactionsLog.open('move_project', ctx)
+
+    try:
+        from_project = find_project(from_project_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    try:
+        to_project = find_project(to_project_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    from_project = link_parent_project_db(trxl, from_project, to_project)
+
+    return from_project
