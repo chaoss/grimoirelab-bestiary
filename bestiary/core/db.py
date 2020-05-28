@@ -129,7 +129,7 @@ def add_ecosystem(trxl, name, title, description):
     return ecosystem
 
 
-def add_project(trxl, ecosystem, name, title):
+def add_project(trxl, ecosystem, name, title, parent):
     """Add an project to the database.
 
     This function adds a new project to the database,
@@ -141,6 +141,7 @@ def add_project(trxl, ecosystem, name, title):
     :param trxl: TransactionsLog object from the method calling this one
     :param name: name of the project
     :param title: title of the project
+    :param parent: Project to be set as parent of the project to be created
 
     :returns: a new project
 
@@ -152,16 +153,21 @@ def add_project(trxl, ecosystem, name, title):
     op_args = {
         'name': name,
         'title': title,
-        'ecosystem': ecosystem.id
+        'ecosystem': ecosystem.id,
+        'parent': parent.id if parent else None
     }
 
     # Check if the name fulfills the requirements
     validate_name(name)
     validate_field('title', title, allow_none=True)
 
+    if (parent) and (parent.ecosystem != ecosystem):
+        raise ValueError('Parent cannot belong to a different ecosystem')
+
     project = Project(name=name,
                       title=title,
-                      ecosystem=ecosystem)
+                      ecosystem=ecosystem,
+                      parent_project=parent)
 
     try:
         project.save()

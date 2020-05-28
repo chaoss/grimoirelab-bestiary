@@ -57,6 +57,7 @@ DESC_VALUE_ERROR = "field 'description' value must be a string; int given"
 ECOSYSTEM_NOT_FOUND_ERROR = "Ecosystem ID 2 not found in the registry"
 PROJECT_NOT_FOUND_ERROR = "Project ID 2 not found in the registry"
 PROJECT_PARENT_EQUAL_ERROR = "Project 'example' cannot be added as parent project"
+PROJECT_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
 
 NAME_ALPHANUMERIC_ERROR = "'name' must start with an alphanumeric character"
 
@@ -354,18 +355,23 @@ class TestAddProject(TestCase):
 
         self.eco = Ecosystem.objects.create(name='Eco-example')
 
+        self.parent = Project.objects.create(name='parent-project',
+                                             ecosystem=self.eco)
+
     def test_add_project(self):
         """Check if a new project is added"""
 
         proj = db.add_project(self.trxl,
                               self.eco,
                               'example',
-                              title='Project title')
+                              title='Project title',
+                              parent=self.parent)
+
         self.assertIsInstance(proj, Project)
         self.assertEqual(proj.ecosystem, self.eco)
         self.assertEqual(proj.name, 'example')
         self.assertEqual(proj.title, 'Project title')
-        self.assertEqual(proj.parent_project, None)
+        self.assertEqual(proj.parent_project, self.parent)
 
         proj_db = Project.objects.get(id=proj.id)
         self.assertIsInstance(proj_db, Project)
@@ -373,7 +379,7 @@ class TestAddProject(TestCase):
         self.assertEqual(proj_db.ecosystem, proj.ecosystem)
         self.assertEqual(proj_db.name, 'example')
         self.assertEqual(proj_db.title, 'Project title')
-        self.assertEqual(proj_db.parent_project, None)
+        self.assertEqual(proj_db.parent_project, self.parent)
 
     def test_name_none(self):
         """Check whether projects with None as name cannot be added"""
@@ -382,7 +388,8 @@ class TestAddProject(TestCase):
             db.add_project(self.trxl,
                            self.eco,
                            None,
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         operations = Operation.objects.all()
         self.assertEqual(len(operations), 0)
@@ -394,7 +401,8 @@ class TestAddProject(TestCase):
             db.add_project(self.trxl,
                            self.eco,
                            '',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         operations = Operation.objects.all()
         self.assertEqual(len(operations), 0)
@@ -406,31 +414,36 @@ class TestAddProject(TestCase):
             db.add_project(self.trxl,
                            self.eco,
                            'my project',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, NAME_ALPHANUMERIC_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            ' project',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            '  ',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            '\t',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, NAME_WHITESPACES_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            ' \t  ',
-                           title='Project title')
+                           title='Project title',
+                           parent=None)
 
         operations = Operation.objects.all()
         self.assertEqual(len(operations), 0)
@@ -441,7 +454,8 @@ class TestAddProject(TestCase):
         proj = db.add_project(self.trxl,
                               self.eco,
                               'example',
-                              title=None)
+                              title=None,
+                              parent=None)
         self.assertIsInstance(proj, Project)
         self.assertEqual(proj.ecosystem, self.eco)
         self.assertEqual(proj.name, 'example')
@@ -463,7 +477,8 @@ class TestAddProject(TestCase):
             db.add_project(self.trxl,
                            self.eco,
                            'example',
-                           title='')
+                           title='',
+                           parent=None)
 
         operations = Operation.objects.all()
         self.assertEqual(len(operations), 0)
@@ -475,19 +490,22 @@ class TestAddProject(TestCase):
             db.add_project(self.trxl,
                            self.eco,
                            'example',
-                           title='  ')
+                           title='  ',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            'example',
-                           title='\t')
+                           title='\t',
+                           parent=None)
 
         with self.assertRaisesRegex(ValueError, TITLE_WHITESPACES_ERROR):
             db.add_project(self.trxl,
                            self.eco,
                            'example',
-                           title=' \t  ')
+                           title=' \t  ',
+                           parent=None)
 
         operations = Operation.objects.all()
         self.assertEqual(len(operations), 0)
@@ -500,8 +518,50 @@ class TestAddProject(TestCase):
         title2 = 'Project title 2'
 
         with self.assertRaisesRegex(AlreadyExistsError, DUPLICATED_PROJECT_ERROR):
-            db.add_project(self.trxl, self.eco, name, title=title1)
-            db.add_project(self.trxl, self.eco, name, title=title2)
+            db.add_project(self.trxl, self.eco, name, title=title1, parent=None)
+            db.add_project(self.trxl, self.eco, name, title=title2, parent=None)
+
+    def test_parent_none(self):
+        """Check if it adds a new project when a parent is set to `None`"""
+
+        proj = db.add_project(self.trxl,
+                              self.eco,
+                              'example-name',
+                              title='Project title',
+                              parent=None)
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example-name')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.parent_project, None)
+
+        projects_db = Project.objects.filter(id=proj.id)
+        self.assertEqual(len(projects_db), 1)
+
+        proj1 = projects_db[0]
+        self.assertEqual(proj, proj1)
+
+    def test_parent_different_ecosystem(self):
+        """Check if it fails when trying set as parent a project from a different ecosystem"""
+
+        eco2 = Ecosystem.objects.create(name='Eco-2')
+        parent = Project.objects.create(name='parent-project-2',
+                                        ecosystem=eco2)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_DIFFERENT_ECO):
+            db.add_project(self.trxl,
+                           self.eco,
+                           'example-name',
+                           title='Project title',
+                           parent=parent)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
 
     def test_operations(self):
         """Check if the right operations are created when adding a project"""
@@ -511,7 +571,8 @@ class TestAddProject(TestCase):
         db.add_project(self.trxl,
                        self.eco,
                        'example',
-                       title='Project title')
+                       title='Project title',
+                       parent=self.parent)
 
         transactions = Transaction.objects.all()
         trx = transactions[0]
@@ -528,10 +589,11 @@ class TestAddProject(TestCase):
         self.assertGreater(op1.timestamp, timestamp)
 
         op1_args = json.loads(op1.args)
-        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(len(op1_args), 4)
         self.assertEqual(op1_args['name'], 'example')
         self.assertEqual(op1_args['title'], 'Project title')
         self.assertEqual(op1_args['ecosystem'], self.eco.id)
+        self.assertEqual(op1_args['parent'], self.parent.id)
 
 
 class TestDeleteEcosystem(TestCase):
