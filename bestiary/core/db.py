@@ -334,6 +334,86 @@ def delete_project(trxl, project):
                        target=str(op_args['id']))
 
 
+def link_parent_project(trxl, project, parent_project):
+    """Link a project object with another with a child-parent relation.
+
+    This method sets the `parent_project` field value from `project` with the
+    `Project` object from `parent_project`. If this field already had a value,
+    it will be overwritten. In case the parent project is invalid, the method
+    will raise an `ValueError`.
+    The reasons for considering a parent as invalid are:
+      - The parent is already set to the project.
+      - The parent and the project are the same.
+      - The parent belongs to a different ecosystem.
+      - If the project is not a root one, when the parent comes from a
+       different root project.
+      - The parent is a descendant from the project.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param project: Source project to be linked
+    :param parent_project: Parent project to be linked to the source project
+
+    :returns: the updated project object
+
+    :raises ValueError: raised either when the given parent project is invalid
+    """
+    def _get_root(project):
+        """Return the root project given one of its subprojects"""
+
+        parent = None
+        if project:
+            parent = project.parent_project
+        if parent:
+            project = _get_root(parent)
+
+        return project
+
+    def _is_descendant(project, from_project):
+        """Check if a project is a descendant of another"""
+
+        queue = [from_project]
+        while queue:
+            cur_project = queue.pop(0)
+            for subproject in cur_project.subprojects.all():
+                if subproject == project:
+                    return True
+                queue.append(subproject)
+
+    # Setting operation arguments before they are modified
+    op_args = {
+        'id': project.id,
+        'parent_id': parent_project.id
+    }
+
+    if project.parent_project == parent_project:
+        raise ValueError('Parent is already set to the project')
+    if project == parent_project:
+        raise ValueError('Project cannot be its own parent')
+    if project.ecosystem != parent_project.ecosystem:
+        raise ValueError('Parent cannot belong to a different ecosystem')
+    if _is_descendant(parent_project, project):
+        raise ValueError('Parent cannot be a descendant')
+
+    from_root = _get_root(project)
+    to_root = _get_root(parent_project)
+    # If `from_project` is not a root project, its parent cannot belong to another root
+    if (project.parent_project) and (from_root != to_root):
+        raise ValueError('Parent cannot belong to a different root project')
+
+    project.parent_project = parent_project
+
+    try:
+        project.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(Project, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.LINK, entity_type='project',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+    return project
+
+
 _MYSQL_DUPLICATE_ENTRY_ERROR_REGEX = re.compile(r"Duplicate entry '(?P<value>.+)' for key")
 
 

@@ -56,8 +56,11 @@ DESC_WHITESPACES_ERROR = "'description' cannot be composed by whitespaces only"
 DESC_VALUE_ERROR = "field 'description' value must be a string; int given"
 ECOSYSTEM_NOT_FOUND_ERROR = "Ecosystem ID 2 not found in the registry"
 PROJECT_NOT_FOUND_ERROR = "Project ID 2 not found in the registry"
-PROJECT_PARENT_EQUAL_ERROR = "Project 'example' cannot be added as parent project"
+PROJECT_PARENT_ALREADY_SET_ERROR = "Parent is already set to the project"
+PROJECT_PARENT_EQUAL_ERROR = "Project cannot be its own parent"
+PROJECT_PARENT_DIFFERENT_ROOT = "Parent cannot belong to a different root project"
 PROJECT_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
+PROJECT_PARENT_DESCENDANT_ERROR = "Parent cannot be a descendant"
 
 NAME_ALPHANUMERIC_ERROR = "'name' must start with an alphanumeric character"
 
@@ -559,9 +562,9 @@ class TestAddProject(TestCase):
                            title='Project title',
                            parent=parent)
 
-        # Check if there are no transactions created when there is an error
-        transactions = Transaction.objects.filter(created_at__gte=timestamp)
-        self.assertEqual(len(transactions), 0)
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.filter(timestamp__gte=timestamp)
+        self.assertEqual(len(operations), 0)
 
     def test_operations(self):
         """Check if the right operations are created when adding a project"""
@@ -1009,3 +1012,187 @@ class TestUpdateProject(TestCase):
         self.assertEqual(op1_args['id'], self.project.id)
         self.assertEqual(op1_args['name'], 'example-updated')
         self.assertEqual(op1_args['title'], 'Project title updated')
+
+
+class TestLinkParentProject(TestCase):
+    """Unit tests for link_parent_project"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.trxl = TransactionsLog.open('link_parent_project', self.ctx)
+
+        self.ecosystem = Ecosystem.objects.create(name='Test-Ecosystem')
+
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.ecosystem)
+
+    def test_link_parent_project(self):
+        """Check if it links a project to another as parent"""
+
+        parent_proj = Project.objects.create(id=2,
+                                             name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        proj = db.link_parent_project(self.trxl, self.project, parent_proj)
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.id, 1)
+        self.assertEqual(proj.parent_project, parent_proj)
+        self.assertEqual(proj.ecosystem, self.ecosystem)
+
+        # Check database objects
+        proj_db = Project.objects.get(name='example')
+        self.assertEqual(proj, proj_db)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        parent_proj = Project.objects.create(id=2,
+                                             name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        before_dt = datetime_utcnow()
+        project = db.link_parent_project(self.trxl,
+                                         self.project,
+                                         parent_proj)
+        after_dt = datetime_utcnow()
+
+        self.assertLessEqual(before_dt, project.last_modified)
+        self.assertGreaterEqual(after_dt, project.last_modified)
+
+    def test_project_parent_equal(self):
+        """Check if it fails when the source and target projects are the same"""
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_EQUAL_ERROR):
+            db.link_parent_project(self.trxl, self.project, self.project)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_parent_already_set(self):
+        """Check if it fails when the project already has that parent"""
+
+        parent_proj = Project.objects.create(id=2,
+                                             name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        proj = db.link_parent_project(self.trxl, self.project, parent_proj)
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+
+        self.assertEqual(proj.name, 'example')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.id, 1)
+        self.assertEqual(proj.parent_project, parent_proj)
+        self.assertEqual(proj.ecosystem, self.ecosystem)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_ALREADY_SET_ERROR):
+            db.link_parent_project(self.trxl, self.project, parent_proj)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.filter(timestamp__gte=timestamp)
+        self.assertEqual(len(operations), 0)
+
+    def test_parent_different_root_project(self):
+        """Check if it fails when trying set as parent a project from a different root project"""
+
+        root1 = Project.objects.create(name='root-1',
+                                       ecosystem=self.ecosystem)
+        child1 = Project.objects.create(name='example-child-1',
+                                        ecosystem=self.ecosystem,
+                                        parent_project=root1)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_DIFFERENT_ROOT):
+            db.link_parent_project(self.trxl, child1, self.project)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.filter(timestamp__gte=timestamp)
+        self.assertEqual(len(operations), 0)
+
+    def test_set_descendant_as_parent(self):
+        """Check if it fails when trying set as parent a child project"""
+
+        parent = Project.objects.create(name='parent',
+                                        title='Project title',
+                                        ecosystem=self.ecosystem,
+                                        parent_project=self.project)
+        child = Project.objects.create(name='child',
+                                       title='Project title',
+                                       ecosystem=self.ecosystem,
+                                       parent_project=parent)
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_DESCENDANT_ERROR):
+            db.link_parent_project(self.trxl, parent, child)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.filter(timestamp__gte=timestamp)
+        self.assertEqual(len(operations), 0)
+
+    def test_parent_different_ecosystem(self):
+        """Check if it fails when trying set as parent a project from a different ecosystem"""
+
+        ecosystem = Ecosystem.objects.create(name='Test-Ecosystem-2')
+
+        root1 = Project.objects.create(name='root-1',
+                                       title='Project title',
+                                       ecosystem=ecosystem)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_DIFFERENT_ECO):
+            db.link_parent_project(self.trxl, self.project, root1)
+
+        # Check if operations have not been generated after the failure
+        operations = Operation.objects.filter(timestamp__gte=timestamp)
+        self.assertEqual(len(operations), 0)
+
+    def test_operations(self):
+        """Check if the right operations are created"""
+
+        timestamp = datetime_utcnow()
+
+        # Update the project
+        parent_proj = Project.objects.create(name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        db.link_parent_project(self.trxl, self.project, parent_proj)
+
+        transactions = Transaction.objects.filter(name='link_parent_project')
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.LINK.value)
+        self.assertEqual(op1.entity_type, 'project')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, str(self.project.id))
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 2)
+        self.assertEqual(op1_args['id'], self.project.id)
+        self.assertEqual(op1_args['parent_id'], parent_proj.id)
