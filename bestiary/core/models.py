@@ -131,7 +131,7 @@ class Operation(Model):
     performed.
 
     :param ouid: unique identifier for the operation.
-    :param op_type: type of the operation (`ADD`, `DELETE` or `UPDATE`).
+    :param op_type: type of the operation.
     :param entity_type: type of the entity affected by this operation.
     :param target: identifier for the main object affected by the
         operation.
@@ -144,6 +144,8 @@ class Operation(Model):
         ADD = 'ADD'
         DELETE = 'DELETE'
         UPDATE = 'UPDATE'
+        LINK = 'LINK'
+        UNLINK = 'UNLINK'
 
         @classmethod
         def choices(cls):
