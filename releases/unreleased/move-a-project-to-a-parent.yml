@@ -1,0 +1,20 @@
+---
+title: Move a project to a parent
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 42  
+notes: >   
+    This feature allows to move a project to another parent project.
+
+    A project can be moved to an existing project which now will be
+    considered as its parent.
+
+    This has some restrictions:
+    - The project and its parent must belong to the same ecosystem.
+    - If the project is not a root one, the parent cannot belong to
+      a different root project.
+    - A project cannot have a parent which is already one of its 
+      descendants.
+    - The parent cannot be already set to the project.
+
+    There is a new mutation to perform this action, `moveProject`.

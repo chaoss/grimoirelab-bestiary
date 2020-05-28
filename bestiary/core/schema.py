@@ -40,7 +40,8 @@ from .api import (add_ecosystem,
                   update_ecosystem,
                   update_project,
                   delete_ecosystem,
-                  delete_project)
+                  delete_project,
+                  move_project)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
@@ -457,6 +458,33 @@ class DeleteProject(graphene.Mutation):
         )
 
 
+class MoveProject(graphene.Mutation):
+    """Mutation which can move a project to a parent project"""
+
+    class Arguments:
+        from_project_id = graphene.ID()
+        to_project_id = graphene.ID()
+
+    project = graphene.Field(lambda: ProjectType)
+
+    @check_auth
+    def mutate(self, info, from_project_id, to_project_id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        from_project_id_value = int(from_project_id)
+        to_project_id_value = int(to_project_id)
+
+        project = move_project(ctx,
+                               from_project_id_value,
+                               to_project_id=to_project_id_value)
+
+        return MoveProject(
+            project=project
+        )
+
+
 class BestiaryQuery(graphene.ObjectType):
     """Queries supported by Bestiary"""
 
@@ -576,6 +604,7 @@ class BestiaryMutation(graphene.ObjectType):
     update_project = UpdateProject.Field()
     delete_ecosystem = DeleteEcosystem.Field()
     delete_project = DeleteProject.Field()
+    move_project = MoveProject.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()

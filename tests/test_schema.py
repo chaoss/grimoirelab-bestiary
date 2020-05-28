@@ -49,7 +49,7 @@ TITLE_EMPTY_ERROR = "'title' cannot be an empty string"
 DESC_EMPTY_ERROR = "'description' cannot be an empty string"
 ECOSYSTEM_DOES_NOT_EXIST_ERROR = "Ecosystem ID 11111111 not found in the registry"
 PROJECT_DOES_NOT_EXIST_ERROR = "Project ID 11111111 not found in the registry"
-PARENT_PROJECT_ERROR = "Project 'example' cannot be added as parent project"
+PARENT_PROJECT_ERROR = "Project cannot be its own parent"
 INVALID_NAME_WHITESPACES = "'name' cannot contain whitespace characters"
 
 # Test queries
@@ -1995,6 +1995,162 @@ class TestUpdateProjectMutation(django.test.TestCase):
             }
         }
         executed = client.execute(self.BT_UPDATE_PROJECT,
+                                  context_value=context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestMoveProjectMutation(django.test.TestCase):
+    """Unit tests for mutation to move projects"""
+
+    BT_MOVE_PROJECT = """
+      mutation moveProj ($fromProjectId: ID,
+                        $toProjectId: ID) {
+        moveProject(fromProjectId: $fromProjectId,
+                    toProjectId: $toProjectId) {
+          project {
+            id
+            name
+            title
+            parentProject {
+              id
+              name
+            }
+            ecosystem {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Load initial dataset and set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.ctx = BestiaryContext(self.user)
+
+        self.ecosystem = Ecosystem.objects.create(id=1,
+                                                  name='Example',
+                                                  title='Eco title')
+
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Example title',
+                                              ecosystem=self.ecosystem)
+        self.parent_project = Project.objects.create(id=2,
+                                                     name='example-parent',
+                                                     title='Example title',
+                                                     ecosystem=self.ecosystem)
+
+    def test_move_project(self):
+        """Check if it moves a project to another one and to a given ecosystem"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'fromProjectId': 1,
+            'toProjectId': 2
+        }
+        executed = client.execute(self.BT_MOVE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check results, project was updated with the parent project and the ecosystem
+        project = executed['data']['moveProject']['project']
+        self.assertEqual(project['id'], '1')
+        self.assertEqual(project['name'], 'example')
+        self.assertEqual(project['title'], 'Example title')
+
+        parent_project = project['parentProject']
+        self.assertEqual(parent_project['id'], '2')
+        self.assertEqual(parent_project['name'], 'example-parent')
+
+        ecosystem = project['ecosystem']
+        self.assertEqual(ecosystem['id'], '1')
+        self.assertEqual(ecosystem['name'], 'Example')
+
+        # Check database
+        project_db = Project.objects.get(id=1)
+        self.assertEqual(project_db.id, 1)
+        self.assertEqual(project_db.name, 'example')
+        self.assertEqual(project_db.title, 'Example title')
+
+        parent_project_db = project_db.parent_project
+        self.assertEqual(parent_project_db.id, 2)
+        self.assertEqual(parent_project_db.name, 'example-parent')
+
+        ecosystem_db = project_db.ecosystem
+        self.assertEqual(ecosystem_db.id, 1)
+        self.assertEqual(ecosystem_db.name, 'Example')
+
+    def test_from_project_not_exists(self):
+        """Check if it fails when source project does not exist"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'fromProjectId': 11111111,
+            'toProjectId': 2
+        }
+        executed = client.execute(self.BT_MOVE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+    def test_to_project_not_exists(self):
+        """Check if it fails when the destination parent project does not exist"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'fromProjectId': 1,
+            'toProjectId': 11111111
+        }
+        executed = client.execute(self.BT_MOVE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+    def test_to_project_invalid(self):
+        """Check if it fails when the destination project is the same as the source"""
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'fromProjectId': 1,
+            'toProjectId': 1
+        }
+        executed = client.execute(self.BT_MOVE_PROJECT,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PARENT_PROJECT_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        params = {
+            'fromProjectId': 1,
+            'toProjectId': 2
+        }
+        executed = client.execute(self.BT_MOVE_PROJECT,
                                   context_value=context_value,
                                   variables=params)
 
