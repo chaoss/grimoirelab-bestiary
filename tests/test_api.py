@@ -48,6 +48,7 @@ ECOSYSTEM_ALREADY_EXISTS_ERROR = "Ecosystem '{name}' already exists in the regis
 PROJECT_NOT_FOUND_ERROR = "Project ID {proj_id} not found in the registry"
 PROJECT_ALREADY_EXISTS_ERROR = "Project '{name}' already exists in the registry"
 PROJECT_INVALID_PARENT_ERROR = "Project '{name}' cannot be added as parent project"
+PROJECT_INVALID_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
 TITLE_EMPTY_ERROR = "'title' cannot be"
 TITLE_VALUE_ERROR = "field 'title' value must be a string;"
 DESCRIPTION_EMPTY_ERROR = "'description' cannot be"
@@ -408,20 +409,24 @@ class TestAddProject(TestCase):
 
         self.eco = Ecosystem.objects.create(name='Eco-example')
 
+        self.parent = Project.objects.create(name='parent-project',
+                                             ecosystem=self.eco)
+
     def test_add_new_project(self):
         """Check if everything goes OK when adding a new project"""
 
         proj = api.add_project(self.ctx,
                                self.eco.id,
                                'example-name',
-                               title='Project title')
+                               title='Project title',
+                               parent_id=self.parent.id)
 
         # Tests
         self.assertIsInstance(proj, Project)
         self.assertEqual(proj.ecosystem, self.eco)
         self.assertEqual(proj.name, 'example-name')
         self.assertEqual(proj.title, 'Project title')
-        self.assertEqual(proj.parent_project, None)
+        self.assertEqual(proj.parent_project, self.parent)
 
         projects_db = Project.objects.filter(id=proj.id)
         self.assertEqual(len(projects_db), 1)
@@ -446,10 +451,7 @@ class TestAddProject(TestCase):
                             'example',
                             title='Project title')
 
-        projects = Project.objects.filter(id=proj.id)
-        self.assertEqual(len(projects), 1)
-
-        projects = Project.objects.all()
+        projects = Project.objects.filter(name=proj.name)
         self.assertEqual(len(projects), 1)
 
         # Check if there are no transactions created when there is an error
@@ -634,6 +636,60 @@ class TestAddProject(TestCase):
         transactions = Transaction.objects.all()
         self.assertEqual(len(transactions), 0)
 
+    def test_parent_none(self):
+        """Check if it adds a new project when a parent is not set"""
+
+        proj = api.add_project(self.ctx,
+                               self.eco.id,
+                               'example-name',
+                               title='Project title')
+
+        # Tests
+        self.assertIsInstance(proj, Project)
+        self.assertEqual(proj.ecosystem, self.eco)
+        self.assertEqual(proj.name, 'example-name')
+        self.assertEqual(proj.title, 'Project title')
+        self.assertEqual(proj.parent_project, None)
+
+        projects_db = Project.objects.filter(id=proj.id)
+        self.assertEqual(len(projects_db), 1)
+
+        proj1 = projects_db[0]
+        self.assertEqual(proj, proj1)
+
+    def test_parent_not_exists(self):
+        """Check if it fails when the parent project to set does not exist"""
+
+        with self.assertRaisesRegex(NotFoundError, PROJECT_NOT_FOUND_ERROR.format(proj_id='11111111')):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example',
+                            title='title',
+                            parent_id=11111111)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_parent_different_ecosystem(self):
+        """Check if it fails when trying set as parent a project from a different ecosystem"""
+
+        eco2 = Ecosystem.objects.create(name='Eco-2')
+        parent = Project.objects.create(name='parent-project-2',
+                                        ecosystem=eco2)
+
+        timestamp = datetime_utcnow()
+
+        with self.assertRaisesRegex(InvalidValueError, PROJECT_INVALID_PARENT_DIFFERENT_ECO):
+            api.add_project(self.ctx,
+                            self.eco.id,
+                            'example-name',
+                            parent_id=parent.id)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 0)
+
     def test_transaction(self):
         """Check if a transaction is created when adding a project"""
 
@@ -661,7 +717,8 @@ class TestAddProject(TestCase):
         api.add_project(self.ctx,
                         self.eco.id,
                         'example',
-                        title='Project title')
+                        title='Project title',
+                        parent_id=self.parent.id)
 
         transactions = Transaction.objects.all()
         trx = transactions[0]
@@ -678,10 +735,11 @@ class TestAddProject(TestCase):
         self.assertGreater(op1.timestamp, timestamp)
 
         op1_args = json.loads(op1.args)
-        self.assertEqual(len(op1_args), 3)
+        self.assertEqual(len(op1_args), 4)
         self.assertEqual(op1_args['name'], 'example')
         self.assertEqual(op1_args['title'], 'Project title')
         self.assertEqual(op1_args['ecosystem'], self.eco.id)
+        self.assertEqual(op1_args['parent'], self.parent.id)
 
 
 class TestDeleteEcosystem(TestCase):

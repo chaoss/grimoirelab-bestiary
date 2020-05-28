@@ -81,7 +81,7 @@ def add_ecosystem(ctx, name, title=None, description=None):
 
 
 @django.db.transaction.atomic
-def add_project(ctx, ecosystem_id, name, title=None):
+def add_project(ctx, ecosystem_id, name, title=None, parent_id=None):
     """Add a project to the registry.
 
     This function adds a project to the registry.
@@ -94,8 +94,10 @@ def add_project(ctx, ecosystem_id, name, title=None):
     :param ecosystem_id: ID of the ecosystem where this project belongs to
     :param name: name of the project
     :param title: title of the project
+    :param parent_id: ID of the parent project to be set to the new project
 
     :raises InvalidValueError: raised when name is None or an empty string
+        or when the parent project to be set is invalid
     :raises TypeError: raised when name is not a string or a NoneType
     :raises AlreadyExistsError: raised when the project already exists
         in the registry
@@ -119,10 +121,18 @@ def add_project(ctx, ecosystem_id, name, title=None):
         raise exc
 
     try:
+        parent = find_project(parent_id) if parent_id else None
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    try:
         project = add_project_db(trxl,
-                                 ecosystem=ecosystem,
-                                 name=name,
-                                 title=title)
+                                 ecosystem,
+                                 name,
+                                 title=title,
+                                 parent=parent)
     except ValueError as e:
         raise InvalidValueError(msg=str(e))
     except AlreadyExistsError as exc:
