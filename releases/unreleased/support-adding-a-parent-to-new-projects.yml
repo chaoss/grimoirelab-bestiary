@@ -1,0 +1,13 @@
+---
+title: Support adding a parent to new projects
+category: added
+author: Miguel Ángel Fernández <mafesan@bitergia.com>
+issue: 42
+notes: >
+    This feature allows to add a parent when creating new projects.
+
+    To add a project as the parent of a new project, this parent
+    must exist in the same ecosystem where the new project is 
+    created.
+
+    The mutation `addProject` has been updated to include this option.

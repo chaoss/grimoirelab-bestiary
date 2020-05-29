@@ -40,7 +40,8 @@ from .api import (add_ecosystem,
                   update_ecosystem,
                   update_project,
                   delete_ecosystem,
-                  delete_project)
+                  delete_project,
+                  move_project)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
@@ -344,17 +345,19 @@ class AddProject(graphene.Mutation):
         ecosystem_id = graphene.ID()
         name = graphene.String()
         title = graphene.String(required=False)
+        parent_id = graphene.ID(required=False)
 
     project = graphene.Field(lambda: ProjectType)
 
     @check_auth
-    def mutate(self, info, ecosystem_id, name, title=None):
+    def mutate(self, info, ecosystem_id, name, title=None, parent_id=None):
         user = info.context.user
         ctx = BestiaryContext(user)
 
         ecosystem_id_value = int(ecosystem_id) if ecosystem_id else None
+        parent_id_value = int(parent_id) if parent_id else None
 
-        project = add_project(ctx, ecosystem_id_value, name, title)
+        project = add_project(ctx, ecosystem_id_value, name, title, parent_id_value)
 
         return AddProject(
             project=project
@@ -451,6 +454,33 @@ class DeleteProject(graphene.Mutation):
         project = delete_project(ctx, id_value)
 
         return DeleteProject(
+            project=project
+        )
+
+
+class MoveProject(graphene.Mutation):
+    """Mutation which can move a project to a parent project"""
+
+    class Arguments:
+        from_project_id = graphene.ID()
+        to_project_id = graphene.ID()
+
+    project = graphene.Field(lambda: ProjectType)
+
+    @check_auth
+    def mutate(self, info, from_project_id, to_project_id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        from_project_id_value = int(from_project_id)
+        to_project_id_value = int(to_project_id)
+
+        project = move_project(ctx,
+                               from_project_id_value,
+                               to_project_id=to_project_id_value)
+
+        return MoveProject(
             project=project
         )
 
@@ -574,6 +604,7 @@ class BestiaryMutation(graphene.ObjectType):
     update_project = UpdateProject.Field()
     delete_ecosystem = DeleteEcosystem.Field()
     delete_project = DeleteProject.Field()
+    move_project = MoveProject.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()

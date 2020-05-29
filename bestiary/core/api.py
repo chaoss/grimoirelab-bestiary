@@ -29,7 +29,8 @@ from .db import (find_ecosystem,
                  update_ecosystem as update_ecosystem_db,
                  update_project as update_project_db,
                  delete_ecosystem as delete_ecosystem_db,
-                 delete_project as delete_project_db)
+                 delete_project as delete_project_db,
+                 link_parent_project as link_parent_project_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -81,7 +82,7 @@ def add_ecosystem(ctx, name, title=None, description=None):
 
 
 @django.db.transaction.atomic
-def add_project(ctx, ecosystem_id, name, title=None):
+def add_project(ctx, ecosystem_id, name, title=None, parent_id=None):
     """Add a project to the registry.
 
     This function adds a project to the registry.
@@ -94,8 +95,10 @@ def add_project(ctx, ecosystem_id, name, title=None):
     :param ecosystem_id: ID of the ecosystem where this project belongs to
     :param name: name of the project
     :param title: title of the project
+    :param parent_id: ID of the parent project to be set to the new project
 
     :raises InvalidValueError: raised when name is None or an empty string
+        or when the parent project to be set is invalid
     :raises TypeError: raised when name is not a string or a NoneType
     :raises AlreadyExistsError: raised when the project already exists
         in the registry
@@ -119,10 +122,18 @@ def add_project(ctx, ecosystem_id, name, title=None):
         raise exc
 
     try:
+        parent = find_project(parent_id) if parent_id else None
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    try:
         project = add_project_db(trxl,
-                                 ecosystem=ecosystem,
-                                 name=name,
-                                 title=title)
+                                 ecosystem,
+                                 name,
+                                 title=title,
+                                 parent=parent)
     except ValueError as e:
         raise InvalidValueError(msg=str(e))
     except AlreadyExistsError as exc:
@@ -296,3 +307,48 @@ def delete_project(ctx, project_id):
     project.id = project_id
 
     return project
+
+
+@django.db.transaction.atomic
+def move_project(ctx, from_project_id, to_project_id):
+    """Move a project to a parent project.
+
+    Link a project with another one with a child-parent relation. If a project
+    is not linked to any project, it is a root project. Once the project is linked
+    with another one, it won't be a root project anymore.
+    If the source project was already linked to a parent project, it will be
+    overwritten.
+
+    :param ctx: context from where this method is called
+    :param from_project_id: Project to be linked to another project or to an ecosystem
+    :param to_project_id: Destination project which will be linked as a parent project
+
+    :returns: the updated project object
+
+    :raises InvalidValueError: raised when from_project_id is None or any of the
+        other IDs are invalid, or when the parent project to be set is invalid
+    :raises NotFoundError: raised when the any of the projects or the ecosystem
+        do not exist in the registry
+    """
+    if from_project_id is None:
+        raise InvalidValueError(msg="'from_project_id' cannot be None")
+
+    trxl = TransactionsLog.open('move_project', ctx)
+
+    try:
+        from_project = find_project(from_project_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    try:
+        to_project = find_project(to_project_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    from_project = link_parent_project_db(trxl, from_project, to_project)
+
+    return from_project
