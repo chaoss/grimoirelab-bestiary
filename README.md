@@ -1,4 +1,4 @@
-# Bestiary [![Build Status](https://travis-ci.org/acs/bestiary.svg?branch=master)](https://travis-ci.org/acs/bestiary)
+# Bestiary [![Build Status](https://github.com/chaoss/grimoirelab-bestiary/workflows/build/badge.svg)](https://github.com/chaoss/grimoirelab-bestiary/actions?query=workflow:build+branch:master+event:push)
 
 A tool to visually manage software development ecosystems description.
 
