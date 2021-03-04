@@ -18,3 +18,14 @@ lib
 lib64
 share
 pyvenv.cfg
+
+# JavaScript files
+node_modules
+dist
+storybook-static
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
