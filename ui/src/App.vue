@@ -33,15 +33,45 @@
       </v-btn>
     </v-app-bar>
 
-    <v-main></v-main>
+    <v-main>
+      <v-container>
+        <v-row>
+          <v-col v-for="ecosystem in ecosystems" :key="ecosystem.id" cols="6">
+            <example-card
+              :name="ecosystem.name"
+              :title="ecosystem.title"
+              :description="ecosystem.description"
+            >
+            </example-card>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
   </v-app>
 </template>
 
 <script>
+import { getEcosystems } from "./apollo/queries";
+import ExampleCard from "./components/ExampleCard";
+
 export default {
   name: "App",
+  components: {
+    ExampleCard
+  },
   data: () => ({
-    //
-  })
+    ecosystems: []
+  }),
+  methods: {
+    async getEcosystemsPage(pageSize = 10, page = 1) {
+      const response = await getEcosystems(this.$apollo, pageSize, page);
+      if (response && response.data) {
+        this.ecosystems = response.data.ecosystems.entities;
+      }
+    }
+  },
+  created() {
+    this.getEcosystemsPage(10, 1);
+  }
 };
 </script>
