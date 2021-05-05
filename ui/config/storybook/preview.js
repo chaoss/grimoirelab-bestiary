@@ -3,6 +3,7 @@ import VueRouter from "vue-router";
 import router from "./../../src/router";
 import * as _Vuetify from "vuetify/lib";
 import { configure, addDecorator } from "@storybook/vue";
+import '@mdi/font/css/materialdesignicons.css';
 
 const Vuetify = _Vuetify.default;
 
@@ -22,6 +23,20 @@ Vue.use(Vuetify, {
 });
 
 Vue.use(VueRouter);
+
+const VuetifyConfig = new Vuetify({
+  icons: {
+    iconfont: "mdi"
+  },
+  theme: {
+    themes: {
+      light: {
+        primary: "#003756",
+        secondary: "#f4bc00"
+      }
+    }
+  }
+});
 
 addDecorator(() => ({
   router,
