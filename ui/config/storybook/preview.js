@@ -1,4 +1,6 @@
 import Vue from "vue";
+import VueRouter from "vue-router";
+import router from "./../../src/router";
 import * as _Vuetify from "vuetify/lib";
 import { configure, addDecorator } from "@storybook/vue";
 
@@ -19,9 +21,10 @@ Vue.use(Vuetify, {
   }
 });
 
-const VuetifyConfig = new Vuetify();
+Vue.use(VueRouter);
 
 addDecorator(() => ({
+  router,
   vuetify: VuetifyConfig,
   template: "<v-app><story/></v-app>"
 }));
