@@ -542,6 +542,8 @@ class BestiaryQuery(graphene.ObjectType):
             query = query.filter(name=filters['name'])
         if filters and 'title' in filters:
             query = query.filter(title=filters['title'])
+        if filters and 'ecosystem_id' in filters:
+            query = query.filter(ecosystem__id=filters['ecosystem_id'])
 
         return ProjectPaginatedType.create_paginated_result(query,
                                                             page,
