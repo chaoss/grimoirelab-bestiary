@@ -44,6 +44,17 @@ const GET_ECOSYSTEMS = gql`
   ${projectFragment}
 `;
 
+const GET_PROJECTS = gql`
+  query GetProjects($pageSize: Int, $page: Int, $filters: ProjectFilterType) {
+    projects(pageSize: $pageSize, page: $page, filters: $filters) {
+      entities {
+        id
+        title
+      }
+    }
+  }
+`;
+
 const getEcosystems = (apollo, pageSize, page) => {
   const response = apollo.query({
     query: GET_ECOSYSTEMS,
@@ -55,4 +66,16 @@ const getEcosystems = (apollo, pageSize, page) => {
   return response;
 };
 
-export { getEcosystems };
+const getProjects = (apollo, pageSize, page, filters) => {
+  const response = apollo.query({
+    query: GET_PROJECTS,
+    variables: {
+      pageSize,
+      page,
+      filters
+    }
+  });
+  return response;
+};
+
+export { getEcosystems, getProjects };
