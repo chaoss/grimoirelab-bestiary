@@ -11,9 +11,25 @@
     :items="items"
   >
     <template v-slot:label="{ item }">
-      <router-link :to="getLink(item)" @click.native="addActiveClass">
-        {{ item.title }}
-      </router-link>
+      <div class="d-flex justify-space-between align-center hidden">
+        <router-link :to="getLink(item)">
+          {{ item.title }}
+        </router-link>
+        <v-tooltip right>
+          <template v-slot:activator="{ on }">
+            <v-btn
+              v-if="item.projectSet"
+              :to="{ name: 'project-new', params: { id: item.id } }"
+              v-on="on"
+              color="transparent"
+              icon
+            >
+              <v-icon>mdi-plus-box-outline</v-icon>
+            </v-btn>
+          </template>
+          <span class="text-caption">Add a project</span>
+        </v-tooltip>
+      </div>
     </template>
   </v-treeview>
 </template>
@@ -45,9 +61,9 @@ export default {
     },
     getLink(item) {
       if (item.projectSet) {
-        return `/ecosystem/${item.name}`;
+        return `/ecosystem/${item.id}`;
       } else {
-        return `/ecosystem/${item.ecosystem.name}/project/${item.name}`;
+        return `/ecosystem/${item.ecosystem.id}/project/${item.name}`;
       }
     },
     addActiveClass() {
@@ -67,6 +83,14 @@ export default {
   mounted() {
     this.items = this.filterDuplicateProjects(this.ecosystem);
     this.$nextTick(this.addActiveClass);
+  },
+  watch: {
+    ecosystem(value) {
+      this.items = this.filterDuplicateProjects(value);
+    },
+    $route() {
+      this.$nextTick(this.addActiveClass);
+    }
   }
 };
 </script>
@@ -102,8 +126,20 @@ export default {
   width: 18px;
 }
 ::v-deep .v-treeview-node--active {
-  .theme--light.v-icon {
+  .theme--light.v-icon,
+  .hidden:hover .v-icon.v-icon {
     color: $primary-color;
+  }
+}
+.hidden {
+  .v-icon.v-icon {
+    color: transparent;
+  }
+  &:hover,
+  &:focus {
+    .v-icon.v-icon {
+      color: $text-color;
+    }
   }
 }
 </style>

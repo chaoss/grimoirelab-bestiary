@@ -10,7 +10,7 @@
           text
           block
         >
-          <v-icon dense left>mdi-plus</v-icon>
+          <v-icon small left>mdi-plus-box-outline</v-icon>
           Add project
         </v-btn>
       </div>
@@ -18,7 +18,10 @@
     <v-main>
       <v-container>
         <transition name="fade" mode="out-in">
-          <router-view :key="$route.fullPath" />
+          <router-view
+            :key="$route.fullPath"
+            @updateSidebar="getEcosystemsPage"
+          />
         </transition>
       </v-container>
     </v-main>
@@ -42,6 +45,7 @@ export default {
       const response = await getEcosystems(this.$apollo, pageSize, page);
       if (response && response.data) {
         this.ecosystems = response.data.ecosystems.entities;
+        this.$store.commit("setEcosystems", this.ecosystems);
       }
     }
   },
@@ -54,7 +58,7 @@ export default {
 <style lang="scss">
 .fade-enter-active,
 .fade-leave-active {
-  transition-duration: 0.3s;
+  transition-duration: 0.35s;
   transition-property: opacity;
   transition-timing-function: ease;
 }
@@ -70,8 +74,19 @@ export default {
   }
 }
 
-.link .v-btn__content {
-  text-transform: none;
-  justify-content: left;
+.link.v-btn:not(.v-btn--round).v-size--default {
+  padding: 0 32px;
+  .v-btn__content {
+    text-transform: none;
+    justify-content: left;
+    letter-spacing: 0;
+  }
+}
+
+.link.v-btn--active {
+  background: rgba(0, 55, 86, 0.12);
+  .v-btn__content {
+    color: #003756;
+  }
 }
 </style>

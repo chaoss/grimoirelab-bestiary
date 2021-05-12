@@ -61,7 +61,8 @@ const getEcosystems = (apollo, pageSize, page) => {
     variables: {
       pageSize,
       page
-    }
+    },
+    fetchPolicy: "no-cache"
   });
   return response;
 };
