@@ -3,6 +3,7 @@ import Vue from "vue";
 import Vuetify from "vuetify";
 import VueRouter from 'vue-router';
 import EcosystemTree from "@/components/EcosystemTree";
+import router from "@/router";
 
 Vue.use(Vuetify)
 const localVue = createLocalVue();
@@ -10,7 +11,6 @@ localVue.use(Vuetify);
 localVue.use(VueRouter)
 
 describe("EcosystemTree", () => {
-  const router = new VueRouter();
   const vuetify = new Vuetify();
   const mountFunction = options => {
     return mount(EcosystemTree, {
@@ -32,7 +32,8 @@ describe("EcosystemTree", () => {
         title: "child",
         parentProject: null,
         ecosystem: {
-          name: "root"
+          name: "root",
+          id: 0
         },
         subprojects: [{
           id: 2,
@@ -42,7 +43,8 @@ describe("EcosystemTree", () => {
             name: "child"
           },
           ecosystem: {
-            name: "root"
+            name: "root",
+            id: 0
           }
         }]
       },
@@ -54,7 +56,8 @@ describe("EcosystemTree", () => {
           name: "child"
         },
         ecosystem: {
-          name: "root"
+          name: "root",
+          id: 0
         }
       }
     ]
@@ -79,16 +82,16 @@ describe("EcosystemTree", () => {
     });
 
     const ecosystemLink = wrapper.vm.getLink(wrapper.vm.ecosystem);
-    expect(ecosystemLink).toBe("/ecosystem/root");
+    expect(ecosystemLink).toBe("/ecosystem/0");
 
     const projectLink = wrapper.vm.getLink(
       wrapper.vm.ecosystem.subprojects[0]
     );
-    expect(projectLink).toBe("/ecosystem/root/project/child");
+    expect(projectLink).toBe("/ecosystem/0/project/child");
 
     const subprojectLink = wrapper.vm.getLink(
       wrapper.vm.ecosystem.subprojects[0].subprojects[0]
     );
-    expect(subprojectLink).toBe("/ecosystem/root/project/grandchild");
+    expect(subprojectLink).toBe("/ecosystem/0/project/grandchild");
   })
 });
