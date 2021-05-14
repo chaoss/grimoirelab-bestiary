@@ -9,6 +9,7 @@
       :ecosystemId="ecosystemId"
       :get-projects="getProjects"
       :add-project="addProject"
+      :parent="parent"
     />
     <v-alert v-else text outlined type="error" width="50%">
       No ecosystem with id <code>{{ this.$route.params.id }}</code>
@@ -30,6 +31,9 @@ export default {
     },
     isEcosystem() {
       return this.$store.getters.findEcosystem(this.ecosystemId);
+    },
+    parent() {
+      return this.$route.params.parent;
     }
   },
   methods: {

@@ -32,6 +32,7 @@
           label="Parent project (optional)"
           item-text="title"
           item-value="id"
+          clearable
           outlined
           dense
           @click.once="loadParentProjects"
@@ -73,6 +74,11 @@ export default {
     addProject: {
       type: Function,
       required: true
+    },
+    parent: {
+      type: Object,
+      required: false,
+      default: null
     }
   },
   data() {
@@ -119,6 +125,12 @@ export default {
           path: `/ecosystem/${this.ecosystemId}/project/${projectName}`
         });
       }
+    }
+  },
+  created() {
+    if (this.parent) {
+      this.loadParentProjects();
+      this.parentId = this.parent.id;
     }
   }
 };
