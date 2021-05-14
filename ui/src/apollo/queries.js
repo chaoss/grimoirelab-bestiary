@@ -55,6 +55,26 @@ const GET_PROJECTS = gql`
   }
 `;
 
+const GET_PROJECT_BY_NAME = gql`
+  query getProjectById($filters: ProjectFilterType) {
+    projects(pageSize: 1, page: 1, filters: $filters) {
+      entities {
+        ...projectFields
+        subprojects {
+          ...projectFields
+          subprojects {
+            ...projectFields
+            subprojects {
+              ...projectFields
+            }
+          }
+        }
+      }
+    }
+  }
+  ${projectFragment}
+`;
+
 const getEcosystems = (apollo, pageSize, page) => {
   const response = apollo.query({
     query: GET_ECOSYSTEMS,
@@ -79,4 +99,18 @@ const getProjects = (apollo, pageSize, page, filters) => {
   return response;
 };
 
-export { getEcosystems, getProjects };
+const getProjectByName = (apollo, name, ecosystemId) => {
+  const response = apollo.query({
+    query: GET_PROJECT_BY_NAME,
+    variables: {
+      filters: {
+        ecosystemId: ecosystemId,
+        name: name
+      }
+    },
+    fetchPolicy: "no-cache"
+  });
+  return response;
+};
+
+export { getEcosystems, getProjects, getProjectByName };
