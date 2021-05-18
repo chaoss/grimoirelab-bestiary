@@ -61,6 +61,7 @@ exports[`ProjectsForm queries Mock query for getProjects 1`] = `
         allowoverflow="true"
         appendicon="$dropdown"
         backgroundcolor=""
+        clearable="true"
         clearicon="$clear"
         dense="true"
         errorcount="1"
