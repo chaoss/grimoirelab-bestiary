@@ -11,16 +11,6 @@ localVue.use(Vuetify);
 localVue.use(VueRouter)
 
 describe("EcosystemTree", () => {
-  const vuetify = new Vuetify();
-  const mountFunction = options => {
-    return mount(EcosystemTree, {
-      localVue,
-      vuetify,
-      router,
-      ...options
-    });
-  };
-
   const threeLevels = {
     id: 0,
     name: "root",
@@ -62,24 +52,29 @@ describe("EcosystemTree", () => {
       }
     ]
   };
-
-  test("Filters subprojects at projectSet level", () => {
-    const wrapper = mountFunction({
+  const vuetify = new Vuetify();
+  const mountFunction = options => {
+    return mount(EcosystemTree, {
+      localVue,
+      vuetify,
+      router,
       propsData: {
-        ecosystem: threeLevels
-      }
+        ecosystem: threeLevels,
+        deleteProject: () => {}
+      },
+      ...options
     });
+  };
+
+  test("Filters subprojects at projectSet level", async () => {
+    const wrapper = mountFunction();
 
     const children = wrapper.vm.items[0].subprojects;
     expect(children.length).toBe(1);
   });
 
-  test("Generates links", () => {
-    const wrapper = mountFunction({
-      propsData: {
-        ecosystem: threeLevels
-      }
-    });
+  test("Generates links", async () => {
+    const wrapper = mountFunction();
 
     const ecosystemLink = wrapper.vm.getLink(wrapper.vm.ecosystem);
     expect(ecosystemLink).toBe("/ecosystem/0");

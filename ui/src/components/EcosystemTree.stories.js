@@ -5,7 +5,9 @@ export default {
   excludeStories: /.*Data$/
 };
 
-const ecosystemTreeTemplate = '<ecosystem-tree :ecosystem="ecosystem" />';
+const ecosystemTreeTemplate = `
+  <ecosystem-tree :ecosystem="ecosystem" :delete-project="mockAction" />
+`;
 
 export const Default = () => ({
   components: { EcosystemTree },
@@ -84,5 +86,10 @@ export const Default = () => ({
         ]
       }
     };
+  },
+  methods: {
+    mockAction() {
+      return;
+    }
   }
 });

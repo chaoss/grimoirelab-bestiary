@@ -2,7 +2,10 @@
   <v-app>
     <v-navigation-drawer permanent app class="pa-3" color="#F5F5F5">
       <div v-for="ecosystem in ecosystems" :key="ecosystem.id">
-        <ecosystem-tree :ecosystem="ecosystem" />
+        <ecosystem-tree
+          :ecosystem="ecosystem"
+          :delete-project="deleteProject"
+        />
         <v-btn
           :to="{ name: 'project-new', params: { id: ecosystem.id } }"
           class="link"
@@ -42,6 +45,7 @@
 
 <script>
 import { getEcosystems } from "./apollo/queries";
+import { deleteProject } from "./apollo/mutations";
 import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
 import SimpleDialog from "./components/SimpleDialog";
@@ -64,6 +68,25 @@ export default {
       if (response && response.data) {
         this.ecosystems = response.data.ecosystems.entities;
         this.$store.commit("setEcosystems", this.ecosystems);
+      }
+    },
+    async deleteProject(id) {
+      try {
+        await deleteProject(this.$apollo, id);
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Project deleted successfully",
+          color: "success"
+        });
+        this.getEcosystemsPage();
+      } catch (error) {
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
       }
     }
   },
