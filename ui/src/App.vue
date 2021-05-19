@@ -25,21 +25,39 @@
         </transition>
       </v-container>
     </v-main>
+    <simple-dialog
+      :is-open="dialog.isOpen"
+      :title="dialog.title"
+      :text="dialog.text"
+      :action="dialog.action"
+      :warning="dialog.warning"
+      :width="dialog.width"
+    >
+    </simple-dialog>
+    <v-snackbar v-model="snackbar.isOpen" :color="snackbar.color">
+      {{ snackbar.text }}
+    </v-snackbar>
   </v-app>
 </template>
 
 <script>
 import { getEcosystems } from "./apollo/queries";
+import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
+import SimpleDialog from "./components/SimpleDialog";
 
 export default {
   name: "App",
   components: {
-    EcosystemTree
+    EcosystemTree,
+    SimpleDialog
   },
   data: () => ({
     ecosystems: []
   }),
+  computed: {
+    ...mapGetters(["dialog", "snackbar"])
+  },
   methods: {
     async getEcosystemsPage(pageSize = 10, page = 1) {
       const response = await getEcosystems(this.$apollo, pageSize, page);

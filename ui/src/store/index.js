@@ -5,11 +5,42 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    ecosystems: []
+    ecosystems: [],
+    dialog: {
+      isOpen: false,
+      title: null,
+      text: null,
+      action: null,
+      warning: null
+    },
+    snackbar: {
+      isOpen: false,
+      color: "success",
+      text: null
+    }
   },
   mutations: {
     setEcosystems(state, ecosystems) {
       state.ecosystems = ecosystems;
+    },
+    setDialog(state, dialog) {
+      Object.assign(state.dialog, dialog);
+    },
+    clearDialog(state) {
+      state.dialog = {
+        isOpen: false,
+        title: null
+      };
+    },
+    setSnackbar(state, snackbar) {
+      Object.assign(state.snackbar, snackbar);
+    },
+    clearSnackbar(state) {
+      state.snackbar = {
+        isOpen: false,
+        color: "success",
+        text: null
+      };
     }
   },
   getters: {
@@ -18,7 +49,9 @@ export default new Vuex.Store({
       return state.ecosystems.find(
         ecosystem => ecosystem.id.toString() === id.toString()
       );
-    }
+    },
+    dialog: state => state.dialog,
+    snackbar: state => state.snackbar
   },
   modules: {}
 });
