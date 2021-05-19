@@ -8,7 +8,13 @@
       <span class="font-weight-bold">{{ project.name }}</span>
     </nav>
 
-    <h2 class="text-h5 font-weight-medium mb-9">{{ project.title }}</h2>
+    <v-row class="ma-0 mb-9 justify-space-between">
+      <h2 class="text-h5 font-weight-medium">{{ project.title }}</h2>
+      <v-btn class="primary--text button" @click="confirmDelete">
+        <v-icon dense left>mdi-trash-can-outline</v-icon>
+        Delete
+      </v-btn>
+    </v-row>
 
     <project-list
       :projects="project.subprojects"
@@ -20,6 +26,7 @@
 
 <script>
 import { getProjectByName } from "../apollo/queries";
+import { deleteProject } from "../apollo/mutations";
 import ProjectList from "../components/ProjectList";
 
 export default {
@@ -38,6 +45,37 @@ export default {
       return this.$route.params.name;
     }
   },
+  methods: {
+    confirmDelete() {
+      const dialog = {
+        isOpen: true,
+        title: `Delete project ${this.project.title}?`,
+        warning: "This will delete every project inside it.",
+        action: () => this.deleteProject(this.project.id)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    async deleteProject(id) {
+      try {
+        await deleteProject(this.$apollo, id);
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Project deleted successfully",
+          color: "success"
+        });
+        this.$emit("updateSidebar");
+        this.$router.push("/");
+      } catch (error) {
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      }
+    }
+  },
   async mounted() {
     try {
       const response = await getProjectByName(
@@ -52,3 +90,9 @@ export default {
   }
 };
 </script>
+<style scoped>
+.button {
+  text-transform: none;
+  letter-spacing: normal;
+}
+</style>
