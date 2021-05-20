@@ -21,6 +21,16 @@ const ADD_PROJECT = gql`
   }
 `;
 
+const DELETE_PROJECT = gql`
+  mutation deleteProject($id: ID) {
+    deleteProject(id: $id) {
+      project {
+        id
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -34,4 +44,14 @@ const addProject = (apollo, data) => {
   return response;
 };
 
-export { addProject };
+const deleteProject = (apollo, id) => {
+  const response = apollo.mutate({
+    mutation: DELETE_PROJECT,
+    variables: {
+      id: id
+    }
+  });
+  return response;
+};
+
+export { addProject, deleteProject };

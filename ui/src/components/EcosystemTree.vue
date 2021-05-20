@@ -12,9 +12,26 @@
   >
     <template v-slot:label="{ item }">
       <div class="d-flex justify-space-between align-center hidden">
-        <router-link :to="getLink(item)">
+        <router-link :to="getLink(item)" class="router-link">
           {{ item.title }}
         </router-link>
+
+        <v-menu offset-y v-if="!item.projectSet">
+          <template v-slot:activator="{ on }">
+            <v-btn v-on="on" icon color="transparent">
+              <v-icon>mdi-dots-horizontal</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item @click="confirmDelete(item)">
+              <v-list-item-icon class="mr-2">
+                <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>Delete</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
         <v-tooltip right>
           <template v-slot:activator="{ on }">
             <v-btn
@@ -40,6 +57,10 @@ export default {
   props: {
     ecosystem: {
       type: Object,
+      required: true
+    },
+    deleteProject: {
+      type: Function,
       required: true
     }
   },
@@ -78,6 +99,15 @@ export default {
         const parent = activeRouterLink.closest(".v-treeview-node__root");
         parent.classList.add("v-treeview-node--active", "primary--text");
       }
+    },
+    confirmDelete(item) {
+      const dialog = {
+        isOpen: true,
+        title: `Delete project ${item.title}?`,
+        warning: "This will delete every project inside it.",
+        action: () => this.deleteProject(item.id)
+      };
+      this.$store.commit("setDialog", dialog);
     }
   },
   mounted() {
@@ -136,10 +166,18 @@ export default {
     color: transparent;
   }
   &:hover,
-  &:focus {
+  &:focus,
+  .v-btn:focus {
     .v-icon.v-icon {
       color: $text-color;
     }
+    .router-link {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
+}
+.v-btn--icon {
+  min-width: 36px;
 }
 </style>

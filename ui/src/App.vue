@@ -2,7 +2,10 @@
   <v-app>
     <v-navigation-drawer permanent app class="pa-3" color="#F5F5F5">
       <div v-for="ecosystem in ecosystems" :key="ecosystem.id">
-        <ecosystem-tree :ecosystem="ecosystem" />
+        <ecosystem-tree
+          :ecosystem="ecosystem"
+          :delete-project="deleteProject"
+        />
         <v-btn
           :to="{ name: 'project-new', params: { id: ecosystem.id } }"
           class="link"
@@ -25,27 +28,65 @@
         </transition>
       </v-container>
     </v-main>
+    <simple-dialog
+      :is-open="dialog.isOpen"
+      :title="dialog.title"
+      :text="dialog.text"
+      :action="dialog.action"
+      :warning="dialog.warning"
+      :width="dialog.width"
+    >
+    </simple-dialog>
+    <v-snackbar v-model="snackbar.isOpen" :color="snackbar.color">
+      {{ snackbar.text }}
+    </v-snackbar>
   </v-app>
 </template>
 
 <script>
 import { getEcosystems } from "./apollo/queries";
+import { deleteProject } from "./apollo/mutations";
+import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
+import SimpleDialog from "./components/SimpleDialog";
 
 export default {
   name: "App",
   components: {
-    EcosystemTree
+    EcosystemTree,
+    SimpleDialog
   },
   data: () => ({
     ecosystems: []
   }),
+  computed: {
+    ...mapGetters(["dialog", "snackbar"])
+  },
   methods: {
     async getEcosystemsPage(pageSize = 10, page = 1) {
       const response = await getEcosystems(this.$apollo, pageSize, page);
       if (response && response.data) {
         this.ecosystems = response.data.ecosystems.entities;
         this.$store.commit("setEcosystems", this.ecosystems);
+      }
+    },
+    async deleteProject(id) {
+      try {
+        await deleteProject(this.$apollo, id);
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Project deleted successfully",
+          color: "success"
+        });
+        this.getEcosystemsPage();
+      } catch (error) {
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
       }
     }
   },

@@ -6,7 +6,6 @@
         <v-chip small pill class="ml-2">{{ list.length }}</v-chip>
       </h3>
       <v-btn
-        color="#D7DDE1"
         class="primary--text button"
         :to="{
           name: 'project-new',
