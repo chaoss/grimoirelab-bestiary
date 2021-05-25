@@ -6,7 +6,7 @@
         <v-chip small pill class="ml-2">{{ list.length }}</v-chip>
       </h3>
       <v-btn
-        class="primary--text button"
+        class="primary--text button--lowercase"
         :to="{
           name: 'project-new',
           params: {
@@ -20,27 +20,23 @@
       </v-btn>
     </div>
     <v-list two-line>
-      <router-link
+      <project-entry
         v-for="project in list"
         :key="project.id"
-        :to="project.route"
-        custom
-        v-slot="{ href, route, navigate }"
-      >
-        <v-list-item :href="href" @click="navigate">
-          <v-list-item-content>
-            <v-list-item-title v-html="highlightName(project.path)" />
-            <v-list-item-subtitle>{{ project.title }}</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-      </router-link>
+        :title="project.title"
+        :route="project.route"
+        :path="project.path"
+      />
     </v-list>
   </section>
 </template>
 
 <script>
+import ProjectEntry from "./ProjectEntry";
+
 export default {
   name: "ProjectList",
+  components: { ProjectEntry },
   props: {
     projects: {
       type: Array,
@@ -103,7 +99,7 @@ export default {
 ::v-deep .v-list-item__title span {
   font-weight: 500;
 }
-.button {
+.button--lowercase {
   text-transform: none;
   letter-spacing: normal;
 }
