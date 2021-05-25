@@ -1,0 +1,30 @@
+// Outlined button with thick border on focus
+.v-btn--outlined.btn--focusable {
+  border-color: rgba(0, 0, 0, 0.42);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 0;
+  }
+
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.87);
+    &::before {
+      opacity: 0;
+    }
+  }
+  &:focus {
+    border-color: #003756;
+    &::before {
+      opacity: 0;
+    }
+    &::after {
+      border: thin solid #003756;
+    }
+  }
+}
