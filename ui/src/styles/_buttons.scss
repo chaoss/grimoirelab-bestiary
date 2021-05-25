@@ -28,3 +28,15 @@
     }
   }
 }
+
+// Pagination buttons
+::v-deep .theme--light.v-pagination .v-pagination__item,
+::v-deep .theme--light.v-pagination .v-pagination__navigation {
+  box-shadow: none;
+  border: thin solid rgba(0, 0, 0, 0.42);
+
+  &--disabled {
+    color: rgba(0, 0, 0, 0.42);
+    border-color: rgba(0, 0, 0, 0.12);
+  }
+}
