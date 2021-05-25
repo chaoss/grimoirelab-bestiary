@@ -19,7 +19,7 @@
 
 <script>
 import ProjectForm from "../components/ProjectForm";
-import { getProjects } from "../apollo/queries";
+import { GetBasicProjectInfo } from "../apollo/queries";
 import { addProject } from "../apollo/mutations";
 
 export default {
@@ -38,7 +38,7 @@ export default {
   },
   methods: {
     async getProjects(ecosystem, pageSize = 50, page = 1) {
-      const response = await getProjects(this.$apollo, pageSize, page, {
+      const response = await GetBasicProjectInfo(this.$apollo, pageSize, page, {
         ecosystemId: ecosystem
       });
       if (response) {
