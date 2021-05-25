@@ -326,6 +326,19 @@ BT_PROJECTS_QUERY_FILTER = """{
     }
   }
 }"""
+BT_PROJECTS_QUERY_FILTER_TERM = """{
+  projects (
+    filters: {
+      term: "%s"
+    }
+  ){
+    entities {
+      id
+      name
+      title
+    }
+  }
+}"""
 BT_PROJECTS_QUERY_PAGINATION = """{
   projects (
     page: %d
@@ -933,6 +946,33 @@ class TestQueryProjects(django.test.TestCase):
 
         client = graphene.test.Client(schema)
         test_query = BT_PROJECTS_QUERY_FILTER % (11111111, 'Ghost-Project')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertListEqual(projects, [])
+
+    def test_filter_term_registry(self):
+        """Check whether it returns the project searched when looking for a term"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_PROJECTS_QUERY_FILTER_TERM % 'ex'
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        projects = executed['data']['projects']['entities']
+        self.assertEqual(len(projects), 1)
+
+        proj = projects[0]
+        self.assertEqual(proj['id'], str(self.proj.id))
+        self.assertEqual(proj['name'], 'Example')
+        self.assertEqual(proj['title'], 'Example title')
+
+    def test_filter_term_non_existing_registry(self):
+        """Check whether it returns an empty list when searched with a non existing term"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_PROJECTS_QUERY_FILTER_TERM % 'test'
         executed = client.execute(test_query,
                                   context_value=self.context_value)
 

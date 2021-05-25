@@ -27,6 +27,7 @@ import graphql_jwt
 
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.db.models import Q
 
 from django_mysql.models import JSONField
 
@@ -230,6 +231,8 @@ class ProjectFilterType(graphene.InputObjectType):
     name = graphene.String(required=False)
     ecosystem_id = graphene.ID(required=False)
     has_parent = graphene.Boolean(required=False)
+    term = graphene.String(required=False)
+    title = graphene.String(required=False)
 
 
 class AbstractPaginatedType(graphene.ObjectType):
@@ -544,6 +547,10 @@ class BestiaryQuery(graphene.ObjectType):
             query = query.filter(title=filters['title'])
         if filters and 'ecosystem_id' in filters:
             query = query.filter(ecosystem__id=filters['ecosystem_id'])
+        if filters and 'term' in filters:
+            search_term = filters['term']
+            query = query.filter(Q(name__icontains=search_term) |
+                                 Q(title__icontains=search_term))
 
         return ProjectPaginatedType.create_paginated_result(query,
                                                             page,
