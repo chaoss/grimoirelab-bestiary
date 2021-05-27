@@ -28,7 +28,7 @@ describe("ProjectsForm queries", () => {
       propsData: {
         ecosystemId: 1,
         getProjects: Queries.getProjects,
-        addProject: () => {}
+        saveFunction: () => {}
       }
     });
     await wrapper.vm.loadParentProjects();

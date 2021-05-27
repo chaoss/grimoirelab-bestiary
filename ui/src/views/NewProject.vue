@@ -5,7 +5,7 @@
       v-if="isEcosystem"
       :ecosystemId="ecosystemId"
       :get-projects="getProjects"
-      :add-project="addProject"
+      :save-function="addProject"
       :parent="parent"
     />
     <v-alert v-else text outlined type="error" width="50%">
