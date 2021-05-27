@@ -23,6 +23,20 @@
             </v-btn>
           </template>
           <v-list dense>
+            <v-list-item
+              :to="{
+                name: 'project-edit',
+                params: {
+                  id: item.ecosystem.id,
+                  name: item.name
+                }
+              }"
+            >
+              <v-list-item-icon class="mr-2">
+                <v-icon small color="#3f3f3f">mdi-pencil-outline</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>Edit</v-list-item-title>
+            </v-list-item>
             <v-list-item @click="confirmDelete(item)">
               <v-list-item-icon class="mr-2">
                 <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
