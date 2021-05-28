@@ -11,6 +11,12 @@ const projectFragment = gql`
     }
     parentProject {
       name
+      parentProject {
+        name
+        parentProject {
+          name
+        }
+      }
     }
   }
 `;
@@ -44,8 +50,8 @@ const GET_ECOSYSTEMS = gql`
   ${projectFragment}
 `;
 
-const GET_PROJECTS = gql`
-  query GetProjects($pageSize: Int, $page: Int, $filters: ProjectFilterType) {
+const GET_BASIC_PROJECT_INFO = gql`
+  query GetBasicInfo($pageSize: Int, $page: Int, $filters: ProjectFilterType) {
     projects(pageSize: $pageSize, page: $page, filters: $filters) {
       entities {
         id
@@ -53,6 +59,30 @@ const GET_PROJECTS = gql`
       }
     }
   }
+`;
+
+const GET_PROJECTS = gql`
+  query GetProjects($pageSize: Int, $page: Int, $filters: ProjectFilterType) {
+    projects(pageSize: $pageSize, page: $page, filters: $filters) {
+      entities {
+        ...projectFields
+        subprojects {
+          ...projectFields
+          subprojects {
+            ...projectFields
+            subprojects {
+              ...projectFields
+            }
+          }
+        }
+      }
+      pageInfo {
+        page
+        numPages
+      }
+    }
+  }
+  ${projectFragment}
 `;
 
 const GET_PROJECT_BY_NAME = gql`
@@ -87,6 +117,18 @@ const getEcosystems = (apollo, pageSize, page) => {
   return response;
 };
 
+const GetBasicProjectInfo = (apollo, pageSize, page, filters) => {
+  const response = apollo.query({
+    query: GET_BASIC_PROJECT_INFO,
+    variables: {
+      pageSize,
+      page,
+      filters
+    }
+  });
+  return response;
+};
+
 const getProjects = (apollo, pageSize, page, filters) => {
   const response = apollo.query({
     query: GET_PROJECTS,
@@ -113,4 +155,4 @@ const getProjectByName = (apollo, name, ecosystemId) => {
   return response;
 };
 
-export { getEcosystems, getProjects, getProjectByName };
+export { getEcosystems, GetBasicProjectInfo, getProjects, getProjectByName };

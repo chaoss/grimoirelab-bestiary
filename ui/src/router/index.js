@@ -14,6 +14,11 @@ const router = new Router({
       path: "/ecosystem/:ecosystemId/project/:name",
       component: () => import("../views/Project"),
       props: true
+    },
+    {
+      name: "search",
+      path: "/search",
+      component: () => import("../views/SearchResults")
     }
   ]
 });

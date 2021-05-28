@@ -1,6 +1,7 @@
 <template>
   <v-app>
-    <v-navigation-drawer permanent app class="pa-3" color="#F5F5F5">
+    <v-navigation-drawer permanent app class="pa-3" color="#F5F7F8">
+      <search class="mt-4" filled @search="search" ref="search" />
       <div v-for="ecosystem in ecosystems" :key="ecosystem.id">
         <ecosystem-tree
           :ecosystem="ecosystem"
@@ -48,12 +49,14 @@ import { getEcosystems } from "./apollo/queries";
 import { deleteProject } from "./apollo/mutations";
 import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
+import Search from "./components/Search";
 import SimpleDialog from "./components/SimpleDialog";
 
 export default {
   name: "App",
   components: {
     EcosystemTree,
+    Search,
     SimpleDialog
   },
   data: () => ({
@@ -88,6 +91,10 @@ export default {
           color: "error"
         });
       }
+    },
+    search(query) {
+      this.$router.push({ name: "search", query });
+      this.$refs.search.clearInput();
     }
   },
   created() {
