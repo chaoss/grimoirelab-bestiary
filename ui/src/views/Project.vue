@@ -1,13 +1,6 @@
 <template>
   <div class="pa-5" v-if="project">
-    <nav class="text-body-1 font-weight-light mb-9">
-      Bestiary / {{ project.ecosystem.name }} /
-      <span v-if="project.parentProject">
-        {{ project.parentProject.name }} /
-      </span>
-      <span class="font-weight-bold">{{ project.name }}</span>
-    </nav>
-
+    <breadcrumbs :items="breadcrumbs" />
     <v-row class="ma-0 mb-9 justify-space-between">
       <h2 class="text-h5 font-weight-medium">{{ project.title }}</h2>
       <v-btn class="primary--text button" @click="confirmDelete">
@@ -27,11 +20,13 @@
 <script>
 import { getProjectByName } from "../apollo/queries";
 import { deleteProject } from "../apollo/mutations";
+import { getProjectBreadcrumbs } from "../utils";
+import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectList from "../components/ProjectList";
 
 export default {
   name: "Project",
-  components: { ProjectList },
+  components: { Breadcrumbs, ProjectList },
   data() {
     return {
       project: null
@@ -43,6 +38,9 @@ export default {
     },
     name() {
       return this.$route.params.name;
+    },
+    breadcrumbs() {
+      return getProjectBreadcrumbs(this.project);
     }
   },
   methods: {
