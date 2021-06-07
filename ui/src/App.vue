@@ -6,6 +6,7 @@
         <ecosystem-tree
           :ecosystem="ecosystem"
           :delete-project="deleteProject"
+          :move-project="moveProject"
         />
         <v-btn
           :to="{ name: 'project-new', params: { id: ecosystem.id } }"
@@ -46,7 +47,7 @@
 
 <script>
 import { getEcosystems } from "./apollo/queries";
-import { deleteProject } from "./apollo/mutations";
+import { deleteProject, moveProject } from "./apollo/mutations";
 import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
 import Search from "./components/Search";
@@ -95,6 +96,25 @@ export default {
     search(query) {
       this.$router.push({ name: "search", query });
       this.$refs.search.clearInput();
+    },
+    async moveProject(fromId, toId) {
+      try {
+        await moveProject(this.$apollo, fromId, toId);
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Project moved successfully",
+          color: "success"
+        });
+        this.getEcosystemsPage();
+      } catch (error) {
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      }
     }
   },
   created() {
