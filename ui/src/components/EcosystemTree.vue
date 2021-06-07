@@ -1,71 +1,98 @@
 <template>
-  <v-treeview
-    v-if="items"
-    dense
-    hoverable
-    open-all
-    expand-icon="mdi-chevron-down"
-    item-key="name"
-    item-text="title"
-    item-children="subprojects"
-    :items="items"
-  >
-    <template v-slot:label="{ item }">
-      <div class="d-flex justify-space-between align-center hidden">
-        <router-link :to="getLink(item)" class="router-link">
-          {{ item.title }}
-        </router-link>
-
-        <v-menu offset-y v-if="!item.projectSet">
-          <template v-slot:activator="{ on }">
-            <v-btn v-on="on" icon color="transparent">
-              <v-icon>mdi-dots-horizontal</v-icon>
-            </v-btn>
-          </template>
-          <v-list dense>
-            <v-list-item
-              :to="{
-                name: 'project-edit',
-                params: {
-                  id: item.ecosystem.id,
-                  name: item.name
-                }
-              }"
+  <div>
+    <v-treeview
+      v-if="items"
+      dense
+      hoverable
+      open-all
+      expand-icon="mdi-chevron-down"
+      active-class="dropzone"
+      item-key="name"
+      item-text="title"
+      item-children="subprojects"
+      :items="items"
+      :active="active"
+    >
+      <template v-slot:label="{ item }">
+        <div
+          class="d-flex flex-wrap justify-space-between align-center hidden"
+          :draggable="!item.projectSet"
+          @dragstart.stop="startDrag(item, $event)"
+          @drop.stop.prevent="onDrop(item, $event)"
+          @dragenter.prevent
+          @dragover.prevent="handleDrag(item, $event, true)"
+          @dragleave.prevent="handleDrag(item, $event, false)"
+          @dragend.prevent="onDragend"
+        >
+          <router-link
+            v-slot="{ navigate, href, isExactActive }"
+            :to="getLink(item)"
+            custom
+          >
+            <a
+              class="router-link"
+              :class="{ 'router-link-exact-active': isExactActive }"
+              :href="href"
+              @click="navigate"
+              @drop.prevent="onDrop(item, $event)"
             >
-              <v-list-item-icon class="mr-2">
-                <v-icon small color="#3f3f3f">mdi-pencil-outline</v-icon>
-              </v-list-item-icon>
-              <v-list-item-title>Edit</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="confirmDelete(item)">
-              <v-list-item-icon class="mr-2">
-                <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
-              </v-list-item-icon>
-              <v-list-item-title>Delete</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
+              {{ item.title }}
+            </a>
+          </router-link>
 
-        <v-tooltip right>
-          <template v-slot:activator="{ on }">
-            <v-btn
-              v-if="item.projectSet"
-              :to="{ name: 'project-new', params: { id: item.id } }"
-              v-on="on"
-              color="transparent"
-              icon
-            >
-              <v-icon>mdi-plus-box-outline</v-icon>
-            </v-btn>
-          </template>
-          <span class="text-caption">Add a project</span>
-        </v-tooltip>
-      </div>
-    </template>
-  </v-treeview>
+          <v-menu offset-y v-if="!item.projectSet">
+            <template v-slot:activator="{ on }">
+              <v-btn v-on="on" icon color="transparent">
+                <v-icon>mdi-dots-horizontal</v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item
+                :to="{
+                  name: 'project-edit',
+                  params: {
+                    id: item.ecosystem.id,
+                    name: item.name
+                  }
+                }"
+              >
+                <v-list-item-icon class="mr-2">
+                  <v-icon small color="#3f3f3f">mdi-pencil-outline</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Edit</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="confirmDelete(item)">
+                <v-list-item-icon class="mr-2">
+                  <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Delete</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
+          <v-tooltip right>
+            <template v-slot:activator="{ on }">
+              <v-btn
+                v-if="item.projectSet"
+                :to="{ name: 'project-new', params: { id: item.id } }"
+                v-on="on"
+                color="transparent"
+                icon
+              >
+                <v-icon>mdi-plus-box-outline</v-icon>
+              </v-btn>
+            </template>
+            <span class="text-caption">Add a project</span>
+          </v-tooltip>
+        </div>
+      </template>
+    </v-treeview>
+    <div class="drag-image"></div>
+  </div>
 </template>
 
 <script>
+import { hasSameRoot, isDescendant, isParent } from "../utils/projects";
 export default {
   name: "EcosystemTree",
   props: {
@@ -76,11 +103,17 @@ export default {
     deleteProject: {
       type: Function,
       required: true
+    },
+    moveProject: {
+      type: Function,
+      required: true
     }
   },
   data() {
     return {
-      items: null
+      items: null,
+      dragged: null,
+      active: []
     };
   },
   methods: {
@@ -101,19 +134,6 @@ export default {
         return `/ecosystem/${item.ecosystem.id}/project/${item.name}`;
       }
     },
-    addActiveClass() {
-      const activeNode = document.querySelector(".v-treeview-node--active");
-      if (activeNode) {
-        activeNode.classList.remove("v-treeview-node--active", "primary--text");
-      }
-      const activeRouterLink = document.querySelector(
-        ".router-link-exact-active"
-      );
-      if (activeRouterLink) {
-        const parent = activeRouterLink.closest(".v-treeview-node__root");
-        parent.classList.add("v-treeview-node--active", "primary--text");
-      }
-    },
     confirmDelete(item) {
       const dialog = {
         isOpen: true,
@@ -122,18 +142,60 @@ export default {
         action: () => this.deleteProject(item.id)
       };
       this.$store.commit("setDialog", dialog);
+    },
+    startDrag(item, event) {
+      if (item.projectSet) {
+        return;
+      }
+      const dragImage = document.querySelector(".drag-image");
+      dragImage.innerHTML = event.target.closest(".v-treeview-node").innerHTML;
+      event.dataTransfer.setDragImage(dragImage, 10, 10);
+      event.dataTransfer.setData("move", item.id);
+      this.dragged = item;
+    },
+    handleDrag(item, event, dragged) {
+      if (dragged && this.allowDrag(item)) {
+        this.active.push(item.name);
+      } else {
+        this.active = this.active.filter(project => project.name === item.name);
+      }
+    },
+    allowDrag(item) {
+      if (this.dragged && item.ecosystem) {
+        return (
+          item.ecosystem.id === this.dragged.ecosystem.id &&
+          hasSameRoot(this.dragged, item) &&
+          !isParent(this.dragged, item) &&
+          !isDescendant(item, this.dragged) &&
+          item.id !== this.dragged.id
+        );
+      }
+      return false;
+    },
+    onDrop(item) {
+      if (this.dragged && this.allowDrag(item)) {
+        const project = this.dragged.id;
+        const dialog = {
+          isOpen: true,
+          title: `Move project ${this.dragged.title} to ${item.title}?`,
+          action: () => this.moveProject(project, item.id)
+        };
+        this.$store.commit("setDialog", dialog);
+        this.active = this.active.filter(project => project.name === item.name);
+        this.dragged = null;
+      }
+    },
+    onDragend() {
+      this.dragged = null;
+      this.active = [];
     }
   },
   mounted() {
     this.items = this.filterDuplicateProjects(this.ecosystem);
-    this.$nextTick(this.addActiveClass);
   },
   watch: {
     ecosystem(value) {
       this.items = this.filterDuplicateProjects(value);
-    },
-    $route() {
-      this.$nextTick(this.addActiveClass);
     }
   }
 };
@@ -193,5 +255,24 @@ export default {
 }
 .v-btn--icon {
   min-width: 36px;
+}
+::v-deep .dropzone {
+  &::before {
+    border: thin solid;
+    background: lighten($primary-color, 30%);
+    opacity: 0.12;
+    transition: none;
+  }
+}
+.drag-image {
+  position: absolute;
+  top: -1000px;
+  left: -1000px;
+  background-color: #ffffff;
+  border: 2px solid #003756;
+
+  .v-treeview-node__level:first-child {
+    display: none;
+  }
 }
 </style>

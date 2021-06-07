@@ -1,6 +1,8 @@
 import Vue from "vue";
 import VueRouter from "vue-router";
+import Vuex from "vuex";
 import router from "./../../src/router";
+import store from "./../../src/store";
 import * as _Vuetify from "vuetify/lib";
 import { configure, addDecorator } from "@storybook/vue";
 import '@mdi/font/css/materialdesignicons.css';
@@ -23,6 +25,7 @@ Vue.use(Vuetify, {
 });
 
 Vue.use(VueRouter);
+Vue.use(Vuex);
 
 const VuetifyConfig = new Vuetify({
   icons: {
@@ -40,6 +43,7 @@ const VuetifyConfig = new Vuetify({
 
 addDecorator(() => ({
   router,
+  store,
   vuetify: VuetifyConfig,
   template: "<v-app><story/></v-app>"
 }));
