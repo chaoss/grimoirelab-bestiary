@@ -68,8 +68,6 @@ export default {
           result = result.concat(
             this.flattenProjects(project.subprojects, path)
           );
-        } else {
-          result = result.concat(Object.assign(project, { path, route }));
         }
       });
       return result;
