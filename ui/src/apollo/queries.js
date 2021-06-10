@@ -157,7 +157,7 @@ const getEcosystemByID = (apollo, id) => {
   return response;
 };
 
-const GetBasicProjectInfo = (apollo, pageSize, page, filters) => {
+const getBasicProjectInfo = (apollo, pageSize, page, filters) => {
   const response = apollo.query({
     query: GET_BASIC_PROJECT_INFO,
     variables: {
@@ -199,7 +199,7 @@ const getProjectByName = (apollo, name, ecosystemId) => {
 export {
   getEcosystems,
   getEcosystemByID,
-  GetBasicProjectInfo,
+  getBasicProjectInfo,
   getProjects,
   getProjectByName
 };
