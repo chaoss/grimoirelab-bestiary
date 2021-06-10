@@ -16,6 +16,12 @@ const router = new Router({
       props: true
     },
     {
+      name: "project-edit",
+      path: "/ecosystem/:id/project/:name/edit",
+      component: () => import("../views/EditProject"),
+      props: true
+    },
+    {
       name: "search",
       path: "/search",
       component: () => import("../views/SearchResults")

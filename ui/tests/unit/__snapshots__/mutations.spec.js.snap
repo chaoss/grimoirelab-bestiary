@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ProjectsForm queries Mock query for getProjects 1`] = `
+exports[`ProjectsForm mutations Mock mutation for addProject 1`] = `
 <v-form-stub>
   <v-row-stub
     tag="div"
@@ -85,6 +85,144 @@ exports[`ProjectsForm queries Mock query for getProjects 1`] = `
         rules=""
         successmessages=""
         type="text"
+        valuecomparator="function deepEqual(a, b) {
+  if (a === b) return true;
+
+  if (a instanceof Date && b instanceof Date && a.getTime() !== b.getTime()) {
+    // If the values are Date, compare them as timestamps
+    return false;
+  }
+
+  if (a !== Object(a) || b !== Object(b)) {
+    // If the values aren't objects, they were already checked for equality
+    return false;
+  }
+
+  var props = Object.keys(a);
+
+  if (props.length !== Object.keys(b).length) {
+    // Different number of props, don't bother to check
+    return false;
+  }
+
+  return props.every(function (p) {
+    return deepEqual(a[p], b[p]);
+  });
+}"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      class="d-flex justify-end"
+      cols="4"
+      tag="div"
+    >
+      <v-btn-stub
+        activeclass=""
+        color="primary"
+        depressed="true"
+        tag="button"
+        type="button"
+      >
+        
+        Save
+      
+      </v-btn-stub>
+    </v-col-stub>
+  </v-row-stub>
+</v-form-stub>
+`;
+
+exports[`ProjectsForm mutations Mock mutation for updateProject 1`] = `
+<v-form-stub>
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-text-field-stub
+        backgroundcolor=""
+        clearicon="$clear"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        label="Project title"
+        loaderheight="2"
+        messages=""
+        outlined="true"
+        rules="value => !!value || \\"Required\\""
+        successmessages=""
+        type="text"
+        value="Test Title"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-text-field-stub
+        backgroundcolor=""
+        clearicon="$clear"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        label="Project name"
+        loaderheight="2"
+        messages=""
+        outlined="true"
+        rules="value => !!value || \\"Required\\""
+        successmessages=""
+        type="text"
+        value="test"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-autocomplete-stub
+        allowoverflow="true"
+        appendicon="$dropdown"
+        backgroundcolor=""
+        clearable="true"
+        clearicon="$clear"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        filter="function _default(item, queryText, itemText) {
+        return itemText.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) > -1;
+      }"
+        itemcolor="primary"
+        itemdisabled="disabled"
+        items=""
+        itemtext="title"
+        itemvalue="id"
+        label="Parent project (optional)"
+        loaderheight="2"
+        menuprops="[object Object]"
+        messages=""
+        nodatatext="$vuetify.noDataText"
+        outlined="true"
+        rules=""
+        successmessages=""
+        type="text"
+        value="2"
         valuecomparator="function deepEqual(a, b) {
   if (a === b) return true;
 

@@ -9,7 +9,7 @@ const ProjectFormTemplate = `
   <project-form
     :ecosystemId="1"
     :get-projects="getProjects"
-    :add-project="addProject"
+    :save-function="addProject"
   />
 `;
 

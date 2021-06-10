@@ -10,10 +10,13 @@ const projectFragment = gql`
       name
     }
     parentProject {
+      id
       name
       parentProject {
+        id
         name
         parentProject {
+          id
           name
         }
       }
@@ -56,6 +59,7 @@ const GET_BASIC_PROJECT_INFO = gql`
       entities {
         id
         title
+        name
       }
     }
   }
@@ -136,7 +140,8 @@ const getProjects = (apollo, pageSize, page, filters) => {
       pageSize,
       page,
       filters
-    }
+    },
+    fetchPolicy: "no-cache"
   });
   return response;
 };

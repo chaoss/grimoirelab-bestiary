@@ -3,7 +3,7 @@
     <v-row>
       <v-col cols="4">
         <v-text-field
-          v-model="title"
+          v-model="form.title"
           label="Project title"
           :rules="validations.required"
           outlined
@@ -15,7 +15,7 @@
     <v-row>
       <v-col cols="4">
         <v-text-field
-          v-model="name"
+          v-model="form.name"
           label="Project name"
           :rules="validations.required"
           outlined
@@ -27,7 +27,7 @@
     <v-row>
       <v-col cols="4">
         <v-autocomplete
-          v-model="parentId"
+          v-model="form.parentId"
           :items="projects"
           label="Parent project (optional)"
           item-text="title"
@@ -71,9 +71,17 @@ export default {
       type: Function,
       required: true
     },
-    addProject: {
+    saveFunction: {
       type: Function,
       required: true
+    },
+    name: {
+      type: String,
+      required: false
+    },
+    title: {
+      type: String,
+      required: false
     },
     parent: {
       type: Object,
@@ -83,9 +91,11 @@ export default {
   },
   data() {
     return {
-      name: null,
-      title: null,
-      parentId: null,
+      form: {
+        name: this.name,
+        title: this.title,
+        parentId: null
+      },
       touchedName: false,
       projects: [],
       validations: {
@@ -95,8 +105,8 @@ export default {
   },
   methods: {
     suggestName(value) {
-      if (value && !this.touchedName) {
-        this.name = value
+      if (value && !this.name && !this.touchedName) {
+        this.form.name = value
           .trim()
           .replace(/\s+/g, "-")
           .toLowerCase();
@@ -113,12 +123,12 @@ export default {
         return;
       }
       const data = {
-        name: this.name.trim(),
-        title: this.title,
-        parentId: this.parentId ? Number(this.parentId) : null,
+        name: this.form.name.trim(),
+        title: this.form.title,
+        parentId: this.form.parentId ? Number(this.form.parentId) : null,
         ecosystemId: this.ecosystemId
       };
-      const response = await this.addProject(data);
+      const response = await this.saveFunction(data);
       if (response) {
         const projectName = response.name;
         this.$router.push({
@@ -127,10 +137,19 @@ export default {
       }
     }
   },
+  watch: {
+    title(value) {
+      this.form.title = value;
+    },
+    parent(value) {
+      this.loadParentProjects();
+      this.form.parentId = value.id;
+    }
+  },
   created() {
     if (this.parent) {
       this.loadParentProjects();
-      this.parentId = this.parent.id;
+      this.form.parentId = this.parent.id;
     }
   }
 };

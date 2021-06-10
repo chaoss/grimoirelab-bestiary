@@ -31,6 +31,28 @@ const DELETE_PROJECT = gql`
   }
 `;
 
+const MOVE_PROJECT = gql`
+  mutation moveProject($fromProjectId: ID, $toProjectId: ID) {
+    moveProject(fromProjectId: $fromProjectId, toProjectId: $toProjectId) {
+      project {
+        id
+        name
+      }
+    }
+  }
+`;
+
+const UPDATE_PROJECT = gql`
+  mutation updateProject($data: ProjectInputType, $id: ID) {
+    updateProject(data: $data, id: $id) {
+      project {
+        id
+        name
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -54,4 +76,26 @@ const deleteProject = (apollo, id) => {
   return response;
 };
 
-export { addProject, deleteProject };
+const moveProject = (apollo, fromProjectId, toProjectId) => {
+  const response = apollo.mutate({
+    mutation: MOVE_PROJECT,
+    variables: {
+      fromProjectId: fromProjectId,
+      toProjectId: toProjectId
+    }
+  });
+  return response;
+};
+
+const updateProject = (apollo, data, id) => {
+  const response = apollo.mutate({
+    mutation: UPDATE_PROJECT,
+    variables: {
+      data: data,
+      id: id
+    }
+  });
+  return response;
+};
+
+export { addProject, deleteProject, moveProject, updateProject };

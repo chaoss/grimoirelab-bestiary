@@ -3,10 +3,25 @@
     <breadcrumbs :items="breadcrumbs" />
     <v-row class="ma-0 mb-9 justify-space-between">
       <h2 class="text-h5 font-weight-medium">{{ project.title }}</h2>
-      <v-btn class="primary--text button" @click="confirmDelete">
-        <v-icon dense left>mdi-trash-can-outline</v-icon>
-        Delete
-      </v-btn>
+      <div>
+        <v-btn
+          class="primary--text button mr-6"
+          :to="{
+            name: 'project-edit',
+            params: {
+              id: ecosystemId,
+              name: name
+            }
+          }"
+        >
+          <v-icon dense left>mdi-pencil-outline</v-icon>
+          Edit
+        </v-btn>
+        <v-btn class="primary--text button" @click="confirmDelete">
+          <v-icon dense left>mdi-trash-can-outline</v-icon>
+          Delete
+        </v-btn>
+      </div>
     </v-row>
 
     <project-list
