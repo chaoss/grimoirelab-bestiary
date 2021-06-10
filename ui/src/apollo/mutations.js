@@ -53,6 +53,16 @@ const UPDATE_PROJECT = gql`
   }
 `;
 
+const ADD_ECOSYSTEM = gql`
+  mutation addEcosystem($name: String!, $title: String, $description: String) {
+    addEcosystem(name: $name, title: $title, description: $description) {
+      ecosystem {
+        id
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -87,6 +97,18 @@ const moveProject = (apollo, fromProjectId, toProjectId) => {
   return response;
 };
 
+const addEcosystem = (apollo, data) => {
+  const response = apollo.mutate({
+    mutation: ADD_ECOSYSTEM,
+    variables: {
+      name: data.name,
+      title: data.title,
+      description: data.description
+    }
+  });
+  return response;
+};
+
 const updateProject = (apollo, data, id) => {
   const response = apollo.mutate({
     mutation: UPDATE_PROJECT,
@@ -98,4 +120,4 @@ const updateProject = (apollo, data, id) => {
   return response;
 };
 
-export { addProject, deleteProject, moveProject, updateProject };
+export { addProject, deleteProject, moveProject, updateProject, addEcosystem };
