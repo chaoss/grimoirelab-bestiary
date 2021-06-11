@@ -59,6 +59,18 @@ export default {
     }
   },
   methods: {
+    async getProject() {
+      try {
+        const response = await getProjectByName(
+          this.$apollo,
+          this.name,
+          this.ecosystemId
+        );
+        this.project = response.data.projects.entities[0];
+      } catch (error) {
+        console.error(error);
+      }
+    },
     confirmDelete() {
       const dialog = {
         isOpen: true,
@@ -89,16 +101,12 @@ export default {
       }
     }
   },
-  async mounted() {
-    try {
-      const response = await getProjectByName(
-        this.$apollo,
-        this.name,
-        this.ecosystemId
-      );
-      this.project = response.data.projects.entities[0];
-    } catch (error) {
-      console.error(error);
+  mounted() {
+    this.getProject();
+  },
+  watch: {
+    "$store.state.ecosystems": function() {
+      this.getProject();
     }
   }
 };

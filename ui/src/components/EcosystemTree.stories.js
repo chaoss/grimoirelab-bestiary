@@ -6,7 +6,7 @@ export default {
 };
 
 const ecosystemTreeTemplate = `
-  <ecosystem-tree :ecosystem="ecosystem" :delete-project="mockAction" />
+  <ecosystem-tree :ecosystem="ecosystem" :delete-project="mockAction" :move-project="mockAction" />
 `;
 
 export const Default = () => ({
@@ -20,7 +20,7 @@ export const Default = () => ({
         title: "Ecosystem",
         projectSet: [
           {
-            id: "1",
+            id: 1,
             name: "projectname",
             title: "Project 1",
             ecosystem: {
@@ -29,25 +29,27 @@ export const Default = () => ({
             parentProject: null,
             subprojects: [
               {
-                id: 2,
+                id: 5,
                 name: "subproject",
                 title: "Subproject 1",
                 ecosystem: {
                   name: "ecosystem-name"
                 },
                 parentProject: {
-                  name: "projectname"
+                  name: "projectname",
+                  id: 1
                 },
                 subprojects: [
                   {
-                    id: 3,
+                    id: 6,
                     name: "sub-subproject",
                     title: "Sub-subproject title",
                     ecosystem: {
                       name: "ecosystem-name"
                     },
                     parentProject: {
-                      name: "subproject"
+                      name: "subproject",
+                      id: 5
                     }
                   }
                 ]
@@ -60,7 +62,8 @@ export const Default = () => ({
                   name: "ecosystem-name"
                 },
                 parentProject: {
-                  name: "projectname"
+                  name: "projectname",
+                  id: 1
                 }
               }
             ]
