@@ -158,4 +158,31 @@ describe("Ecosystem mutations", () => {
     expect(mutate).toBeCalled();
     expect(wrapper.element).toMatchSnapshot();
   });
+
+  test("Mock mutation for updateEcosystem", async () => {
+    const mutate = jest.fn(() => Promise.resolve(response));
+    const wrapper = shallowMount(EcosystemForm, {
+       Vue,
+       mocks: {
+         $apollo: {
+           mutate
+         }
+       },
+       propsData: {
+         saveFunction: mutate,
+         name: "test",
+         title: "Test",
+         description: "Lorem ipsum"
+       }
+    });
+
+    await Mutations.updateEcosystem(wrapper.vm.$apollo, {
+      name: wrapper.vm.form.name,
+      title: wrapper.vm.form.title,
+      description: wrapper.vm.form.description
+    });
+
+    expect(mutate).toBeCalled();
+    expect(wrapper.element).toMatchSnapshot();
+  });
 });

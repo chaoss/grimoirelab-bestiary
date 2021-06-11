@@ -3,6 +3,13 @@
     <breadcrumbs :items="[{ text: ecosystem.name, disabled: true }]" />
     <v-row class="ma-0 mb-9 justify-space-between">
       <h2 class="text-h5 font-weight-medium">{{ ecosystem.title }}</h2>
+      <v-btn
+        class="primary--text button--lowercase"
+        :to="{ name: 'ecosystem-edit', params: { id: id } }"
+      >
+        <v-icon dense left>mdi-pencil-outline</v-icon>
+        Edit
+      </v-btn>
     </v-row>
     <p class="ma-0 mb-9 text-body-1 text--secondary">
       {{ ecosystem.description }}
@@ -63,4 +70,6 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+@import "../styles/_buttons";
+</style>

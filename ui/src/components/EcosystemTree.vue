@@ -15,7 +15,7 @@
     >
       <template v-slot:label="{ item }">
         <div
-          class="d-flex flex-wrap justify-space-between align-center hidden"
+          class="d-flex justify-space-between align-center hidden"
           :draggable="!item.projectSet"
           @dragstart.stop="startDrag(item, $event)"
           @drop.stop.prevent="onDrop(item, $event)"
@@ -70,20 +70,31 @@
             </v-list>
           </v-menu>
 
-          <v-tooltip right>
+          <v-menu offset-y v-else>
             <template v-slot:activator="{ on }">
-              <v-btn
-                v-if="item.projectSet"
-                :to="{ name: 'project-new', params: { id: item.id } }"
-                v-on="on"
-                color="transparent"
-                icon
-              >
-                <v-icon>mdi-plus-box-outline</v-icon>
+              <v-btn v-on="on" icon color="transparent">
+                <v-icon>mdi-dots-horizontal</v-icon>
               </v-btn>
             </template>
-            <span class="text-caption">Add a project</span>
-          </v-tooltip>
+            <v-list dense>
+              <v-list-item
+                :to="{ name: 'project-new', params: { id: item.id } }"
+              >
+                <v-list-item-icon class="mr-2">
+                  <v-icon small color="#3f3f3f">mdi-plus</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Add a project</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                :to="{ name: 'ecosystem-edit', params: { id: item.id } }"
+              >
+                <v-list-item-icon class="mr-2">
+                  <v-icon small color="#3f3f3f">mdi-pencil-outline</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Edit</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </div>
       </template>
     </v-treeview>
