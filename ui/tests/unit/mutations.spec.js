@@ -3,6 +3,7 @@ import Vue from "vue";
 import Vuetify from "vuetify";
 import * as Mutations from "@/apollo/mutations";
 import ProjectForm from "@/components/ProjectForm";
+import EcosystemForm from "@/components/EcosystemForm";
 
 Vue.use(Vuetify);
 
@@ -110,6 +111,51 @@ describe("ProjectsForm mutations", () => {
       parentId: 2,
       title: "Test Title"
     });
+    expect(wrapper.element).toMatchSnapshot();
+  });
+});
+
+describe("Ecosystem mutations", () => {
+  const response = {
+    data: {
+      addEcosystem: {
+        ecosystem: {
+          id: "1"
+        }
+      }
+    }
+  };
+
+  test("Mock mutation for addEcosystem", async () => {
+    const mutate = jest.fn(() => Promise.resolve(response));
+    const wrapper = shallowMount(EcosystemForm, {
+       Vue,
+       mocks: {
+         $apollo: {
+           mutate
+         }
+       },
+       propsData: {
+         saveFunction: mutate
+       },
+       data() {
+        return {
+          form: {
+            name: "test",
+            title: "Test",
+            description: "Lorem ipsum"
+          }
+        };
+       }
+    });
+
+    await Mutations.addEcosystem(wrapper.vm.$apollo, {
+      name: wrapper.vm.form.name,
+      title: wrapper.vm.form.title,
+      description: wrapper.vm.form.description
+    });
+
+    expect(mutate).toBeCalled();
     expect(wrapper.element).toMatchSnapshot();
   });
 });

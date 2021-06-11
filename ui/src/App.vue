@@ -8,17 +8,17 @@
           :delete-project="deleteProject"
           :move-project="moveProject"
         />
-        <v-btn
-          :to="{ name: 'project-new', params: { id: ecosystem.id } }"
-          class="link"
-          color="#7a7a7a"
-          text
-          block
-        >
-          <v-icon small left>mdi-plus-box-outline</v-icon>
-          Add project
-        </v-btn>
       </div>
+      <v-btn
+        :to="{ name: 'ecosystem-new' }"
+        class="link pl-2"
+        color="#3f3f3f"
+        text
+        block
+      >
+        <v-icon small class="mr-1">mdi-plus</v-icon>
+        Add ecosystem
+      </v-btn>
     </v-navigation-drawer>
     <v-main>
       <v-container>
@@ -148,11 +148,16 @@ export default {
     text-transform: none;
     justify-content: left;
     letter-spacing: 0;
+    .mdi::before {
+      font-size: 1.1rem;
+    }
   }
 }
 
 .link.v-btn--active {
-  background: rgba(0, 55, 86, 0.12);
+  &::before {
+    opacity: 0;
+  }
   .v-btn__content {
     color: #003756;
   }

@@ -1,5 +1,120 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`Ecosystem mutations Mock mutation for addEcosystem 1`] = `
+<v-form-stub>
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-text-field-stub
+        backgroundcolor=""
+        clearicon="$clear"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        label="Ecosystem title"
+        loaderheight="2"
+        messages=""
+        outlined="true"
+        rules="v => !!v || \\"Required\\""
+        successmessages=""
+        type="text"
+        value="Test"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-text-field-stub
+        backgroundcolor=""
+        clearicon="$clear"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        label="Ecosystem name"
+        loaderheight="2"
+        messages=""
+        outlined="true"
+        rules="v => !!v || \\"Required\\""
+        successmessages=""
+        type="text"
+        value="test"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <v-textarea-stub
+        backgroundcolor=""
+        clearicon="$clear"
+        counter="128"
+        dense="true"
+        errorcount="1"
+        errormessages=""
+        label="Ecosystem description (optional)"
+        loaderheight="2"
+        messages=""
+        outlined="true"
+        rowheight="24"
+        rows="4"
+        rules="v => (v ? v.length <= 128 : true) || \\"Max 128 characters\\""
+        successmessages=""
+        type="text"
+        value="Lorem ipsum"
+      />
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      class="d-flex justify-end"
+      cols="4"
+      tag="div"
+    >
+      <v-btn-stub
+        activeclass=""
+        color="primary"
+        depressed="true"
+        tag="button"
+        type="button"
+      >
+        
+        Save
+      
+      </v-btn-stub>
+    </v-col-stub>
+  </v-row-stub>
+   
+  <v-row-stub
+    tag="div"
+  >
+    <v-col-stub
+      cols="4"
+      tag="div"
+    >
+      <!---->
+    </v-col-stub>
+  </v-row-stub>
+</v-form-stub>
+`;
+
 exports[`ProjectsForm mutations Mock mutation for addProject 1`] = `
 <v-form-stub>
   <v-row-stub

@@ -9,6 +9,11 @@ const router = new Router({
       component: () => import("../views/Ecosystem")
     },
     {
+      name: "ecosystem-new",
+      path: "/ecosystem/new",
+      component: () => import("../views/NewEcosystem")
+    },
+    {
       name: "project-new",
       path: "/ecosystem/:id/new",
       component: () => import("../views/NewProject"),
