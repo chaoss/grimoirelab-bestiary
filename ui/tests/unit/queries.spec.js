@@ -3,6 +3,7 @@ import Vue from "vue";
 import Vuetify from "vuetify";
 import * as Queries from "@/apollo/queries";
 import ProjectForm from "@/components/ProjectForm";
+import Ecosystem from "@/views/Ecosystem";
 
 Vue.use(Vuetify);
 
@@ -34,6 +35,57 @@ describe("ProjectsForm queries", () => {
     await wrapper.vm.loadParentProjects();
 
     expect(querySpy).toHaveBeenCalledWith(1);
+    expect(wrapper.element).toMatchSnapshot();
+  });
+});
+
+describe("Ecosystem queries", () => {
+  const response = {
+    data: {
+      ecosystems: {
+        entities: [
+          {
+            name: "test",
+            title: "Test",
+            description: "Projects and repositories monitored",
+            projectSet: [
+              {
+                id: "72",
+                name: "test-project",
+                title: "Test Project",
+                ecosystem: {
+                  id: 1,
+                  name: "test"
+                },
+                parentProject: null,
+                subprojects: []
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+
+  test("Mock query for getEcosystemByID", async () => {
+    const querySpy = spyOn(Queries, "getEcosystemByID");
+    const query = jest.fn(() => Promise.resolve(response));
+    const wrapper = shallowMount(Ecosystem, {
+      Vue,
+      mocks: {
+        $apollo: {
+          query
+        },
+        $route: {
+          params: {
+            id: 1
+          }
+        }
+      }
+    });
+    await wrapper.vm.getEcosystemData();
+
+    expect(querySpy).toBeCalled();
     expect(wrapper.element).toMatchSnapshot();
   });
 });

@@ -17,7 +17,7 @@
 <script>
 import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectForm from "../components/ProjectForm";
-import { GetBasicProjectInfo } from "../apollo/queries";
+import { getBasicProjectInfo } from "../apollo/queries";
 import { addProject } from "../apollo/mutations";
 import { getViewBreadCrumbs } from "../utils";
 
@@ -40,7 +40,7 @@ export default {
   },
   methods: {
     async getProjects(ecosystem, pageSize = 50, page = 1) {
-      const response = await GetBasicProjectInfo(this.$apollo, pageSize, page, {
+      const response = await getBasicProjectInfo(this.$apollo, pageSize, page, {
         ecosystemId: ecosystem
       });
       if (response) {

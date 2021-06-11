@@ -1,5 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`Ecosystem queries Mock query for getEcosystemByID 1`] = `<!---->`;
+
 exports[`ProjectsForm queries Mock query for getProjects 1`] = `
 <v-form-stub>
   <v-row-stub

@@ -53,6 +53,31 @@ const GET_ECOSYSTEMS = gql`
   ${projectFragment}
 `;
 
+const GET_ECOSYSTEM_BY_ID = gql`
+  query GetEcosystemByID($id: ID) {
+    ecosystems(filters: { id: $id }, page: 1, pageSize: 1) {
+      entities {
+        name
+        title
+        description
+        projectSet {
+          ...projectFields
+          subprojects {
+            ...projectFields
+            subprojects {
+              ...projectFields
+              subprojects {
+                ...projectFields
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  ${projectFragment}
+`;
+
 const GET_BASIC_PROJECT_INFO = gql`
   query GetBasicInfo($pageSize: Int, $page: Int, $filters: ProjectFilterType) {
     projects(pageSize: $pageSize, page: $page, filters: $filters) {
@@ -121,7 +146,18 @@ const getEcosystems = (apollo, pageSize, page) => {
   return response;
 };
 
-const GetBasicProjectInfo = (apollo, pageSize, page, filters) => {
+const getEcosystemByID = (apollo, id) => {
+  const response = apollo.query({
+    query: GET_ECOSYSTEM_BY_ID,
+    variables: {
+      id: id
+    },
+    fetchPolicy: "no-cache"
+  });
+  return response;
+};
+
+const getBasicProjectInfo = (apollo, pageSize, page, filters) => {
   const response = apollo.query({
     query: GET_BASIC_PROJECT_INFO,
     variables: {
@@ -160,4 +196,10 @@ const getProjectByName = (apollo, name, ecosystemId) => {
   return response;
 };
 
-export { getEcosystems, GetBasicProjectInfo, getProjects, getProjectByName };
+export {
+  getEcosystems,
+  getEcosystemByID,
+  getBasicProjectInfo,
+  getProjects,
+  getProjectByName
+};

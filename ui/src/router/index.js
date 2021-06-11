@@ -4,6 +4,11 @@ const router = new Router({
   mode: "history",
   routes: [
     {
+      name: "ecosystem",
+      path: "/ecosystem/:id",
+      component: () => import("../views/Ecosystem")
+    },
+    {
       name: "project-new",
       path: "/ecosystem/:id/new",
       component: () => import("../views/NewProject"),
