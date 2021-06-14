@@ -1166,6 +1166,20 @@ class TestLinkParentProject(TestCase):
         operations = Operation.objects.filter(timestamp__gte=timestamp)
         self.assertEqual(len(operations), 0)
 
+    def test_remove_parent(self):
+        """Check if setting a parent project to None removes it"""
+
+        parent_proj = Project.objects.create(id=2,
+                                             name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        proj = db.link_parent_project(self.trxl, self.project, parent_proj)
+        self.assertEqual(proj.parent_project, parent_proj)
+
+        proj = db.link_parent_project(self.trxl, self.project, None)
+        self.assertEqual(proj.parent_project, None)
+
     def test_operations(self):
         """Check if the right operations are created"""
 

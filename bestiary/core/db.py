@@ -382,14 +382,14 @@ def link_parent_project(trxl, project, parent_project):
     # Setting operation arguments before they are modified
     op_args = {
         'id': project.id,
-        'parent_id': parent_project.id
+        'parent_id': parent_project.id if parent_project else None
     }
 
     if project.parent_project == parent_project:
         raise ValueError('Parent is already set to the project')
     if project == parent_project:
         raise ValueError('Project cannot be its own parent')
-    if project.ecosystem != parent_project.ecosystem:
+    if parent_project and (project.ecosystem != parent_project.ecosystem):
         raise ValueError('Parent cannot belong to a different ecosystem')
     if _is_descendant(parent_project, project):
         raise ValueError('Parent cannot be a descendant')
