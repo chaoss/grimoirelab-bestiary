@@ -173,7 +173,7 @@ describe("EcosystemTree", () => {
     expect(isAllowed).toBe(true);
   });
 
-  test("Does not allow moving project to a different root project", async () => {
+  test("Allows moving subproject to ecosystem root", async () => {
     const wrapper = mountFunction({
       data() {
         return {
@@ -188,16 +188,13 @@ describe("EcosystemTree", () => {
         }
       }
     });
-    const projectTo = {
-      id: 2,
-      name: "project2",
-      parentProject: { name: "root2" },
-      ecosystem: {
-        id: 0
-      }
+    const ecosystemTo = {
+      id: 0,
+      name: "ecosystem",
+      projectSet: []
     };
-    const isAllowed = wrapper.vm.allowDrag(projectTo);
-    expect(isAllowed).toBe(false);
+    const isAllowed = wrapper.vm.allowDrag(ecosystemTo);
+    expect(isAllowed).toBe(true);
   });
 
   test("Does not allow moving project to its parent", async () => {

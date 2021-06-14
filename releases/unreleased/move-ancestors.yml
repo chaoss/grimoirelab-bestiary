@@ -1,0 +1,11 @@
+---
+title: Move projects to any ancestor
+category: changed
+author: Eva Millán <evamillan@bitergia.com>
+issue: 74
+notes: >
+    This change allows projects to be moved to any ancestor.
+
+    Projects can be moved to another project that belongs to
+    a different root. Also, a parent relation can be removed,
+    making a project a root one.
