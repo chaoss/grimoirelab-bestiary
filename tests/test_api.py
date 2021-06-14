@@ -1647,28 +1647,6 @@ class TestMoveProject(TestCase):
         transactions = Transaction.objects.filter(created_at__gte=timestamp)
         self.assertEqual(len(transactions), 0)
 
-    def test_parent_different_root_project(self):
-        """Check if it fails when trying set as parent a project from a different root project"""
-
-        root1 = api.add_project(self.ctx,
-                                ecosystem_id=self.origin_eco.id,
-                                name='root-1')
-        child1 = api.add_project(self.ctx,
-                                 ecosystem_id=self.origin_eco.id,
-                                 name='example-child',
-                                 parent_id=root1.id)
-
-        timestamp = datetime_utcnow()
-
-        with self.assertRaisesRegex(ValueError, PROJECT_INVALID_PARENT_DIFFERENT_ROOT):
-            api.move_project(self.ctx,
-                             child1.id,
-                             self.parent_project.id)
-
-        # Check if there are no transactions created when there is an error
-        transactions = Transaction.objects.filter(created_at__gte=timestamp)
-        self.assertEqual(len(transactions), 0)
-
     def test_parent_already_set(self):
         """Check if it fails when the project already has that parent"""
 
