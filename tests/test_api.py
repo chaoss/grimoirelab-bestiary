@@ -1751,6 +1751,21 @@ class TestMoveProject(TestCase):
         transactions = Transaction.objects.filter(created_at__gte=timestamp)
         self.assertEqual(len(transactions), 0)
 
+    def test_no_parent(self):
+        """Check if removes the parent project when None is given"""
+
+        project = api.move_project(self.ctx,
+                                   self.project.id,
+                                   to_project_id=self.parent_project.id)
+
+        self.assertEqual(project.parent_project, self.parent_project)
+
+        project = api.move_project(self.ctx,
+                                   self.project.id,
+                                   to_project_id=None)
+
+        self.assertEqual(project.parent_project, None)
+
     def test_transaction(self):
         """Check if a transaction is created when moving a project"""
 
