@@ -73,6 +73,16 @@ const UPDATE_ECOSYSTEM = gql`
   }
 `;
 
+const DELETE_ECOSYSTEM = gql`
+  mutation deleteEcosystem($id: ID!) {
+    deleteEcosystem(id: $id) {
+      ecosystem {
+        id
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -141,11 +151,22 @@ const updateEcosystem = (apollo, data, id) => {
   return response;
 };
 
+const deleteEcosystem = (apollo, id) => {
+  const response = apollo.mutate({
+    mutation: DELETE_ECOSYSTEM,
+    variables: {
+      id: id
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
   moveProject,
   updateProject,
   addEcosystem,
-  updateEcosystem
+  updateEcosystem,
+  deleteEcosystem
 };

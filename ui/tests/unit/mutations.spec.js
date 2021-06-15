@@ -4,6 +4,7 @@ import Vuetify from "vuetify";
 import * as Mutations from "@/apollo/mutations";
 import ProjectForm from "@/components/ProjectForm";
 import EcosystemForm from "@/components/EcosystemForm";
+import EcosystemTree from "@/components/EcosystemTree";
 
 Vue.use(Vuetify);
 
@@ -181,6 +182,35 @@ describe("Ecosystem mutations", () => {
       title: wrapper.vm.form.title,
       description: wrapper.vm.form.description
     });
+
+    expect(mutate).toBeCalled();
+    expect(wrapper.element).toMatchSnapshot();
+  });
+
+  test("Mock mutation for deleteEcosystem", async () => {
+    const mutate = jest.fn(() => Promise.resolve(response));
+    const wrapper = shallowMount(EcosystemTree, {
+       Vue,
+       mocks: {
+         $apollo: {
+           mutate
+         }
+       },
+       propsData: {
+         ecosystem: {
+           id: 1,
+           title: "Test"
+         },
+         deleteEcosystem: mutate,
+         deleteProject: () => {},
+         moveProject: () => {}
+       }
+    });
+
+    await Mutations.deleteEcosystem(
+      wrapper.vm.$apollo,
+      wrapper.vm.ecosystem.id
+    );
 
     expect(mutate).toBeCalled();
     expect(wrapper.element).toMatchSnapshot();
