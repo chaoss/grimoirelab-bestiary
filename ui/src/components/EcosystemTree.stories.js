@@ -6,7 +6,12 @@ export default {
 };
 
 const ecosystemTreeTemplate = `
-  <ecosystem-tree :ecosystem="ecosystem" :delete-project="mockAction" :move-project="mockAction" />
+  <ecosystem-tree
+    :ecosystem="ecosystem"
+    :delete-project="mockAction"
+    :move-project="mockAction"
+    :delete-ecosystem="mockAction"
+  />
 `;
 
 export const Default = () => ({
