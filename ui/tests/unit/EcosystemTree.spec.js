@@ -63,7 +63,8 @@ describe("EcosystemTree", () => {
       propsData: {
         ecosystem: threeLevels,
         deleteProject: () => {},
-        moveProject: () => {}
+        moveProject: () => {},
+        deleteEcosystem: () => {}
       },
       ...options
     });

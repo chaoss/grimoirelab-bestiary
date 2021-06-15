@@ -61,7 +61,7 @@
                 </v-list-item-icon>
                 <v-list-item-title>Edit</v-list-item-title>
               </v-list-item>
-              <v-list-item @click="confirmDelete(item)">
+              <v-list-item @click="confirmDeleteProject(item)">
                 <v-list-item-icon class="mr-2">
                   <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
                 </v-list-item-icon>
@@ -93,6 +93,12 @@
                 </v-list-item-icon>
                 <v-list-item-title>Edit</v-list-item-title>
               </v-list-item>
+              <v-list-item @click="confirmDeleteEcosystem(item)">
+                <v-list-item-icon class="mr-2">
+                  <v-icon small color="#3f3f3f">mdi-trash-can-outline</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Delete</v-list-item-title>
+              </v-list-item>
             </v-list>
           </v-menu>
         </div>
@@ -116,6 +122,10 @@ export default {
       required: true
     },
     moveProject: {
+      type: Function,
+      required: true
+    },
+    deleteEcosystem: {
       type: Function,
       required: true
     }
@@ -145,12 +155,21 @@ export default {
         return `/ecosystem/${item.ecosystem.id}/project/${item.name}`;
       }
     },
-    confirmDelete(item) {
+    confirmDeleteProject(item) {
       const dialog = {
         isOpen: true,
         title: `Delete project ${item.title}?`,
         warning: "This will delete every project inside it.",
         action: () => this.deleteProject(item.id)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    confirmDeleteEcosystem(item) {
+      const dialog = {
+        isOpen: true,
+        title: `Delete ecosystem ${item.title}?`,
+        warning: "This will delete every project inside it.",
+        action: () => this.deleteEcosystem(item.id)
       };
       this.$store.commit("setDialog", dialog);
     },

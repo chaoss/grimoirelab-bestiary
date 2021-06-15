@@ -4,14 +4,14 @@ const router = new Router({
   mode: "history",
   routes: [
     {
-      name: "ecosystem",
-      path: "/ecosystem/:id",
-      component: () => import("../views/Ecosystem")
-    },
-    {
       name: "ecosystem-new",
       path: "/ecosystem/new",
       component: () => import("../views/NewEcosystem")
+    },
+    {
+      name: "ecosystem",
+      path: "/ecosystem/:id",
+      component: () => import("../views/Ecosystem")
     },
     {
       name: "ecosystem-edit",

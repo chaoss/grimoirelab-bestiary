@@ -7,6 +7,7 @@
           :ecosystem="ecosystem"
           :delete-project="deleteProject"
           :move-project="moveProject"
+          :delete-ecosystem="deleteEcosystem"
         />
       </div>
       <v-btn
@@ -47,7 +48,11 @@
 
 <script>
 import { getEcosystems } from "./apollo/queries";
-import { deleteProject, moveProject } from "./apollo/mutations";
+import {
+  deleteProject,
+  moveProject,
+  deleteEcosystem
+} from "./apollo/mutations";
 import { mapGetters } from "vuex";
 import EcosystemTree from "./components/EcosystemTree";
 import Search from "./components/Search";
@@ -81,6 +86,25 @@ export default {
         this.$store.commit("setSnackbar", {
           isOpen: true,
           text: "Project deleted successfully",
+          color: "success"
+        });
+        this.getEcosystemsPage();
+      } catch (error) {
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      }
+    },
+    async deleteEcosystem(id) {
+      try {
+        await deleteEcosystem(this.$apollo, id);
+        this.$store.commit("clearDialog");
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Ecosystem deleted successfully",
           color: "success"
         });
         this.getEcosystemsPage();

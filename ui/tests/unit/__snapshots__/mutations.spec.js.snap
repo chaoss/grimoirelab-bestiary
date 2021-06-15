@@ -115,6 +115,37 @@ exports[`Ecosystem mutations Mock mutation for addEcosystem 1`] = `
 </v-form-stub>
 `;
 
+exports[`Ecosystem mutations Mock mutation for deleteEcosystem 1`] = `
+<div>
+  <v-treeview-stub
+    active=""
+    activeclass="dropzone"
+    color="primary"
+    dense="true"
+    expandicon="mdi-chevron-down"
+    hoverable="true"
+    indeterminateicon="$checkboxIndeterminate"
+    itemchildren="subprojects"
+    itemdisabled="disabled"
+    itemkey="name"
+    items="[object Object]"
+    itemtext="title"
+    loadingicon="$loading"
+    officon="$checkboxOff"
+    onicon="$checkboxOn"
+    open=""
+    openall="true"
+    selectedcolor="accent"
+    selectiontype="leaf"
+    value=""
+  />
+   
+  <div
+    class="drag-image"
+  />
+</div>
+`;
+
 exports[`Ecosystem mutations Mock mutation for updateEcosystem 1`] = `
 <v-form-stub>
   <v-row-stub
