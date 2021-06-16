@@ -109,7 +109,7 @@
 </template>
 
 <script>
-import { hasSameRoot, isDescendant, isParent } from "../utils/projects";
+import { isDescendant, isParent } from "../utils/projects";
 export default {
   name: "EcosystemTree",
   props: {
@@ -194,21 +194,27 @@ export default {
       if (this.dragged && item.ecosystem) {
         return (
           item.ecosystem.id === this.dragged.ecosystem.id &&
-          hasSameRoot(this.dragged, item) &&
           !isParent(this.dragged, item) &&
           !isDescendant(item, this.dragged) &&
           item.id !== this.dragged.id
         );
+      } else if (
+        this.dragged &&
+        this.dragged.parentProject &&
+        item.projectSet
+      ) {
+        return this.dragged.ecosystem.id === item.id;
       }
       return false;
     },
     onDrop(item) {
       if (this.dragged && this.allowDrag(item)) {
         const project = this.dragged.id;
+        const id = item.ecosystem ? item.id : null;
         const dialog = {
           isOpen: true,
           title: `Move project ${this.dragged.title} to ${item.title}?`,
-          action: () => this.moveProject(project, item.id)
+          action: () => this.moveProject(project, id)
         };
         this.$store.commit("setDialog", dialog);
         this.active = this.active.filter(project => project.name === item.name);

@@ -125,7 +125,7 @@ export default {
       const data = {
         name: this.form.name.trim(),
         title: this.form.title,
-        parentId: this.form.parentId ? Number(this.form.parentId) : null,
+        parentId: this.form.parentId,
         ecosystemId: this.ecosystemId
       };
       const response = await this.saveFunction(data);

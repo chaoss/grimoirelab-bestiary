@@ -77,34 +77,4 @@ describe("EditProject", () => {
     expect(validParents.length).toBe(1);
     expect(validParents[0].name).toBe("root2");
   });
-
-  test("Filters out other root projects for children", async () => {
-    const wrapper = mountFunction({
-      mocks: {
-        $route: {
-          params: {
-            id: 3,
-            name: "child"
-          }
-        }
-      },
-      data() {
-        return {
-          project: {
-            id: 3,
-            name: "child",
-            parentProject: {
-              id: 1,
-              name: "root1"
-            },
-            ecosystem: { name: "ecosystem" }
-          }
-        };
-      }
-    });
-
-    const validParents = wrapper.vm.validateParentProjects(parentProjects);
-    expect(validParents.length).toBe(1);
-    expect(validParents[0].name).toBe("root1");
-  });
 });

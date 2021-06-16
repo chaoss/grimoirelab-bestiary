@@ -86,13 +86,7 @@ export default {
           this.project.id
         );
         if (response && !response.errors) {
-          if (
-            formData.parentId &&
-            formData.parentId.toString() !==
-              (this.project.parentProject
-                ? this.project.parentProject.id.toString()
-                : null)
-          ) {
+          if (this.project.parentProject?.id !== formData.parentId) {
             try {
               await this.moveProject(this.project.id, formData.parentId);
             } catch (error) {
@@ -115,26 +109,11 @@ export default {
       return projects.filter(project => {
         if (project.name === this.name) {
           return false;
-        } else if (
-          this.project.parentProject &&
-          this.getRoot(this.project.parentProject).id !==
-            this.getRoot(project).id
-        ) {
-          // If the project is not a root one, when the parent comes from a
-          // different root project.
-          return false;
         } else if (this.isDescendant(project, this.project)) {
           return false;
         }
         return true;
       });
-    },
-    getRoot(project) {
-      const parent = project ? project.parentProject : null;
-      if (parent) {
-        project = this.getRoot(parent);
-      }
-      return project;
     },
     isDescendant(project, fromProject) {
       const queue = [fromProject];

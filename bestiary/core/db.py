@@ -345,8 +345,6 @@ def link_parent_project(trxl, project, parent_project):
       - The parent is already set to the project.
       - The parent and the project are the same.
       - The parent belongs to a different ecosystem.
-      - If the project is not a root one, when the parent comes from a
-       different root project.
       - The parent is a descendant from the project.
 
     :param trxl: TransactionsLog object from the method calling this one
@@ -357,17 +355,6 @@ def link_parent_project(trxl, project, parent_project):
 
     :raises ValueError: raised either when the given parent project is invalid
     """
-    def _get_root(project):
-        """Return the root project given one of its subprojects"""
-
-        parent = None
-        if project:
-            parent = project.parent_project
-        if parent:
-            project = _get_root(parent)
-
-        return project
-
     def _is_descendant(project, from_project):
         """Check if a project is a descendant of another"""
 
@@ -382,23 +369,17 @@ def link_parent_project(trxl, project, parent_project):
     # Setting operation arguments before they are modified
     op_args = {
         'id': project.id,
-        'parent_id': parent_project.id
+        'parent_id': parent_project.id if parent_project else None
     }
 
     if project.parent_project == parent_project:
         raise ValueError('Parent is already set to the project')
     if project == parent_project:
         raise ValueError('Project cannot be its own parent')
-    if project.ecosystem != parent_project.ecosystem:
+    if parent_project and (project.ecosystem != parent_project.ecosystem):
         raise ValueError('Parent cannot belong to a different ecosystem')
     if _is_descendant(parent_project, project):
         raise ValueError('Parent cannot be a descendant')
-
-    from_root = _get_root(project)
-    to_root = _get_root(parent_project)
-    # If `from_project` is not a root project, its parent cannot belong to another root
-    if (project.parent_project) and (from_root != to_root):
-        raise ValueError('Parent cannot belong to a different root project')
 
     project.parent_project = parent_project
 

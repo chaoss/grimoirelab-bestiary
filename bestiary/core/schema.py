@@ -471,13 +471,13 @@ class MoveProject(graphene.Mutation):
     project = graphene.Field(lambda: ProjectType)
 
     @check_auth
-    def mutate(self, info, from_project_id, to_project_id):
+    def mutate(self, info, from_project_id, to_project_id=None):
         user = info.context.user
         ctx = BestiaryContext(user)
 
         # Forcing this conversion explicitly, as input value is taken as a string
         from_project_id_value = int(from_project_id)
-        to_project_id_value = int(to_project_id)
+        to_project_id_value = int(to_project_id) if to_project_id else None
 
         project = move_project(ctx,
                                from_project_id_value,

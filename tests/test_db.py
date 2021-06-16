@@ -1110,24 +1110,6 @@ class TestLinkParentProject(TestCase):
         operations = Operation.objects.filter(timestamp__gte=timestamp)
         self.assertEqual(len(operations), 0)
 
-    def test_parent_different_root_project(self):
-        """Check if it fails when trying set as parent a project from a different root project"""
-
-        root1 = Project.objects.create(name='root-1',
-                                       ecosystem=self.ecosystem)
-        child1 = Project.objects.create(name='example-child-1',
-                                        ecosystem=self.ecosystem,
-                                        parent_project=root1)
-
-        timestamp = datetime_utcnow()
-
-        with self.assertRaisesRegex(ValueError, PROJECT_PARENT_DIFFERENT_ROOT):
-            db.link_parent_project(self.trxl, child1, self.project)
-
-        # Check if operations have not been generated after the failure
-        operations = Operation.objects.filter(timestamp__gte=timestamp)
-        self.assertEqual(len(operations), 0)
-
     def test_set_descendant_as_parent(self):
         """Check if it fails when trying set as parent a child project"""
 
@@ -1165,6 +1147,20 @@ class TestLinkParentProject(TestCase):
         # Check if operations have not been generated after the failure
         operations = Operation.objects.filter(timestamp__gte=timestamp)
         self.assertEqual(len(operations), 0)
+
+    def test_remove_parent(self):
+        """Check if setting a parent project to None removes it"""
+
+        parent_proj = Project.objects.create(id=2,
+                                             name='example-parent',
+                                             title='Project title',
+                                             ecosystem=self.ecosystem)
+
+        proj = db.link_parent_project(self.trxl, self.project, parent_proj)
+        self.assertEqual(proj.parent_project, parent_proj)
+
+        proj = db.link_parent_project(self.trxl, self.project, None)
+        self.assertEqual(proj.parent_project, None)
 
     def test_operations(self):
         """Check if the right operations are created"""

@@ -314,8 +314,7 @@ def move_project(ctx, from_project_id, to_project_id):
     """Move a project to a parent project.
 
     Link a project with another one with a child-parent relation. If a project
-    is not linked to any project, it is a root project. Once the project is linked
-    with another one, it won't be a root project anymore.
+    is not linked to any project, it is a root project.
     If the source project was already linked to a parent project, it will be
     overwritten.
 
@@ -343,7 +342,7 @@ def move_project(ctx, from_project_id, to_project_id):
         raise exc
 
     try:
-        to_project = find_project(to_project_id)
+        to_project = find_project(to_project_id) if to_project_id else None
     except ValueError as e:
         raise InvalidValueError(msg=str(e))
     except NotFoundError as exc:
