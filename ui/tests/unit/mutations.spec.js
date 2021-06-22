@@ -5,6 +5,7 @@ import * as Mutations from "@/apollo/mutations";
 import ProjectForm from "@/components/ProjectForm";
 import EcosystemForm from "@/components/EcosystemForm";
 import EcosystemTree from "@/components/EcosystemTree";
+import Login from "@/views/Login";
 
 Vue.use(Vuetify);
 
@@ -130,16 +131,16 @@ describe("Ecosystem mutations", () => {
   test("Mock mutation for addEcosystem", async () => {
     const mutate = jest.fn(() => Promise.resolve(response));
     const wrapper = shallowMount(EcosystemForm, {
-       Vue,
-       mocks: {
-         $apollo: {
-           mutate
-         }
-       },
-       propsData: {
-         saveFunction: mutate
-       },
-       data() {
+      Vue,
+      mocks: {
+        $apollo: {
+          mutate
+        }
+      },
+      propsData: {
+        saveFunction: mutate
+      },
+      data() {
         return {
           form: {
             name: "test",
@@ -147,7 +148,7 @@ describe("Ecosystem mutations", () => {
             description: "Lorem ipsum"
           }
         };
-       }
+      }
     });
 
     await Mutations.addEcosystem(wrapper.vm.$apollo, {
@@ -163,18 +164,18 @@ describe("Ecosystem mutations", () => {
   test("Mock mutation for updateEcosystem", async () => {
     const mutate = jest.fn(() => Promise.resolve(response));
     const wrapper = shallowMount(EcosystemForm, {
-       Vue,
-       mocks: {
-         $apollo: {
-           mutate
-         }
-       },
-       propsData: {
-         saveFunction: mutate,
-         name: "test",
-         title: "Test",
-         description: "Lorem ipsum"
-       }
+      Vue,
+      mocks: {
+        $apollo: {
+          mutate
+        }
+      },
+      propsData: {
+        saveFunction: mutate,
+        name: "test",
+        title: "Test",
+        description: "Lorem ipsum"
+      }
     });
 
     await Mutations.updateEcosystem(wrapper.vm.$apollo, {
@@ -190,26 +191,56 @@ describe("Ecosystem mutations", () => {
   test("Mock mutation for deleteEcosystem", async () => {
     const mutate = jest.fn(() => Promise.resolve(response));
     const wrapper = shallowMount(EcosystemTree, {
-       Vue,
-       mocks: {
-         $apollo: {
-           mutate
-         }
-       },
-       propsData: {
-         ecosystem: {
-           id: 1,
-           title: "Test"
-         },
-         deleteEcosystem: mutate,
-         deleteProject: () => {},
-         moveProject: () => {}
-       }
+      Vue,
+      mocks: {
+        $apollo: {
+          mutate
+        }
+      },
+      propsData: {
+        ecosystem: {
+          id: 1,
+          title: "Test"
+        },
+        deleteEcosystem: mutate,
+        deleteProject: () => {},
+        moveProject: () => {}
+      }
     });
 
     await Mutations.deleteEcosystem(
       wrapper.vm.$apollo,
       wrapper.vm.ecosystem.id
+    );
+
+    expect(mutate).toBeCalled();
+    expect(wrapper.element).toMatchSnapshot();
+  });
+});
+
+describe("Login mutations", () => {
+  const tokenResponse = {
+    data: {
+      tokenAuth: {
+        token: "eyJ0eXAiOiJKV1QiL"
+      }
+    }
+  };
+  test("Mock mutation for tokenAuth", async () => {
+    const mutate = jest.fn(() => Promise.resolve(tokenResponse));
+    const wrapper = shallowMount(Login, {
+      Vue,
+      mocks: {
+        $apollo: {
+          mutate
+        }
+      }
+    });
+
+    const response = await Mutations.tokenAuth(
+      wrapper.vm.$apollo,
+      "username",
+      "password"
     );
 
     expect(mutate).toBeCalled();

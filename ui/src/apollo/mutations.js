@@ -83,6 +83,14 @@ const DELETE_ECOSYSTEM = gql`
   }
 `;
 
+const TOKEN_AUTH = gql`
+  mutation tokenAuth($username: String!, $password: String!) {
+    tokenAuth(username: $username, password: $password) {
+      token
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -161,6 +169,17 @@ const deleteEcosystem = (apollo, id) => {
   return response;
 };
 
+const tokenAuth = (apollo, username, password) => {
+  const response = apollo.mutate({
+    mutation: TOKEN_AUTH,
+    variables: {
+      username: username,
+      password: password
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -168,5 +187,6 @@ export {
   updateProject,
   addEcosystem,
   updateEcosystem,
-  deleteEcosystem
+  deleteEcosystem,
+  tokenAuth
 };
