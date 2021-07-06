@@ -26,9 +26,8 @@ from django.db.models import (CASCADE,
                               BooleanField,
                               CharField,
                               DateTimeField,
-                              ForeignKey)
-
-from django_mysql.models import JSONField
+                              ForeignKey,
+                              JSONField)
 
 from enum import Enum
 
