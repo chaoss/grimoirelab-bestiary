@@ -13,30 +13,134 @@ Bestiary is a tool to manage this kind of description using a web based interfac
 
 It also provides an interface to connect with [GrimoireLab](http://grimoirelab.github.io) to work as analytics scope manager.
 
-# How to run it?
 
-Clone the repository, and we recommend to set up a Python virtual environment to run it
+## Requirements
+
+- Python >= 3.6
+- Poetry >= 1.1.0
+- MySQL >= 5.7 or MariaDB >= 10.2
+- Django = 3.1
+- Graphene-Django >= 2.0
+- Django-graphql-jwt
+
+You will also need some other libraries for running the tool, you can find the whole list of dependencies in [pyproject.toml](pyproject.toml) file.
+
+## Installation
+
+### Getting the source code
+
+Clone the repository, and change to the `unicorn` branch
 
 ```
-$ python3 -m venv bestiary
-$ source bestiary/bin/activate
+$ git clone https://github.com/chaoss/grimoirelab-bestiary
+$ git checkout unicorn
 ```
 
-Install the requirements:
+### Backend
+
+#### Prerequisites
+
+##### Poetry
+
+We use [Poetry](https://python-poetry.org/docs/) for managing the project.
+You can install it following [these steps](https://python-poetry.org/docs/#installation).
+
+##### mysql_config
+
+Before you install Bestiary tool you might need to install `mysql_config`
+command. If you are using a Debian based distribution, this command can be
+found either in `libmysqlclient-dev` or `libmariadbclient-dev` packages
+(depending on if you are using MySQL or MariaDB database server). You can
+install these packages in your system with the next commands:
+
+* **MySQL**
 
 ```
-(bestiary)$ pip3 install -r requirements.txt
+$ apt install libmysqlclient-dev
 ```
 
-Run Bestiary as a typical Django app:
+* **MariaDB**
 
 ```
-(bestiary)$ cd bestiary/django_bestiary
-(bestiary)$ python3 manage.py makemigrations
-(bestiary)$ python3 manage.py migrate
-(bestiary)$ python3 manage.py runserver
+$ apt install libmariadbclient-dev
 ```
 
-# License
+#### Installation and configuration
 
-[GPL v3](LICENSE)
+Install the required dependencies (this will also create a virtual environment).
+```
+$ poetry install
+```
+
+Activate the virtual environment:
+```
+$ poetry shell
+```
+
+Migrations, and create a superuser:
+```
+(.venv)$ ./manage.py migrate --settings=config.settings.devel
+(.venv)$ ./manage.py createsuperuser --settings=config.settings.devel
+```
+
+#### Running the backend
+
+Run Bestiary backend Django app:
+```
+(.venv)$ ./manage.py runserver --settings=config.settings.devel
+```
+
+### Frontend
+
+#### Prerequisites
+
+##### yarn
+
+To compile and run the frontend you will need to install `yarn` first.
+The latest versions of `yarn` can only be installed with `npm` - which
+is distributed with [NodeJS](https://nodejs.org/en/download/).
+
+When you have `npm` installed, then run the next command to install `yarn`
+on the system:
+
+```
+npm install -g yarn
+```
+
+Check the [official documentation](https://yarnpkg.com/getting-started)
+for more information.
+
+#### Installation and configuration
+
+Install the required dependencies
+```
+$ cd ui/
+$ yarn install
+```
+
+#### Running the frontend
+
+Run Bestiary frontend Vue app:
+```
+$ yarn serve
+```
+
+## Running tests
+
+Bestiary comes with a comprehensive list of unit tests for both 
+frontend and backend.
+
+#### Backend test suite
+```
+(.venv)$ ./manage.py test --settings=config.settings.testing
+```
+
+#### Frontend test suite
+```
+$ cd ui/
+$ yarn test:unit
+```
+
+## License
+
+Licensed under GNU General Public License (GPL), version 3 or later.
