@@ -3,7 +3,6 @@
 import bestiary.core.models
 from django.db import migrations, models
 import django.db.models.deletion
-import django_mysql.models
 import grimoirelab_toolkit.datetime
 
 
@@ -38,7 +37,7 @@ class Migration(migrations.Migration):
                 ('entity_type', models.CharField(help_text='Type of the main entity involved in the operation', max_length=128)),
                 ('target', models.CharField(help_text='Identifier of the targeted entity in the operation', max_length=128)),
                 ('timestamp', models.DateTimeField(help_text='Datetime when the operation is performed')),
-                ('args', django_mysql.models.JSONField(default=dict, help_text='Main input arguments when performing the operation')),
+                ('args', models.JSONField(default=dict, help_text='Main input arguments when performing the operation')),
             ],
             options={
                 'db_table': 'operations',

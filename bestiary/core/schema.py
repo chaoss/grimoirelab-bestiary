@@ -27,9 +27,7 @@ import graphql_jwt
 
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Q
-
-from django_mysql.models import JSONField
+from django.db.models import Q, JSONField
 
 from graphene.types.generic import GenericScalar
 
