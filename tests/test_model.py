@@ -30,7 +30,10 @@ from grimoirelab_toolkit.datetime import datetime_utcnow
 from bestiary.core.models import (Ecosystem,
                                   Project,
                                   Transaction,
-                                  Operation)
+                                  Operation,
+                                  DataSourceType,
+                                  DataSource,
+                                  DataSet)
 
 # Test check errors messages
 DUPLICATE_CHECK_ERROR = "Duplicate entry .+"
@@ -175,6 +178,209 @@ class TestProject(TransactionTestCase):
 
         self.assertGreaterEqual(proj.last_modified, before_modified_dt)
         self.assertLessEqual(proj.last_modified, after_modified_dt)
+
+
+class TestDataSourceType(TransactionTestCase):
+    """Unit tests for DataSourceType class"""
+
+    def test_unique_datasource_types(self):
+        """Check whether data source types are unique based on the name"""
+
+        with self.assertRaises(IntegrityError):
+            DataSourceType.objects.create(id=1)
+            DataSourceType.objects.create(id=1)
+
+    def test_unique_name(self):
+        """Check whether data source types are unique based on the name"""
+
+        with self.assertRaises(IntegrityError):
+            DataSourceType.objects.create(name='GitHub')
+            DataSourceType.objects.create(name='GitHub')
+
+    def test_charset(self):
+        """Check encoding charset"""
+
+        # With an invalid encoding both names wouldn't be inserted;
+        # In MySQL, chars 'ı' and 'i' are considered the same with a
+        # collation distinct to <charset>_unicode_ci
+        DataSourceType.objects.create(name='GıtHub')
+        DataSourceType.objects.create(name='GitHub')
+
+        dst1 = DataSourceType.objects.get(name='GıtHub')
+        dst2 = DataSourceType.objects.get(name='GitHub')
+
+        self.assertEqual(dst1.name, 'GıtHub')
+        self.assertEqual(dst2.name, 'GitHub')
+
+
+class TestDataSource(TransactionTestCase):
+    """Unit tests for DataSource class"""
+
+    def test_unique_datasources(self):
+        """Check whether data sources are unique based on type and uri"""
+
+        with self.assertRaises(IntegrityError):
+            dstype = DataSourceType.objects.create(name='GitHub')
+            uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+            DataSource.objects.create(type=dstype, uri=uri)
+            DataSource.objects.create(type=dstype, uri=uri)
+
+    def test_not_null_datasource_type(self):
+        """Check whether every data source is assigned to a data source type"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+            DataSource.objects.create(type=None, uri=uri)
+
+    def test_created_at(self):
+        """Check creation date is only set when the object is created"""
+
+        before_dt = datetime_utcnow()
+        dstype = DataSourceType.objects.create(name='GitHub')
+        uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+        datasource = DataSource.objects.create(type=dstype,
+                                               uri=uri)
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(datasource.created_at, before_dt)
+        self.assertLessEqual(datasource.created_at, after_dt)
+
+        datasource.save()
+
+        self.assertGreaterEqual(datasource.created_at, before_dt)
+        self.assertLessEqual(datasource.created_at, after_dt)
+
+    def test_last_modified(self):
+        """Check last modification date is set when the object is updated"""
+
+        before_dt = datetime_utcnow()
+        dstype = DataSourceType.objects.create(name='GitHub')
+        uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+        datasource = DataSource.objects.create(type=dstype,
+                                               uri=uri)
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(datasource.last_modified, before_dt)
+        self.assertLessEqual(datasource.last_modified, after_dt)
+
+        before_modified_dt = datetime_utcnow()
+        datasource.save()
+        after_modified_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(datasource.last_modified, before_modified_dt)
+        self.assertLessEqual(datasource.last_modified, after_modified_dt)
+
+
+class TestDataSet(TransactionTestCase):
+    """Unit tests for DataSet class"""
+
+    def setUp(self):
+        """Create basic objects for datasets"""
+
+        uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+        self.proj = Project.objects.create(name='example')
+        self.dstype = DataSourceType.objects.create(name='GitHub')
+        self.datasource = DataSource.objects.create(type=self.dstype,
+                                                    uri=uri)
+
+    def test_unique_datasets(self):
+        """Check whether datasets are unique based on its fields"""
+
+        with self.assertRaises(IntegrityError):
+            DataSet.objects.create(project=self.proj,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters={})
+            DataSet.objects.create(project=self.proj,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters={})
+
+    def test_unique_datasets_2(self):
+        """Check whether datasets are unique based on its fields"""
+
+        with self.assertRaises(IntegrityError):
+            DataSet.objects.create(project=self.proj,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters={'a': 1, 'b': 2})
+            DataSet.objects.create(project=self.proj,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters={'b': 2, 'a': 1})
+
+    def test_not_null_project(self):
+        """Check whether every data set is assigned to a project"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            DataSet.objects.create(project=None,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters={})
+
+    def test_not_null_datasource(self):
+        """Check whether every data set is assigned to a datasource"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            DataSet.objects.create(project=self.proj,
+                                   datasource=None,
+                                   category='issues',
+                                   filters={})
+
+    def test_not_null_filters(self):
+        """Check whether every data set is assigned to a datasource"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            DataSet.objects.create(project=self.proj,
+                                   datasource=self.datasource,
+                                   category='issues',
+                                   filters=None)
+
+    def test_filters_hash(self):
+        """Check if filters_hash is created correctly"""
+        ds = DataSet.objects.create(project=self.proj,
+                                    datasource=self.datasource,
+                                    category='issues',
+                                    filters={'b': 2, 'a': 1})
+        self.assertEqual(ds.filters_hash, '1744f53e00fc23bd3e515b298e42936485061dba')
+
+    def test_created_at(self):
+        """Check creation date is only set when the object is created"""
+
+        before_dt = datetime_utcnow()
+        dataset = DataSet.objects.create(project=self.proj,
+                                         datasource=self.datasource,
+                                         category='issues',
+                                         filters={})
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(dataset.created_at, before_dt)
+        self.assertLessEqual(dataset.created_at, after_dt)
+
+        dataset.save()
+
+        self.assertGreaterEqual(dataset.created_at, before_dt)
+        self.assertLessEqual(dataset.created_at, after_dt)
+
+    def test_last_modified(self):
+        """Check last modification date is set when the object is updated"""
+
+        before_dt = datetime_utcnow()
+        dataset = DataSet.objects.create(project=self.proj,
+                                         datasource=self.datasource,
+                                         category='issues',
+                                         filters={})
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(dataset.last_modified, before_dt)
+        self.assertLessEqual(dataset.last_modified, after_dt)
+
+        before_modified_dt = datetime_utcnow()
+        dataset.save()
+        after_modified_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(dataset.last_modified, before_modified_dt)
+        self.assertLessEqual(dataset.last_modified, after_modified_dt)
 
 
 class TestTransaction(TransactionTestCase):

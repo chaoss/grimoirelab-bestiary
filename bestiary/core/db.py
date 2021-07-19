@@ -30,7 +30,9 @@ from grimoirelab_toolkit.datetime import datetime_utcnow
 from .errors import AlreadyExistsError, NotFoundError
 from .models import (Ecosystem,
                      Project,
-                     Operation)
+                     Operation,
+                     DataSource,
+                     DataSet)
 from .utils import validate_field, validate_name
 
 
@@ -77,6 +79,50 @@ def find_project(project_id):
         raise NotFoundError(entity='Project ID {}'.format(project_id))
     else:
         return project
+
+
+def find_datasource(datasource_id):
+    """Find a data source.
+
+    Find a data source by its id in the database. When the
+    data source does not exist the function will raise
+    a `NotFoundError`.
+
+    :param datasource_id: id of the data source to find
+
+    :returns: a data source object
+
+    :raises NotFoundError: when the data source with the
+        given `datasource_id` does not exist
+    """
+    try:
+        datasource = DataSource.objects.get(id=datasource_id)
+    except DataSource.DoesNotExist:
+        raise NotFoundError(entity='DataSource ID {}'.format(datasource_id))
+    else:
+        return datasource
+
+
+def find_dataset(dataset_id):
+    """Find a data set.
+
+    Find a data set by its id in the database. When the
+    data set does not exist the function will raise
+    a `NotFoundError`.
+
+    :param dataset_id: id of the data set to find
+
+    :returns: a data set object
+
+    :raises NotFoundError: when the data set with the
+        given `dataset_id` does not exist
+    """
+    try:
+        dataset = DataSet.objects.get(id=dataset_id)
+    except DataSet.DoesNotExist:
+        raise NotFoundError(entity='DataSet ID {}'.format(dataset_id))
+    else:
+        return dataset
 
 
 def add_ecosystem(trxl, name, title, description):
@@ -130,7 +176,7 @@ def add_ecosystem(trxl, name, title, description):
 
 
 def add_project(trxl, ecosystem, name, title, parent):
-    """Add an project to the database.
+    """Add a project to the database.
 
     This function adds a new project to the database,
     using the given `name` as an identifier and an optional title. Name cannot
@@ -171,6 +217,7 @@ def add_project(trxl, ecosystem, name, title, parent):
 
     try:
         project.save()
+        project.ecosystem.save()
     except django.db.utils.IntegrityError as exc:
         _handle_integrity_error(Project, exc)
 
@@ -179,6 +226,105 @@ def add_project(trxl, ecosystem, name, title, parent):
                        target=op_args['name'])
 
     return project
+
+
+def add_datasource(trxl, type, uri):
+    """Add a data source to the database.
+
+    This function adds a new data source to the database,
+    using the given `type` as a data source type and
+    a `uri` as the data end-point of the data source.
+
+    It returns a new `DataSource` object.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param type: type of data source
+    :param uri: location of the data source
+
+    :returns: a new data source
+
+    :raises ValueError: when `type` is `None` or empty or when `uri` is empty
+    :raises AlreadyExistsError: when an instance with the tuple (type, uri)
+        already exists in the database
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'type': type.name,
+        'uri': uri
+    }
+
+    validate_field('uri', uri, allow_none=False)
+
+    datasource = DataSource(type=type,
+                            uri=uri)
+
+    try:
+        datasource.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(DataSource, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.ADD, entity_type='datasource',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=op_args['uri'])
+
+    return datasource
+
+
+def add_dataset(trxl, project, datasource, category, filters):
+    """Add a data set to the database.
+
+    This function adds a new data set to the database,
+    using the given `project` as location of the data set,
+    and a data source (`datasource`). It must also include the
+    data source category and filters.
+
+    It returns a new `DataSet` object.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param project: project for the data set
+    :param datasource: data source of the data set
+    :param category: type of data source analysis
+    :param filters: attributes to filter the view of the data source
+
+    :returns: a new data set
+
+    :raises ValueError: when `type` is `None` or empty or when `uri` is empty
+    :raises AlreadyExistsError: when an instance with the tuple (type, uri)
+        already exists in the database
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'project': project.id,
+        'datasource': datasource.id,
+        'category': category,
+        'filters': filters
+    }
+
+    validate_field('category', category, allow_none=False)
+    if filters is None:
+        raise ValueError("'filters' cannot be None")
+
+    if not isinstance(filters, dict):
+        msg = "field 'filters' cannot be '{}'".format(filters.__class__.__name__)
+        raise TypeError(msg)
+
+    dataset = DataSet(project=project,
+                      datasource=datasource,
+                      category=category,
+                      filters=filters)
+
+    try:
+        dataset.save()
+        dataset.project.save()
+        dataset.project.ecosystem.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(DataSet, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.ADD, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['project']))
+
+    return dataset
 
 
 def update_ecosystem(trxl, ecosystem, **kwargs):
@@ -282,6 +428,7 @@ def update_project(trxl, project, **kwargs):
 
     try:
         project.save()
+        project.ecosystem.save()
     except django.db.utils.IntegrityError as exc:
         _handle_integrity_error(Project, exc)
 
@@ -290,6 +437,61 @@ def update_project(trxl, project, **kwargs):
                        target=str(op_args['id']))
 
     return project
+
+
+def update_dataset(trxl, dataset, **kwargs):
+    """Update dataset information.
+
+    This function allows to edit or update the information of the
+    given dataset. The values to update are given
+    as keyword arguments. The allowed keys are listed below
+    (other keywords will be ignored):
+
+       - `category`: type of data source analysis
+       - `filters`: attributes to filter the view of the data source
+
+    As a result, it will return the `DataSet` object with
+    the updated data.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param dataset: dataset which will be updated
+    :param kwargs: parameters to edit the dataset
+
+    :returns: the updated dataset object
+
+    :raises ValueError: raised either when the given dataset category is None
+        or empty
+    :raises TypeError: raised either when the given dataset category is not
+        a string or filters is not JSONField compatible
+    """
+    # Setting operation arguments before they are modified
+    op_args = copy.deepcopy(kwargs)
+    op_args.update({'id': dataset.id})
+
+    if 'category' in kwargs:
+        validate_field('category', kwargs['category'], allow_none=False)
+        dataset.category = kwargs['category']
+    if 'filters' in kwargs:
+        filters = kwargs['filters']
+        if filters is None:
+            raise ValueError("'filters' cannot be None")
+        if not isinstance(filters, dict):
+            msg = "field 'filters' cannot be '{}'".format(filters.__class__.__name__)
+            raise TypeError(msg)
+        dataset.filters = filters
+
+    try:
+        dataset.save()
+        dataset.project.save()
+        dataset.project.ecosystem.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(DataSet, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.UPDATE, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+    return dataset
 
 
 def delete_ecosystem(trxl, ecosystem):
@@ -328,8 +530,55 @@ def delete_project(trxl, project):
     }
 
     project.delete()
+    project.ecosystem.save()
 
     trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='project',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+
+def delete_datasource(trxl, datasource):
+    """Remove an data source from the database.
+
+    Function that removes from the database the data source
+    given in `datasource`.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param datasource: data source to remove
+    """
+    # Setting operation arguments before they are modified
+
+    op_args = {
+        'id': datasource.id
+    }
+
+    datasource.delete()
+
+    trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='datasource',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+
+def delete_dataset(trxl, dataset):
+    """Remove an data set from the database.
+
+    Function that removes from the database the data set
+    given in `dataset`.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param dataset: data set to remove
+    """
+    # Setting operation arguments before they are modified
+
+    op_args = {
+        'id': dataset.id
+    }
+
+    dataset.delete()
+    dataset.project.save()
+    dataset.project.ecosystem.save()
+
+    trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='dataset',
                        timestamp=datetime_utcnow(), args=op_args,
                        target=str(op_args['id']))
 
@@ -355,6 +604,7 @@ def link_parent_project(trxl, project, parent_project):
 
     :raises ValueError: raised either when the given parent project is invalid
     """
+
     def _is_descendant(project, from_project):
         """Check if a project is a descendant of another"""
 
@@ -385,6 +635,7 @@ def link_parent_project(trxl, project, parent_project):
 
     try:
         project.save()
+        project.ecosystem.save()
     except django.db.utils.IntegrityError as exc:
         _handle_integrity_error(Project, exc)
 
@@ -393,6 +644,48 @@ def link_parent_project(trxl, project, parent_project):
                        target=str(op_args['id']))
 
     return project
+
+
+def link_dataset_project(trxl, dataset, project):
+    """Link a data set object with a project.
+
+    This method updates the `project` field value from a `DataSet`.
+    In case the project is invalid, the method will raise an `ValueError`.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param dataset: data set object to be updated
+    :param project: project to be linked to the data set
+
+    :returns: the updated dataset object
+
+    :raises ValueError: raised either when the given project is invalid
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'dataset': dataset.id,
+        'project': project.id if project else None
+    }
+
+    if not project:
+        raise ValueError('Project cannot be None')
+
+    if dataset.project == project:
+        raise ValueError('Project is already set to the data set')
+
+    dataset.project = project
+
+    try:
+        dataset.save()
+        dataset.project.save()
+        dataset.project.ecosystem.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(DataSet, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.LINK, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['dataset']))
+
+    return dataset
 
 
 _MYSQL_DUPLICATE_ENTRY_ERROR_REGEX = re.compile(r"Duplicate entry '(?P<value>.+)' for key")
