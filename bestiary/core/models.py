@@ -19,7 +19,8 @@
 #     Santiago Dueñas <sduenas@bitergia.com>
 #     Miguel Ángel Fernández <mafesan@bitergia.com>
 #
-
+import hashlib
+import json
 
 from django.db.models import (CASCADE,
                               Model,
@@ -41,6 +42,7 @@ MAX_SIZE_CHAR_INDEX = 191
 MAX_SIZE_CHAR_FIELD = 128
 MAX_SIZE_NAME_FIELD = 32
 MAX_SIZE_TITLE_FIELD = 80
+MAX_SIZE_SHA1_FIELD = 40
 
 
 class CreationDateTimeField(DateTimeField):
@@ -252,3 +254,93 @@ class Ecosystem(EntityBase):
 
     def __str__(self):
         return '%s' % self.name
+
+
+class DataSourceType(Model):
+    """Model class for DataSourceType objects.
+
+    This class is meant to represent all data
+    sources types supported by Bestiary.
+
+    Every data source type must have a unique name (`name`).
+
+    :param name: name of the data source
+    """
+    name = CharField(unique=True,
+                     max_length=MAX_SIZE_NAME_FIELD,
+                     help_text='DataSource name')
+
+    class Meta:
+        db_table = 'datasource_types'
+        ordering = ('name', )
+
+    def __str__(self):
+        return '%s' % self.name
+
+
+class DataSource(EntityBase):
+    """Model class for DataSource objects.
+
+    This class is meant to represent a data source
+    that could be a repository, an issue tracking system,
+    a forum, etc.
+
+    Every data source object must have a uri (`uri`) and
+    must be linked to a supported data source type (`type`).
+
+    :param type: type of the data source
+    :param uri: URI of the data source
+    """
+    type = ForeignKey(DataSourceType,
+                      on_delete=CASCADE,
+                      help_text='Data source type')
+    uri = CharField(max_length=MAX_SIZE_CHAR_FIELD,
+                    help_text='Data source uri')
+
+    class Meta:
+        db_table = 'datasources'
+        unique_together = ['type', 'uri']
+
+    def __str__(self):
+        return '%s - %s' % (self.type, self.uri)
+
+
+class DataSet(EntityBase):
+    """Model class for DataSet objects.
+
+    This class is meant to represent the data sources
+    included in each project and its filters.
+
+    Each data set object must be linked to a project (`project`)
+    and a data source (`datasource`). It must also include the
+    data source category and filters.
+
+    :param project: project which the data set belongs to
+    :param datasource: data source object related to the data set
+    :param category: type of data source analysis
+    :param filters: attributes to filter the view of the data source
+    :param filters_hash: sha1 representation of filters field
+    """
+    project = ForeignKey(Project,
+                         on_delete=CASCADE,
+                         help_text='Related project')
+    datasource = ForeignKey(DataSource,
+                            on_delete=CASCADE,
+                            help_text='Related data source')
+    category = CharField(max_length=MAX_SIZE_NAME_FIELD,
+                         help_text='Data source category')
+    filters = JSONField(help_text='Filters for the data source')
+    filters_hash = CharField(max_length=MAX_SIZE_SHA1_FIELD,
+                             help_text='Data source category')
+
+    class Meta:
+        db_table = 'datasets'
+        unique_together = ['project', 'datasource', 'category', 'filters_hash']
+
+    def __str__(self):
+        return '%s - %s - %s - %s' % (self.project, self.datasource, self.category, self.filters)
+
+    def save(self, *args, **kwargs):
+        filters_str = json.dumps(self.filters, sort_keys=True)
+        self.filters_hash = hashlib.sha1(filters_str.encode('utf-8')).hexdigest()
+        super().save(*args, **kwargs)

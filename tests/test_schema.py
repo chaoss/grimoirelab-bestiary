@@ -1604,11 +1604,14 @@ class TestDeleteProjectMutation(django.test.TestCase):
         self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
         self.context_value.user = self.user
 
+        eco = Ecosystem.objects.create(name='Eco-example')
         self.proj_ex = Project.objects.create(id=1,
-                                              name='Example')
+                                              name='Example',
+                                              ecosystem=eco)
 
         self.proj_bit = Project.objects.create(id=2,
-                                               name='Bitergia')
+                                               name='Bitergia',
+                                               ecosystem=eco)
 
     def test_delete_project(self):
         """Check whether it deletes a project"""
