@@ -211,7 +211,6 @@ class Project(EntityBase):
                                 related_name='subprojects',
                                 help_text='Parent project')
     ecosystem = ForeignKey("Ecosystem",
-                           null=True,
                            on_delete=CASCADE,
                            help_text='Ecosystem')
 

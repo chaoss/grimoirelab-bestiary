@@ -108,25 +108,29 @@ class TestEcosystem(TransactionTestCase):
 class TestProject(TransactionTestCase):
     """Unit tests for Project class"""
 
-    def test_unique_ecosystems(self):
+    def setUp(self):
+        """Create common ecosystem for every test"""
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+
+    def test_unique_projects(self):
         """Check whether projects are unique based on the id"""
 
         with self.assertRaises(IntegrityError):
-            Project.objects.create(id=128)
-            Project.objects.create(id=128)
+            Project.objects.create(id=128, ecosystem=self.eco)
+            Project.objects.create(id=128, ecosystem=self.eco)
 
     def test_unique_name(self):
         """Check whether projects are unique based on the name"""
 
         with self.assertRaises(IntegrityError):
-            Project.objects.create(name='Test')
-            Project.objects.create(name='Test')
+            Project.objects.create(name='Test', ecosystem=self.eco)
+            Project.objects.create(name='Test', ecosystem=self.eco)
 
     def test_add_parent(self):
         """Check whether parent projects can be added to projects"""
 
-        proj_parent = Project.objects.create(name='Test-parent')
-        Project.objects.create(name='Test', parent_project=proj_parent)
+        proj_parent = Project.objects.create(name='Test-parent', ecosystem=self.eco)
+        Project.objects.create(name='Test', parent_project=proj_parent, ecosystem=self.eco)
 
         proj = Project.objects.get(name='Test')
 
@@ -138,8 +142,8 @@ class TestProject(TransactionTestCase):
         # With an invalid encoding both names wouldn't be inserted;
         # In MySQL, chars 'ı' and 'i' are considered the same with a
         # collation distinct to <charset>_unicode_ci
-        Project.objects.create(name='ıProject')
-        Project.objects.create(name='iProject')
+        Project.objects.create(name='ıProject', ecosystem=self.eco)
+        Project.objects.create(name='iProject', ecosystem=self.eco)
 
         proj1 = Project.objects.get(name='ıProject')
         proj2 = Project.objects.get(name='iProject')
@@ -151,7 +155,7 @@ class TestProject(TransactionTestCase):
         """Check creation date is only set when the object is created"""
 
         before_dt = datetime_utcnow()
-        proj = Project.objects.create(name='example')
+        proj = Project.objects.create(name='example', ecosystem=self.eco)
         after_dt = datetime_utcnow()
 
         self.assertGreaterEqual(proj.created_at, before_dt)
@@ -166,7 +170,7 @@ class TestProject(TransactionTestCase):
         """Check last modification date is set when the object is updated"""
 
         before_dt = datetime_utcnow()
-        proj = Project.objects.create(name='example')
+        proj = Project.objects.create(name='example', ecosystem=self.eco)
         after_dt = datetime_utcnow()
 
         self.assertGreaterEqual(proj.last_modified, before_dt)
@@ -278,7 +282,8 @@ class TestDataSet(TransactionTestCase):
         """Create basic objects for datasets"""
 
         uri = 'https://github.com/chaoss/grimoirelab-bestiary'
-        self.proj = Project.objects.create(name='example')
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+        self.proj = Project.objects.create(name='example', ecosystem=self.eco)
         self.dstype = DataSourceType.objects.create(name='GitHub')
         self.datasource = DataSource.objects.create(type=self.dstype,
                                                     uri=uri)

@@ -902,8 +902,10 @@ class TestQueryProjects(django.test.TestCase):
         self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
         self.context_value.user = self.user
 
+        self.eco = Ecosystem.objects.create(name='Eco-example')
         self.proj = Project(name='Example',
-                            title='Example title')
+                            title='Example title',
+                            ecosystem=self.eco)
         self.proj.save()
 
     def test_project(self):
@@ -921,7 +923,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
     def test_filter_registry(self):
         """Check whether it returns the project searched when using filters"""
@@ -939,7 +941,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
     def test_filter_non_existing_registry(self):
         """Check whether it returns an empty list when searched with a non existing project"""
@@ -984,11 +986,13 @@ class TestQueryProjects(django.test.TestCase):
 
         # Creating additional projects
         proj1 = Project(name='Example-1',
-                        title='Example title 1')
+                        title='Example title 1',
+                        ecosystem=self.eco)
         proj1.save()
 
         proj2 = Project(name='Example-2',
-                        title='Example title 2')
+                        title='Example title 2',
+                        ecosystem=self.eco)
         proj2.save()
 
         client = graphene.test.Client(schema)
@@ -1004,14 +1008,14 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         proj = projects[1]
         self.assertEqual(proj['id'], str(proj1.id))
         self.assertEqual(proj['name'], 'Example-1')
         self.assertEqual(proj['title'], 'Example title 1')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         pag_data = executed['data']['projects']['pageInfo']
         self.assertEqual(len(pag_data), 8)
@@ -1037,7 +1041,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example-2')
         self.assertEqual(proj['title'], 'Example title 2')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         pag_data = executed['data']['projects']['pageInfo']
         self.assertEqual(len(pag_data), 8)
