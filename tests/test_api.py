@@ -36,7 +36,10 @@ from bestiary.core.errors import (AlreadyExistsError,
 from bestiary.core.models import (Ecosystem,
                                   Project,
                                   Transaction,
-                                  Operation)
+                                  Operation,
+                                  DataSourceType,
+                                  DataSource,
+                                  DataSet)
 
 NAME_NONE_OR_EMPTY_ERROR = "'name' cannot be"
 ECOSYSTEM_ID_NONE_OR_EMPTY_ERROR = "'ecosystem_id' cannot be"
@@ -62,6 +65,13 @@ ID_INVALID_LITERAL = "invalid literal for int()"
 NAME_LENGTH_ERROR = "'name' cannot have more than"
 NAME_START_ERROR = "'name' must start with an alphanumeric character"
 NAME_CONTAIN_ERROR = "'name' cannot contain"
+DATASET_ALREADY_EXISTS_ERROR = "DataSet '.*' already exists in the registry"
+DATASOURCE_TYPE_NONE_ERROR = "'datasource_name' cannot be None"
+URI_EMPTY_ERROR = "'uri' cannot be"
+CATEGORY_EMPTY_ERROR = "'category' cannot be"
+FILTERS_NONE_ERROR = "'filters' cannot be None"
+DATASET_NOT_FOUND_ERROR = "DataSet ID {dset_id} not found in the registry"
+DATASET_ID_NONE_OR_EMPTY_ERROR = "'dataset_id' cannot be"
 
 
 class TestAddEcosystem(TestCase):
@@ -745,6 +755,274 @@ class TestAddProject(TestCase):
         self.assertEqual(op1_args['parent'], self.parent.id)
 
 
+class TestAddDataset(TestCase):
+    """Unit tests for add_dataset"""
+
+    def setUp(self):
+        """Load initial values"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.eco)
+        self.dstype = DataSourceType.objects.create(name='GitHub')
+        self.uri = 'https://github.com/chaoss/grimoirelab-bestiary'
+
+    def test_add_new_dataset(self):
+        """Check if everything goes OK when adding a new dataset"""
+
+        dataset = api.add_dataset(self.ctx,
+                                  self.project.id,
+                                  self.dstype.name,
+                                  self.uri,
+                                  'issues',
+                                  {})
+
+        self.assertIsInstance(dataset, DataSet)
+        self.assertEqual(dataset.project, self.project)
+        self.assertEqual(dataset.datasource.type, self.dstype)
+        self.assertEqual(dataset.datasource.uri, self.uri)
+        self.assertEqual(dataset.category, 'issues')
+        self.assertEqual(dataset.filters, {})
+
+        datasets_db = DataSet.objects.filter(id=dataset.id)
+        self.assertEqual(len(datasets_db), 1)
+        self.assertEqual(dataset, datasets_db[0])
+
+    def test_add_duplicate_dataset(self):
+        """Check if it fails when adding a duplicate dataset"""
+
+        dataset_1 = api.add_dataset(self.ctx,
+                                    self.project.id,
+                                    self.dstype.name,
+                                    self.uri,
+                                    'issues',
+                                    {})
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(AlreadyExistsError,
+                                    DATASET_ALREADY_EXISTS_ERROR):
+            dataset_2 = api.add_dataset(self.ctx,
+                                        self.project.id,
+                                        self.dstype.name,
+                                        self.uri,
+                                        'issues',
+                                        {})
+
+        ndatasets = DataSet.objects.count()
+        self.assertEqual(ndatasets, 1)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_none(self):
+        """Check if fails the project is None"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    PROJECT_ID_NONE_OR_EMPTY_ERROR):
+            api.add_dataset(self.ctx,
+                            None,
+                            self.dstype.name,
+                            self.uri,
+                            'issues',
+                            {})
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_project_not_exists(self):
+        """Check if fails the project does not exist"""
+
+        Project.objects.filter(id=100).delete()
+
+        with self.assertRaisesRegex(NotFoundError,
+                                    PROJECT_NOT_FOUND_ERROR.format(proj_id=100)):
+            api.add_dataset(self.ctx,
+                            100,
+                            self.dstype.name,
+                            self.uri,
+                            'issues',
+                            {})
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_datasource_type_empty(self):
+        """Check if fails the data source type is None"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    DATASOURCE_TYPE_NONE_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            None,
+                            self.uri,
+                            'issues',
+                            {})
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_empty_uri(self):
+        """Check if fails the uri is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    URI_EMPTY_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            self.dstype.name,
+                            '',
+                            'issues',
+                            {})
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    URI_EMPTY_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            self.dstype.name,
+                            None,
+                            'issues',
+                            {})
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_empty_category(self):
+        """Check if fails the category is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    CATEGORY_EMPTY_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            self.dstype.name,
+                            self.uri,
+                            None,
+                            {})
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    CATEGORY_EMPTY_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            self.dstype.name,
+                            self.uri,
+                            '',
+                            {})
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_empty_filters(self):
+        """Check if fails the filters is None"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    FILTERS_NONE_ERROR):
+            api.add_dataset(self.ctx,
+                            self.project.id,
+                            self.dstype.name,
+                            self.uri,
+                            'issues',
+                            None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_unique_datasource_created(self):
+        """Check if only a data source is created when many data sets are added"""
+        dataset_1 = api.add_dataset(self.ctx,
+                                    self.project.id,
+                                    self.dstype,
+                                    self.uri,
+                                    'issues',
+                                    {})
+
+        dataset_2 = api.add_dataset(self.ctx,
+                                    self.project.id,
+                                    self.dstype.name,
+                                    self.uri,
+                                    'pull-requests',
+                                    {})
+
+        self.assertEqual(dataset_1.datasource, dataset_2.datasource)
+        ndatasets = DataSet.objects.count()
+        self.assertEqual(ndatasets, 2)
+
+    def test_transaction(self):
+        """Check if a transaction is created when adding a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.add_dataset(self.ctx,
+                        self.project.id,
+                        self.dstype.name,
+                        self.uri,
+                        'issues',
+                        {})
+
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'add_dataset')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when adding a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        dataset = api.add_dataset(self.ctx,
+                                  self.project.id,
+                                  self.dstype.name,
+                                  self.uri,
+                                  'issues',
+                                  {})
+
+        transactions = Transaction.objects.all()
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 2)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op1.entity_type, 'datasource')
+        self.assertEqual(op1.target, self.uri)
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 2)
+        self.assertEqual(op1_args['type'], 'GitHub')
+        self.assertEqual(op1_args['uri'], self.uri)
+
+        op2 = operations[1]
+        self.assertIsInstance(op2, Operation)
+        self.assertEqual(op2.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op2.entity_type, 'dataset')
+        self.assertEqual(op2.target, str(self.project.id))
+        self.assertEqual(op2.trx, trx)
+        self.assertGreater(op2.timestamp, timestamp)
+        op2_args = json.loads(op2.args)
+        self.assertEqual(len(op2_args), 4)
+        self.assertEqual(op2_args['project'], self.project.id)
+        self.assertEqual(op2_args['datasource'], dataset.datasource.id)
+        self.assertEqual(op2_args['category'], 'issues')
+        self.assertEqual(op2_args['filters'], {})
+
+
 class TestDeleteEcosystem(TestCase):
     """Unit tests for delete_ecosystem"""
 
@@ -966,6 +1244,138 @@ class TestDeleteProject(TestCase):
         op1_args = json.loads(op1.args)
         self.assertEqual(len(op1_args), 1)
         self.assertEqual(op1_args['id'], self.proj_example.id)
+
+
+class TestDeleteDataset(TestCase):
+    """Unit tests for delete_dataset"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(name='GitHub')
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        dsource_2 = DataSource.objects.create(id=2,
+                                              type=dstype,
+                                              uri='https://github.com/chaoss/grimoirelab')
+        self.dataset_1 = DataSet.objects.create(id=1,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='issues',
+                                                filters={'tag': 'test'})
+
+        self.dataset_2 = DataSet.objects.create(id=2,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='pull-requests',
+                                                filters={'tag': 'test'})
+
+        self.dataset_3 = DataSet.objects.create(id=3,
+                                                project=project,
+                                                datasource=dsource_2,
+                                                category='issues',
+                                                filters={'tag': 'test'})
+
+    def test_delete_dataset(self):
+        """Check if everything goes OK when deleting a dataset"""
+
+        api.delete_dataset(self.ctx, dataset_id=self.dataset_1.id)
+
+        datasets = DataSet.objects.filter(id=self.dataset_1.id)
+        self.assertEqual(len(datasets), 0)
+
+        datasets = DataSet.objects.all()
+        self.assertEqual(len(datasets), 2)
+
+        proj1 = datasets[0]
+        self.assertEqual(proj1.id, self.dataset_2.id)
+
+        proj2 = datasets[1]
+        self.assertEqual(proj2.id, self.dataset_3.id)
+
+    def test_delete_non_existing_dataset(self):
+        """Check if it fails when deleting a non existing dataset"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(NotFoundError, DATASET_NOT_FOUND_ERROR.format(dset_id='99999')):
+            api.delete_dataset(self.ctx, 99999)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_dataset_id_none(self):
+        """Check if it fails when dataset id is `None`"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(InvalidValueError, DATASET_ID_NONE_OR_EMPTY_ERROR):
+            api.delete_dataset(self.ctx, dataset_id=None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_remove_datasource(self):
+        """Check if removing all data sets related with a data source deletes the data source"""
+        api.delete_dataset(self.ctx, dataset_id=self.dataset_1.id)
+        api.delete_dataset(self.ctx, dataset_id=self.dataset_2.id)
+
+        datasources = DataSource.objects.filter()
+        self.assertEqual(len(datasources), 1)
+        datasource = datasources[0]
+        self.assertEqual(datasource.id, 2)
+
+    def test_transaction(self):
+        """Check if a transaction is created when deleting a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_dataset(self.ctx, dataset_id=self.dataset_1.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'delete_dataset')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_dataset(self.ctx, dataset_id=self.dataset_1.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.DELETE.value)
+        self.assertEqual(op1.entity_type, 'dataset')
+        self.assertEqual(op1.target, str(self.dataset_1.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], self.dataset_1.id)
 
 
 class TestUpdateEcosystem(TestCase):

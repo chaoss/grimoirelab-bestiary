@@ -30,7 +30,14 @@ from .db import (find_ecosystem,
                  update_project as update_project_db,
                  delete_ecosystem as delete_ecosystem_db,
                  delete_project as delete_project_db,
-                 link_parent_project as link_parent_project_db)
+                 link_parent_project as link_parent_project_db,
+                 find_datasource_uri as find_datasource_uri_db,
+                 add_datasource as add_datasource_db,
+                 add_dataset as add_dataset_db,
+                 find_dataset as find_dataset_db,
+                 find_datasource_type as find_datasource_type_db,
+                 delete_dataset as delete_dataset_db,
+                 delete_datasource as delete_datasource_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -142,6 +149,68 @@ def add_project(ctx, ecosystem_id, name, title=None, parent_id=None):
     trxl.close()
 
     return project
+
+
+@django.db.transaction.atomic
+def add_dataset(ctx, project_id, datasource_name, uri, category, filters):
+    """Add a data set to the registry.
+
+    This function adds a data set to the registry.
+    It checks first whether the project and data source are already
+    on the registry.
+    When they are found, a new dataset is added. In case it is duplicated
+    it raises a 'AlreadyExistsError' exception to notify that it
+    already exists.
+
+    :param ctx: context from where this method is called
+    :param project_id: ID of the project where this dataset belongs to
+    :param datasource_name: name of the type of data source
+    :param uri: uri of data source
+    :param category: type of data source analysis
+    :param filters: attributes to filter the view of the data source
+
+    :returns: a new data set
+
+    :raises ValueError: when any of the arguments is empty or not valid
+    :raises AlreadyExistsError: raised when the dataset already exists
+        in the registry
+    """
+    trxl = TransactionsLog.open('add_dataset', ctx)
+
+    if project_id is None:
+        raise InvalidValueError(msg="'project_id' cannot be None")
+    if datasource_name is None:
+        raise InvalidValueError(msg="'datasource_name' cannot be None")
+    if uri is None:
+        raise InvalidValueError(msg="'uri' cannot be None")
+    if uri == '':
+        raise InvalidValueError(msg="'uri' cannot be an empty string")
+    if category is None:
+        raise InvalidValueError(msg="'category' cannot be None")
+    if filters is None:
+        raise InvalidValueError(msg="'filters' cannot be None")
+
+    try:
+        datasource_type = find_datasource_type_db(name=datasource_name)
+    except NotFoundError as exc:
+        raise exc
+
+    project = find_project(project_id)
+    try:
+        datasource = find_datasource_uri_db(datasource_type, uri)
+    except NotFoundError:
+        datasource = add_datasource_db(trxl, datasource_type, uri)
+
+    try:
+        dataset = add_dataset_db(trxl, project, datasource, category, filters)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except AlreadyExistsError as exc:
+        raise exc
+
+    trxl.close()
+
+    return dataset
 
 
 @django.db.transaction.atomic
@@ -307,6 +376,49 @@ def delete_project(ctx, project_id):
     project.id = project_id
 
     return project
+
+
+@django.db.transaction.atomic
+def delete_dataset(ctx, dataset_id):
+    """Remove a dataset from the registry.
+
+    This function removes the given dataset from the registry.
+    It checks first whether the dataset is already on the registry.
+    When it is found, the dataset is removed. Otherwise,
+    it will raise a 'NotFoundError'.
+    It also removes a datasource when it is not linked with any dataset.
+
+    :param ctx: context from where this method is called
+    :param dataset_id: id of the dataset to remove
+
+    :raises InvalidValueError: raised when dataset_id is None
+    :raises NotFoundError: raised when the dataset does not exist
+        in the registry
+    """
+    if dataset_id is None:
+        raise InvalidValueError(msg="'dataset_id' cannot be None")
+
+    trxl = TransactionsLog.open('delete_dataset', ctx)
+
+    try:
+        dataset = find_dataset_db(dataset_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    delete_dataset_db(trxl, dataset=dataset)
+
+    # Check if the related data source has no data set associated
+    if not dataset.datasource.dataset_set.exists():
+        delete_datasource_db(trxl, dataset.datasource)
+
+    trxl.close()
+
+    # Setting former ID manually, as it can't be referenced once it has been removed
+    dataset.id = dataset_id
+
+    return dataset
 
 
 @django.db.transaction.atomic

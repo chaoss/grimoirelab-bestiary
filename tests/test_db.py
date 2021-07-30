@@ -67,6 +67,8 @@ PROJECT_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
 PROJECT_PARENT_DESCENDANT_ERROR = "Parent cannot be a descendant"
 DATASOURCE_NOT_FOUND_ERROR = "DataSource ID 2 not found in the registry"
 DATASOURCE_URI_ERROR = "'uri' cannot be an empty string"
+DATASOURCE_URI_NOT_FOUND_ERROR = "DataSource uri .* not found in the registry"
+DATASOURCE_TYPE_NOT_FOUND_ERROR = "DataSourceType name GitLab not found in the registry"
 DATASET_NOT_FOUND_ERROR = "DataSet ID 2 not found in the registry"
 DATASET_CATEGORY_ERROR = "'category' cannot be None"
 DATASET_FILTER_ERROR = "'filters' cannot be None"
@@ -1295,6 +1297,62 @@ class TestFindDataSource(TestCase):
 
         with self.assertRaisesRegex(NotFoundError, DATASOURCE_NOT_FOUND_ERROR):
             db.find_datasource(2)
+
+
+class TestFindDataSourceType(TestCase):
+    """Unit tests for find_datasource_type"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        dst = DataSourceType.objects.create(id=1, name='GitHub')
+
+    def test_datasource(self):
+        """Test if a datasource type is found by its name"""
+
+        dst = db.find_datasource_type('GitHub')
+
+        # Tests
+        self.assertIsInstance(dst, DataSourceType)
+        self.assertEqual(dst.id, 1)
+        self.assertEqual(dst.name, 'GitHub')
+
+    def test_datasource_not_found(self):
+        """Test whether it raises an exception when the datasource is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, DATASOURCE_TYPE_NOT_FOUND_ERROR):
+            db.find_datasource_type(name='GitLab')
+
+
+class TestFindDataSourceUri(TestCase):
+    """Unit tests for find_datasource_uri"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.dst = DataSourceType.objects.create(name='GitHub')
+        DataSource.objects.create(id=1,
+                                  type=self.dst,
+                                  uri='https://github.com/chaoss/grimoirelab-bestiary')
+
+    def test_datasource(self):
+        """Test if a datasource is found by its id"""
+
+        ds = db.find_datasource_uri(datasource_type=self.dst,
+                                    uri='https://github.com/chaoss/grimoirelab-bestiary')
+
+        # Tests
+        self.assertIsInstance(ds, DataSource)
+        self.assertEqual(ds.id, 1)
+        self.assertEqual(ds.type.name, 'GitHub')
+        self.assertEqual(ds.uri, 'https://github.com/chaoss/grimoirelab-bestiary')
+
+    def test_datasource_not_found(self):
+        """Test whether it raises an exception when the datasource is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, DATASOURCE_URI_NOT_FOUND_ERROR):
+            db.find_datasource_uri(datasource_type=self.dst,
+                                   uri='https://github.com/chaoss/grimoirelab')
 
 
 class TestAddDataSource(TestCase):

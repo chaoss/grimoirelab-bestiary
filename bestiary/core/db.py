@@ -32,7 +32,8 @@ from .models import (Ecosystem,
                      Project,
                      Operation,
                      DataSource,
-                     DataSet)
+                     DataSet,
+                     DataSourceType)
 from .utils import validate_field, validate_name
 
 
@@ -81,6 +82,28 @@ def find_project(project_id):
         return project
 
 
+def find_datasource_type(name):
+    """Find a data source type.
+
+    Find a data source type by its name in the database. When the
+    data source does not exist the function will raise
+    a `NotFoundError`.
+
+    :param name: name of the data source type to find
+
+    :returns: a data source type object
+
+    :raises NotFoundError: when the data source type with the
+        given `name` does not exist
+    """
+    try:
+        datasource = DataSourceType.objects.get(name=name)
+    except DataSourceType.DoesNotExist:
+        raise NotFoundError(entity='DataSourceType name {}'.format(name))
+    else:
+        return datasource
+
+
 def find_datasource(datasource_id):
     """Find a data source.
 
@@ -99,6 +122,30 @@ def find_datasource(datasource_id):
         datasource = DataSource.objects.get(id=datasource_id)
     except DataSource.DoesNotExist:
         raise NotFoundError(entity='DataSource ID {}'.format(datasource_id))
+    else:
+        return datasource
+
+
+def find_datasource_uri(datasource_type, uri):
+    """Find a data source.
+
+    Find a data source by its type and uri in the database.
+    When the data source does not exist the function will raise
+    a `NotFoundError`.
+
+    :param datasource_type: type of the data source to find
+    :param uri: uri of the data source to find
+
+    :returns: a data source object
+
+    :raises NotFoundError: when the data source with the
+        given `datasource_id` does not exist
+    """
+    try:
+        datasource = DataSource.objects.get(type=datasource_type,
+                                            uri=uri)
+    except DataSource.DoesNotExist:
+        raise NotFoundError(entity='DataSource uri {}'.format(uri))
     else:
         return datasource
 
