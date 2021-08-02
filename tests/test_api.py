@@ -787,7 +787,7 @@ class TestAddDataset(TestCase):
         self.assertEqual(dataset.datasource.type, self.dstype)
         self.assertEqual(dataset.datasource.uri, self.uri)
         self.assertEqual(dataset.category, 'issues')
-        self.assertEqual(dataset.filters, {})
+        self.assertEqual(dataset.filters, '{}')
 
         datasets_db = DataSet.objects.filter(id=dataset.id)
         self.assertEqual(len(datasets_db), 1)
@@ -939,6 +939,7 @@ class TestAddDataset(TestCase):
 
     def test_unique_datasource_created(self):
         """Check if only a data source is created when many data sets are added"""
+
         dataset_1 = api.add_dataset(self.ctx,
                                     self.project.id,
                                     self.dstype,
@@ -1271,19 +1272,19 @@ class TestDeleteDataset(TestCase):
                                                 project=project,
                                                 datasource=dsource,
                                                 category='issues',
-                                                filters={'tag': 'test'})
+                                                filters='{"tag": "test"}')
 
         self.dataset_2 = DataSet.objects.create(id=2,
                                                 project=project,
                                                 datasource=dsource,
                                                 category='pull-requests',
-                                                filters={'tag': 'test'})
+                                                filters='{"tag": "test"}')
 
         self.dataset_3 = DataSet.objects.create(id=3,
                                                 project=project,
                                                 datasource=dsource_2,
                                                 category='issues',
-                                                filters={'tag': 'test'})
+                                                filters='{"tag": "test"}')
 
     def test_delete_dataset(self):
         """Check if everything goes OK when deleting a dataset"""
@@ -1328,6 +1329,7 @@ class TestDeleteDataset(TestCase):
 
     def test_remove_datasource(self):
         """Check if removing all data sets related with a data source deletes the data source"""
+
         api.delete_dataset(self.ctx, dataset_id=self.dataset_1.id)
         api.delete_dataset(self.ctx, dataset_id=self.dataset_2.id)
 

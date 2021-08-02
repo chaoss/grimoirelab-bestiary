@@ -295,11 +295,11 @@ class TestDataSet(TransactionTestCase):
             DataSet.objects.create(project=self.proj,
                                    datasource=self.datasource,
                                    category='issues',
-                                   filters={})
+                                   filters='{}')
             DataSet.objects.create(project=self.proj,
                                    datasource=self.datasource,
                                    category='issues',
-                                   filters={})
+                                   filters='{}')
 
     def test_unique_datasets_2(self):
         """Check whether datasets are unique based on its fields"""
@@ -308,11 +308,11 @@ class TestDataSet(TransactionTestCase):
             DataSet.objects.create(project=self.proj,
                                    datasource=self.datasource,
                                    category='issues',
-                                   filters={'a': 1, 'b': 2})
+                                   filters=json.dumps({'a': 1, 'b': 2}, sort_keys=True))
             DataSet.objects.create(project=self.proj,
                                    datasource=self.datasource,
                                    category='issues',
-                                   filters={'b': 2, 'a': 1})
+                                   filters=json.dumps({'b': 2, 'a': 1}, sort_keys=True))
 
     def test_not_null_project(self):
         """Check whether every data set is assigned to a project"""
@@ -321,7 +321,7 @@ class TestDataSet(TransactionTestCase):
             DataSet.objects.create(project=None,
                                    datasource=self.datasource,
                                    category='issues',
-                                   filters={})
+                                   filters='{}')
 
     def test_not_null_datasource(self):
         """Check whether every data set is assigned to a datasource"""
@@ -330,7 +330,7 @@ class TestDataSet(TransactionTestCase):
             DataSet.objects.create(project=self.proj,
                                    datasource=None,
                                    category='issues',
-                                   filters={})
+                                   filters='{}')
 
     def test_not_null_filters(self):
         """Check whether every data set is assigned to a datasource"""
@@ -343,11 +343,13 @@ class TestDataSet(TransactionTestCase):
 
     def test_filters_hash(self):
         """Check if filters_hash is created correctly"""
+
+        filters = json.dumps({'b': 2, 'a': 1}, sort_keys=True)
         ds = DataSet.objects.create(project=self.proj,
                                     datasource=self.datasource,
                                     category='issues',
-                                    filters={'b': 2, 'a': 1})
-        self.assertEqual(ds.filters_hash, '1744f53e00fc23bd3e515b298e42936485061dba')
+                                    filters=filters)
+        self.assertEqual(ds.filters_hash, 'fda562ed3319f73056995db1dcb053feacc0b318')
 
     def test_created_at(self):
         """Check creation date is only set when the object is created"""
@@ -356,7 +358,7 @@ class TestDataSet(TransactionTestCase):
         dataset = DataSet.objects.create(project=self.proj,
                                          datasource=self.datasource,
                                          category='issues',
-                                         filters={})
+                                         filters='{}')
         after_dt = datetime_utcnow()
 
         self.assertGreaterEqual(dataset.created_at, before_dt)
@@ -374,7 +376,7 @@ class TestDataSet(TransactionTestCase):
         dataset = DataSet.objects.create(project=self.proj,
                                          datasource=self.datasource,
                                          category='issues',
-                                         filters={})
+                                         filters='{}')
         after_dt = datetime_utcnow()
 
         self.assertGreaterEqual(dataset.last_modified, before_dt)

@@ -21,6 +21,7 @@
 #
 
 import copy
+import json
 import re
 
 import django.db.utils
@@ -355,10 +356,12 @@ def add_dataset(trxl, project, datasource, category, filters):
         msg = "field 'filters' cannot be '{}'".format(filters.__class__.__name__)
         raise TypeError(msg)
 
+    filters_dump = json.dumps(filters, sort_keys=True)
+
     dataset = DataSet(project=project,
                       datasource=datasource,
                       category=category,
-                      filters=filters)
+                      filters=filters_dump)
 
     try:
         dataset.save()
@@ -525,7 +528,7 @@ def update_dataset(trxl, dataset, **kwargs):
         if not isinstance(filters, dict):
             msg = "field 'filters' cannot be '{}'".format(filters.__class__.__name__)
             raise TypeError(msg)
-        dataset.filters = filters
+        dataset.filters = json.dumps(filters, sort_keys=True)
 
     try:
         dataset.save()

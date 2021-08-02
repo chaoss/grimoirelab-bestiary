@@ -317,7 +317,8 @@ class DataSet(EntityBase):
     :param project: project which the data set belongs to
     :param datasource: data source object related to the data set
     :param category: type of data source analysis
-    :param filters: attributes to filter the view of the data source
+    :param filters: attributes to filter the view of the data source.
+        They are serialized in JSON format.
     :param filters_hash: sha1 representation of filters field
     """
     project = ForeignKey(Project,

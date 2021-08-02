@@ -36,17 +36,22 @@ from graphene_django.types import DjangoObjectType
 
 from .api import (add_ecosystem,
                   add_project,
+                  add_dataset,
                   update_ecosystem,
                   update_project,
                   delete_ecosystem,
                   delete_project,
+                  delete_dataset,
                   move_project)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
                      Project,
+                     DataSet,
                      Transaction,
-                     Operation)
+                     Operation,
+                     DataSourceType,
+                     DataSource)
 
 
 @convert_django_field.register(JSONField)
@@ -131,20 +136,50 @@ class ProjectType(DjangoObjectType):
         model = Project
 
 
+class DatasetType(DjangoObjectType):
+    """Dataset objects are meant to define a data source analysis"""
+
+    class Meta:
+        model = DataSet
+
+
+class DataSourceTypeModelType(DjangoObjectType):
+
+    class Meta:
+        model = DataSourceType
+
+
+class DataSourceModelType(DjangoObjectType):
+    class Meta:
+        model = DataSource
+
+
 class EcosystemInputType(graphene.InputObjectType):
     """Fields which can be used as an input for Ecosystem-related mutations"""
 
-    name = graphene.String(required=False)
-    title = graphene.String(required=False)
-    description = graphene.String(required=False)
+    name = graphene.String(
+        required=False,
+        description="Ecosystem name.")
+    title = graphene.String(
+        required=False,
+        description="Ecosystem title.")
+    description = graphene.String(
+        required=False,
+        description="Brief text describing the ecosystem.")
 
 
 class ProjectInputType(graphene.InputObjectType):
     """Fields which can be used as an input for Project-related mutations"""
 
-    name = graphene.String(required=False)
-    title = graphene.String(required=False)
-    parent_project = graphene.ID(required=False)
+    name = graphene.String(
+        required=False,
+        description="Project name.")
+    title = graphene.String(
+        required=False,
+        description="Project title.")
+    parent_project = graphene.ID(
+        required=False,
+        description="Parent project identifier.")
 
 
 class TransactionFilterType(graphene.InputObjectType):
@@ -218,19 +253,55 @@ class OperationFilterType(graphene.InputObjectType):
 class EcosystemFilterType(graphene.InputObjectType):
     """Fields which can be used as a filter for EcosystemPaginatedType objects"""
 
-    id = graphene.ID(required=False)
-    name = graphene.String(required=False)
+    id = graphene.ID(
+        required=False,
+        description="Find an ecosystem by its unique identifier.")
+    name = graphene.String(
+        required=False,
+        description="Find an ecosystem by its unique name.")
 
 
 class ProjectFilterType(graphene.InputObjectType):
     """Fields which can be used as a filter for ProjectPaginatedType objects"""
 
-    id = graphene.ID(required=False)
-    name = graphene.String(required=False)
-    ecosystem_id = graphene.ID(required=False)
-    has_parent = graphene.Boolean(required=False)
-    term = graphene.String(required=False)
-    title = graphene.String(required=False)
+    id = graphene.ID(
+        required=False,
+        description="Find a project by its unique identifier.")
+    name = graphene.String(
+        required=False,
+        description="Find a project by its unique name.")
+    ecosystem_id = graphene.ID(
+        required=False,
+        description="Filter projects belonging to this ecosystem.")
+    has_parent = graphene.Boolean(
+        required=False,
+        description="Filter projects that have parent.")
+    term = graphene.String(
+        required=False,
+        description="Filter projects whose name or title include the term.")
+    title = graphene.String(
+        required=False,
+        description="Filter projects with this title.")
+
+
+class DatasetFilterType(graphene.InputObjectType):
+    """Fields which can be used as a filter for DatasetPaginatedType objects"""
+
+    id = graphene.ID(
+        required=False,
+        description="Find a dataset by its unique identifier.")
+    project_id = graphene.ID(
+        required=False,
+        description="Filter datasets belonging to this project.")
+    datasource_name = graphene.String(
+        required=False,
+        description="Filter datasets using the name of the datasource.")
+    uri = graphene.String(
+        required=False,
+        description="Filter datasets using the uri of the datasource.")
+    category = graphene.String(
+        required=False,
+        description="Filter datasets by category.")
 
 
 class AbstractPaginatedType(graphene.ObjectType):
@@ -317,6 +388,13 @@ class ProjectPaginatedType(AbstractPaginatedType):
     page_info = graphene.Field(PaginationType)
 
 
+class DatasetPaginatedType(AbstractPaginatedType):
+    """Type returning paginated results of Dataset objects"""
+
+    entities = graphene.List(DatasetType)
+    page_info = graphene.Field(PaginationType)
+
+
 class AddEcosystem(graphene.Mutation):
     """Mutation which adds a new Ecosystem on the registry"""
 
@@ -362,6 +440,33 @@ class AddProject(graphene.Mutation):
 
         return AddProject(
             project=project
+        )
+
+
+class AddDataset(graphene.Mutation):
+    """Mutation which adds a new Dataset on the registry"""
+
+    class Arguments:
+        project_id = graphene.ID()
+        datasource_name = graphene.String()
+        uri = graphene.String()
+        category = graphene.String()
+        filters = graphene.JSONString()
+
+    dataset = graphene.Field(lambda: DatasetType)
+
+    @check_auth
+    def mutate(self, info, project_id, datasource_name, uri, category, filters):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        project_id_value = int(project_id) if project_id else None
+
+        dataset = add_dataset(ctx, project_id_value, datasource_name,
+                              uri, category, filters)
+
+        return AddDataset(
+            dataset=dataset
         )
 
 
@@ -459,6 +564,29 @@ class DeleteProject(graphene.Mutation):
         )
 
 
+class DeleteDataset(graphene.Mutation):
+    """Mutation which deletes an existing data set from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    dataset = graphene.Field(lambda: DatasetType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        dataset = delete_dataset(ctx, id_value)
+
+        return DeleteDataset(
+            dataset=dataset
+        )
+
+
 class MoveProject(graphene.Mutation):
     """Mutation which can move a project to a parent project"""
 
@@ -500,6 +628,12 @@ class BestiaryQuery(graphene.ObjectType):
         page_size=graphene.Int(),
         page=graphene.Int(),
         filters=ProjectFilterType(required=False)
+    )
+    datasets = graphene.Field(
+        DatasetPaginatedType,
+        page_size=graphene.Int(),
+        page=graphene.Int(),
+        filters=DatasetFilterType(required=False)
     )
     transactions = graphene.Field(
         TransactionPaginatedType,
@@ -551,6 +685,26 @@ class BestiaryQuery(graphene.ObjectType):
                                  Q(title__icontains=search_term))
 
         return ProjectPaginatedType.create_paginated_result(query,
+                                                            page,
+                                                            page_size=page_size)
+
+    @check_auth
+    def resolve_datasets(self, info, filters=None,
+                         page=1,
+                         page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE,
+                         **kwargs):
+        query = DataSet.objects.order_by('id')
+
+        if filters and 'id' in filters:
+            query = query.filter(id=filters['id'])
+        if filters and 'project_id' in filters:
+            query = query.filter(project=filters['project_id'])
+        if filters and 'datasource_name' in filters:
+            query = query.filter(datasource__type=filters['datasource_name'])
+        if filters and 'category' in filters:
+            query = query.filter(category=filters['category'])
+
+        return DatasetPaginatedType.create_paginated_result(query,
                                                             page,
                                                             page_size=page_size)
 
@@ -607,10 +761,12 @@ class BestiaryMutation(graphene.ObjectType):
     """Mutations supported by Bestiary"""
     add_ecosystem = AddEcosystem.Field()
     add_project = AddProject.Field()
+    add_dataset = AddDataset.Field()
     update_ecosystem = UpdateEcosystem.Field()
     update_project = UpdateProject.Field()
     delete_ecosystem = DeleteEcosystem.Field()
     delete_project = DeleteProject.Field()
+    delete_dataset = DeleteDataset.Field()
     move_project = MoveProject.Field()
 
     # JWT authentication
