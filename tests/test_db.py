@@ -67,6 +67,8 @@ PROJECT_PARENT_DIFFERENT_ECO = "Parent cannot belong to a different ecosystem"
 PROJECT_PARENT_DESCENDANT_ERROR = "Parent cannot be a descendant"
 DATASOURCE_NOT_FOUND_ERROR = "DataSource ID 2 not found in the registry"
 DATASOURCE_URI_ERROR = "'uri' cannot be an empty string"
+DATASOURCE_URI_NOT_FOUND_ERROR = "DataSource uri .* not found in the registry"
+DATASOURCE_TYPE_NOT_FOUND_ERROR = "DataSourceType name GitLab not found in the registry"
 DATASET_NOT_FOUND_ERROR = "DataSet ID 2 not found in the registry"
 DATASET_CATEGORY_ERROR = "'category' cannot be None"
 DATASET_FILTER_ERROR = "'filters' cannot be None"
@@ -1297,6 +1299,62 @@ class TestFindDataSource(TestCase):
             db.find_datasource(2)
 
 
+class TestFindDataSourceType(TestCase):
+    """Unit tests for find_datasource_type"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        dst = DataSourceType.objects.create(id=1, name='GitHub')
+
+    def test_datasource(self):
+        """Test if a datasource type is found by its name"""
+
+        dst = db.find_datasource_type('GitHub')
+
+        # Tests
+        self.assertIsInstance(dst, DataSourceType)
+        self.assertEqual(dst.id, 1)
+        self.assertEqual(dst.name, 'GitHub')
+
+    def test_datasource_not_found(self):
+        """Test whether it raises an exception when the datasource is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, DATASOURCE_TYPE_NOT_FOUND_ERROR):
+            db.find_datasource_type(name='GitLab')
+
+
+class TestFindDataSourceUri(TestCase):
+    """Unit tests for find_datasource_uri"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.dst = DataSourceType.objects.create(name='GitHub')
+        DataSource.objects.create(id=1,
+                                  type=self.dst,
+                                  uri='https://github.com/chaoss/grimoirelab-bestiary')
+
+    def test_datasource(self):
+        """Test if a datasource is found by its id"""
+
+        ds = db.find_datasource_uri(datasource_type=self.dst,
+                                    uri='https://github.com/chaoss/grimoirelab-bestiary')
+
+        # Tests
+        self.assertIsInstance(ds, DataSource)
+        self.assertEqual(ds.id, 1)
+        self.assertEqual(ds.type.name, 'GitHub')
+        self.assertEqual(ds.uri, 'https://github.com/chaoss/grimoirelab-bestiary')
+
+    def test_datasource_not_found(self):
+        """Test whether it raises an exception when the datasource is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, DATASOURCE_URI_NOT_FOUND_ERROR):
+            db.find_datasource_uri(datasource_type=self.dst,
+                                   uri='https://github.com/chaoss/grimoirelab')
+
+
 class TestAddDataSource(TestCase):
     """Unit tests for add_datasource"""
 
@@ -1481,11 +1539,12 @@ class TestFindDataSet(TestCase):
         dsource = DataSource.objects.create(id=1,
                                             type=dstype,
                                             uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.filters_dump = json.dumps({'tag': 'test'})
         DataSet.objects.create(id=1,
                                project=proj,
                                datasource=dsource,
                                category='issues',
-                               filters={'tag': 'test'})
+                               filters=self.filters_dump)
 
     def test_dataset(self):
         """Test if a dataset is found by its id"""
@@ -1498,8 +1557,8 @@ class TestFindDataSet(TestCase):
         self.assertEqual(dset.project.id, 1)
         self.assertEqual(dset.datasource.id, 1)
         self.assertEqual(dset.category, 'issues')
-        self.assertEqual(dset.filters, {'tag': 'test'})
-        self.assertEqual(dset.filters_hash, 'db8d8baf5ed0ccacc8bf6600e046ac883858ba20')
+        self.assertEqual(dset.filters, self.filters_dump)
+        self.assertEqual(dset.filters_hash, 'fc10bdc3c31ba18ced520da72bb39607d6919b4d')
 
     def test_dataset_not_found(self):
         """Test whether it raises an exception when the dataset is not found"""
@@ -1543,8 +1602,8 @@ class TestAddDataSet(TestCase):
         self.assertEqual(dset.project, self.project)
         self.assertEqual(dset.datasource, self.dsource)
         self.assertEqual(dset.category, category)
-        self.assertEqual(dset.filters, {})
-        self.assertEqual(dset.filters_hash, 'bf21a9e8fbc5a3846fb05b4fa0859e0917b2202f')
+        self.assertEqual(dset.filters, '{}')
+        self.assertEqual(dset.filters_hash, '361e62c2867dd0ef6df55af608898e82b4d020f4')
 
         dset_db = DataSet.objects.get(id=dset.id)
         self.assertIsInstance(dset_db, DataSet)
@@ -1694,7 +1753,7 @@ class TestDeleteDataSet(TestCase):
                                            project=project,
                                            datasource=dsource,
                                            category='issues',
-                                           filters={'tag': 'test'})
+                                           filters=json.dumps({'tag': 'test'}))
 
         self.trxl = TransactionsLog.open('delete_dataset', self.ctx)
 
@@ -1765,11 +1824,12 @@ class TestUpdateDataSet(TestCase):
         self.dsource = DataSource.objects.create(id=1,
                                                  type=dstype,
                                                  uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.filters_dump = json.dumps({'tag': 'test'})
         self.dataset = DataSet.objects.create(id=1,
                                               project=self.project,
                                               datasource=self.dsource,
                                               category='issues',
-                                              filters={'tag': 'test'})
+                                              filters=self.filters_dump)
 
         self.trxl = TransactionsLog.open('update_dataset', self.ctx)
 
@@ -1788,8 +1848,8 @@ class TestUpdateDataSet(TestCase):
         self.assertEqual(self.dataset, up_dataset)
 
         self.assertEqual(up_dataset.category, 'pull-requests')
-        self.assertEqual(up_dataset.filters, {'author': 'Mike'})
-        self.assertEqual(up_dataset.filters_hash, '6e268704f59d3fcd50b016e6ff315d8ce96bb527')
+        self.assertEqual(up_dataset.filters, '{"author": "Mike"}')
+        self.assertEqual(up_dataset.filters_hash, '7deb89121f116d1c0c4ba381d4f9985441752466')
         self.assertEqual(up_dataset.id, dataset_id)
 
         # Check database object
@@ -1861,11 +1921,12 @@ class TestUpdateDataSet(TestCase):
     def test_filters_unique(self):
         """Check if it fails when updating filters with a duplicate dict"""
 
+        filters_dump = json.dumps({'tag': 'test', 'user': 'Mike'}, sort_keys=True)
         DataSet.objects.create(id=2,
                                project=self.project,
                                datasource=self.dsource,
                                category='issues',
-                               filters={'tag': 'test', 'user': 'Mike'})
+                               filters=filters_dump)
 
         args = {'filters': {'user': 'Mike', 'tag': 'test'}}
         with self.assertRaisesRegex(AlreadyExistsError, DUPLICATED_DATASET_ERROR):
@@ -1937,11 +1998,12 @@ class TestLinkDatasetProject(TestCase):
         self.dsource = DataSource.objects.create(id=1,
                                                  type=dsource_type,
                                                  uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.filters_dump = json.dumps({'tag': 'test'})
         self.dataset = DataSet.objects.create(id=1,
                                               project=self.project,
                                               datasource=self.dsource,
                                               category='issues',
-                                              filters={'tag': 'test'})
+                                              filters=self.filters_dump)
 
         self.trxl = TransactionsLog.open('link_dataset_project', self.ctx)
 
@@ -1961,7 +2023,7 @@ class TestLinkDatasetProject(TestCase):
         self.assertEqual(dataset.project.id, new_proj.id)
         self.assertEqual(dataset.datasource, self.dsource)
         self.assertEqual(dataset.category, 'issues')
-        self.assertEqual(dataset.filters, {'tag': 'test'})
+        self.assertEqual(dataset.filters, self.filters_dump)
 
     def test_last_modified(self):
         """Check if last modification date is updated"""

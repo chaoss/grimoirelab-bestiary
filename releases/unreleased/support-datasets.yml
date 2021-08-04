@@ -1,0 +1,12 @@
+---
+title: Support data sets
+category: added
+author: Jose Javier Merchante <jjmerchante@cauldron.io>
+issue: 83
+notes: >
+    This feature allows to add data sets to Bestiary.
+    Each data set is defined as a backend and an URI,
+    belongs to a project, has it's own category of analysis
+    and could have some filters.
+    There are new queries allowing to get or delete these
+    new data sets, including optional filters and pagination.

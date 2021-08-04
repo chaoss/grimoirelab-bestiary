@@ -19,6 +19,7 @@
 #     Santiago Dueñas <sduenas@bitergia.com>
 #     Miguel Ángel Fernández <mafesan@bitergia.com>
 #
+import json
 
 import django.test
 import graphene
@@ -34,10 +35,12 @@ from bestiary.core.context import BestiaryContext
 from bestiary.core.log import TransactionsLog
 from bestiary.core.models import (Ecosystem,
                                   Project,
+                                  DataSet,
+                                  DataSourceType,
+                                  DataSource,
                                   Transaction,
                                   Operation)
 from bestiary.core.schema import BestiaryQuery, BestiaryMutation
-
 
 AUTHENTICATION_ERROR = "You do not have permission to perform this action"
 DUPLICATED_ECO_ERROR = "Ecosystem 'Example' already exists in the registry"
@@ -51,6 +54,9 @@ ECOSYSTEM_DOES_NOT_EXIST_ERROR = "Ecosystem ID 11111111 not found in the registr
 PROJECT_DOES_NOT_EXIST_ERROR = "Project ID 11111111 not found in the registry"
 PARENT_PROJECT_ERROR = "Project cannot be its own parent"
 INVALID_NAME_WHITESPACES = "'name' cannot contain whitespace characters"
+DATASOURCE_NAME_DOES_NOT_EXIST_ERROR = "DataSourceType name .+ not found in the registry"
+DUPLICATED_DATASET_ERROR = "DataSet '.+' already exists in the registry"
+DATASET_DOES_NOT_EXIST_ERROR = "DataSet ID .+ not found in the registry"
 
 # Test queries
 BT_TRANSACTIONS_QUERY = """{
@@ -369,7 +375,81 @@ BT_PROJECTS_QUERY_PAGINATION = """{
     }
   }
 }"""
-
+BT_DATASETS_QUERY = """{
+  datasets {
+    entities {
+      id
+      datasource {
+        type {
+          name
+        }
+        uri
+      }
+      category
+      project {
+        id
+        name
+      }
+      filters
+    }
+  }
+}"""
+BT_DATASETS_QUERY_FILTER = """{
+  datasets (
+    filters: {
+      projectId: %d
+      category: "%s"
+    }
+  ) {
+    entities {
+      id
+      datasource {
+        type {
+          name
+        }
+        uri
+      }
+      category
+      project {
+        id
+        name
+      }
+      filters
+    }
+  }
+}"""
+BT_DATASETS_QUERY_PAGINATION = """{
+  datasets (
+    page: %d
+    pageSize: %d
+  ){
+    entities {
+      id
+      datasource {
+        type {
+          name
+        }
+        uri
+      }
+      category
+      project {
+        id
+        name
+      }
+      filters
+    }
+    pageInfo{
+      page
+      pageSize
+      numPages
+      hasNext
+      hasPrev
+      startIndex
+      endIndex
+      totalResults
+    }
+  }
+}"""
 # API endpoint to obtain a context for executing queries
 GRAPHQL_ENDPOINT = '/graphql/'
 
@@ -902,8 +982,10 @@ class TestQueryProjects(django.test.TestCase):
         self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
         self.context_value.user = self.user
 
+        self.eco = Ecosystem.objects.create(name='Eco-example')
         self.proj = Project(name='Example',
-                            title='Example title')
+                            title='Example title',
+                            ecosystem=self.eco)
         self.proj.save()
 
     def test_project(self):
@@ -921,7 +1003,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
     def test_filter_registry(self):
         """Check whether it returns the project searched when using filters"""
@@ -939,7 +1021,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
     def test_filter_non_existing_registry(self):
         """Check whether it returns an empty list when searched with a non existing project"""
@@ -984,11 +1066,13 @@ class TestQueryProjects(django.test.TestCase):
 
         # Creating additional projects
         proj1 = Project(name='Example-1',
-                        title='Example title 1')
+                        title='Example title 1',
+                        ecosystem=self.eco)
         proj1.save()
 
         proj2 = Project(name='Example-2',
-                        title='Example title 2')
+                        title='Example title 2',
+                        ecosystem=self.eco)
         proj2.save()
 
         client = graphene.test.Client(schema)
@@ -1004,14 +1088,14 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example')
         self.assertEqual(proj['title'], 'Example title')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         proj = projects[1]
         self.assertEqual(proj['id'], str(proj1.id))
         self.assertEqual(proj['name'], 'Example-1')
         self.assertEqual(proj['title'], 'Example title 1')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         pag_data = executed['data']['projects']['pageInfo']
         self.assertEqual(len(pag_data), 8)
@@ -1037,7 +1121,7 @@ class TestQueryProjects(django.test.TestCase):
         self.assertEqual(proj['name'], 'Example-2')
         self.assertEqual(proj['title'], 'Example title 2')
         self.assertEqual(proj['parentProject'], None)
-        self.assertEqual(proj['ecosystem'], None)
+        self.assertEqual(proj['ecosystem']['id'], str(self.eco.id))
 
         pag_data = executed['data']['projects']['pageInfo']
         self.assertEqual(len(pag_data), 8)
@@ -1076,6 +1160,196 @@ class TestQueryProjects(django.test.TestCase):
         client = graphene.test.Client(schema)
 
         executed = client.execute(BT_PROJECTS_QUERY,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestQueryDatasets(django.test.TestCase):
+    """Unit tests for dataset queries"""
+
+    def setUp(self):
+        """Load initial dataset and set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.eco)
+        self.dstype = DataSourceType.objects.create(name='GitHub')
+        self.dsource = DataSource.objects.create(id=1,
+                                                 type=self.dstype,
+                                                 uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.filters = {'tag': 'test'}
+        self.dataset = DataSet.objects.create(id=1,
+                                              project=self.project,
+                                              datasource=self.dsource,
+                                              category='issues',
+                                              filters=json.dumps(self.filters))
+
+    def test_dataset(self):
+        """Check if it returns the list of datasets"""
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_DATASETS_QUERY,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(self.dataset.id))
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], self.dsource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertEqual(dataset['filters'], self.filters)
+
+    def test_filter_registry(self):
+        """Check whether it returns the project searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_DATASETS_QUERY_FILTER % (self.project.id, 'issues')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(self.dataset.id))
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], self.dsource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertEqual(dataset['filters'], self.filters)
+
+    def test_filter_non_existing_registry(self):
+        """Check whether it returns an empty list when searched with a non existing dataset"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_DATASETS_QUERY_FILTER % (11111111, 'unknown')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertListEqual(datasets, [])
+
+    def test_pagination(self):
+        """Check whether it returns the projects searched when using pagination"""
+
+        # Creating additional datasets
+        dataset2 = DataSet.objects.create(id=2,
+                                          project=self.project,
+                                          datasource=self.dsource,
+                                          category='pull-requests',
+                                          filters=json.dumps({'tag': 'test'}))
+
+        dataset3 = DataSet.objects.create(id=3,
+                                          project=self.project,
+                                          datasource=self.dsource,
+                                          category='issues',
+                                          filters=json.dumps({'tag': 'test2'}))
+
+        client = graphene.test.Client(schema)
+        test_query = BT_DATASETS_QUERY_PAGINATION % (1, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertEqual(len(datasets), 2)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(self.dataset.id))
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], self.dsource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertEqual(dataset['filters'], self.filters)
+
+        dataset = datasets[1]
+        self.assertEqual(dataset['id'], str(dataset2.id))
+        self.assertEqual(dataset['project']['id'], str(dataset2.project.id))
+        self.assertEqual(dataset['project']['name'], dataset2.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], dataset2.datasource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], dataset2.datasource.uri)
+        self.assertEqual(dataset['category'], dataset2.category)
+        self.assertEqual(dataset['filters'], {'tag': 'test'})
+
+        pag_data = executed['data']['datasets']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 1)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertTrue(pag_data['hasNext'])
+        self.assertFalse(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 1)
+        self.assertEqual(pag_data['endIndex'], 2)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+        # Testing whether it returns different results in the second page
+        test_query = BT_DATASETS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(dataset3.id))
+        self.assertEqual(dataset['project']['id'], str(dataset3.project.id))
+        self.assertEqual(dataset['project']['name'], dataset3.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], dataset3.datasource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], dataset3.datasource.uri)
+        self.assertEqual(dataset['category'], dataset3.category)
+        self.assertEqual(dataset['filters'], {'tag': 'test2'})
+
+        pag_data = executed['data']['datasets']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 2)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertFalse(pag_data['hasNext'])
+        self.assertTrue(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 3)
+        self.assertEqual(pag_data['endIndex'], 3)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+    def test_empty_registry(self):
+        """Check whether it returns an empty list when the registry is empty"""
+
+        # Delete Projects created in `setUp` method
+        DataSet.objects.all().delete()
+        datasets = DataSet.objects.all()
+
+        self.assertEqual(len(datasets), 0)
+
+        # Test query
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_DATASETS_QUERY,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertListEqual(datasets, [])
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_DATASETS_QUERY,
                                   context_value=context_value)
 
         msg = executed['errors'][0]['message']
@@ -1492,6 +1766,189 @@ class TestAddProjectMutation(django.test.TestCase):
         self.assertEqual(msg, AUTHENTICATION_ERROR)
 
 
+class TestAddDatasetMutation(django.test.TestCase):
+    """Unit tests for mutation to add datasets"""
+
+    BT_ADD_DATASET = """
+      mutation addDatasetTest ($projectId: ID,
+                           $datasourceName:String,
+                           $uri: String,
+                           $category: String,
+                           $filters: JSONString) {
+        addDataset(projectId: $projectId,
+                   datasourceName: $datasourceName,
+                   uri: $uri,
+                   category: $category,
+                   filters: $filters)
+        {
+          dataset {
+            id
+            datasource {
+              type {
+                name
+              }
+              uri
+            }
+            category
+            project {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.eco)
+        self.dstype = DataSourceType.objects.create(id=1, name='GitHub')
+
+    def test_add_dataset(self):
+        """Check if a new dataset is added"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitHub',
+            'uri': 'https://github.com/chaoss/grimoirelab-bestiary',
+            'category': 'issues',
+            'filters': '{"a": 1}'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        dataset = executed['data']['addDataset']['dataset']
+
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], 'GitHub')
+        self.assertEqual(dataset['datasource']['uri'],
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset['category'], 'issues')
+
+        # Check database
+        dset_db = DataSet.objects.get(id=int(dataset['id']))
+        self.assertEqual(dset_db.id, int(dataset['id']))
+        self.assertEqual(dset_db.project.id, self.project.id)
+        self.assertEqual(dset_db.project.name, self.project.name)
+        self.assertEqual(dset_db.datasource.type.name, 'GitHub')
+        self.assertEqual(dset_db.datasource.uri,
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dset_db.category, 'issues')
+
+    def test_not_found_project(self):
+        """Check whether datasets cannot be added when the project is not found"""
+
+        Project.objects.filter(id=11111111).delete()
+        params = {
+            'projectId': 11111111,
+            'datasourceName': 'GitHub',
+            'uri': 'https://github.com/chaoss/grimoirelab',
+            'category': 'issues',
+            'filters': '{"a": 1}'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        datasets = DataSet.objects.filter(
+            datasource__uri='https://github.com/chaoss/grimoirelab')
+        self.assertEqual(len(datasets), 0)
+
+    def test_not_found_parent(self):
+        """Check whether datasets cannot be added when the data source type is not found"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitLab',
+            'uri': 'https://github.com/chaoss/grimoirelab',
+            'category': 'issues',
+            'filters': '{"a": 1}'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DATASOURCE_NAME_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        datasets = DataSet.objects.filter(
+            datasource__uri='https://github.com/chaoss/grimoirelab')
+        self.assertEqual(len(datasets), 0)
+
+    def test_integrity_error(self):
+        """Check whether there shouldn't be identical data sets"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitHub',
+            'uri': 'https://github.com/chaoss/grimoirelab-bestiary',
+            'category': 'issues',
+            'filters': '{}'
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+        dataset = executed['data']['addDataset']['dataset']
+        dataset_id = int(dataset['id'])
+
+        # Check database
+        dataset_db = DataSet.objects.get(id=dataset_id)
+        self.assertEqual(dataset_db.id, dataset_id)
+        self.assertEqual(dataset_db.project.id, self.project.id)
+        self.assertEqual(dataset_db.project.name, self.project.name)
+        self.assertEqual(dataset_db.datasource.type.name, 'GitHub')
+        self.assertEqual(dataset_db.datasource.uri,
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset_db.category, 'issues')
+        self.assertEqual(dataset_db.filters, '{}')
+
+        # Try to insert it twice
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DUPLICATED_DATASET_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_ADD_DATASET,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
 class TestDeleteEcosystemMutation(django.test.TestCase):
     """Unit tests for mutation to delete ecosystems"""
 
@@ -1665,6 +2122,115 @@ class TestDeleteProjectMutation(django.test.TestCase):
         client = graphene.test.Client(schema)
 
         executed = client.execute(self.BT_DELETE_PROJECT,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestDeleteDatasetMutation(django.test.TestCase):
+    """Unit tests for mutation to delete datasets"""
+
+    BT_DELETE_DATASET = """
+      mutation delDatasetTest($id: ID) {
+        deleteDataset(id: $id) {
+          dataset {
+            id
+            datasource {
+              type {
+                name
+              }
+              uri
+            }
+            category
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(id=1, name='GitHub')
+
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dataset_1 = DataSet.objects.create(id=1,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='issues',
+                                                filters=json.dumps({'tag': 'test'}))
+
+        self.dataset_2 = DataSet.objects.create(id=2,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='pull-requests',
+                                                filters=json.dumps({'tag': 'test'}))
+
+    def test_delete_dataset(self):
+        """Check whether it deletes a dataset"""
+
+        # Delete project
+        params = {
+            'id': 1
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        dataset = executed['data']['deleteDataset']['dataset']
+        self.assertEqual(dataset['id'], '1')
+        self.assertEqual(dataset['datasource']['type']['name'], 'GitHub')
+        self.assertEqual(dataset['datasource']['uri'],
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset['category'], 'issues')
+
+        # Tests
+        with self.assertRaises(django.core.exceptions.ObjectDoesNotExist):
+            DataSet.objects.get(id=1)
+
+        ndatasets = DataSet.objects.count()
+        self.assertEqual(ndatasets, 1)
+
+    def test_not_found_dataset(self):
+        """Check if it returns an error when a dataset does not exist"""
+
+        params = {
+            'id': 11111111
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DATASET_DOES_NOT_EXIST_ERROR)
+
+        datasets = DataSet.objects.all()
+        self.assertEqual(len(datasets), 2)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_DELETE_DATASET,
                                   context_value=context_value)
 
         msg = executed['errors'][0]['message']
