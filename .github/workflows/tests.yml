@@ -1,0 +1,81 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - unicorn
+    tags:
+      - '!**'
+  pull_request:
+    branches:
+      - unicorn
+
+jobs:
+
+  backend:
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install and set up Poetry
+      run: |
+        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+        echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        poetry install -vvv
+    - name: Set MySQL mode
+      env:
+        DB_HOST: 127.0.0.1
+        DB_PORT: ${{ job.services.mysql.ports[3306] }}
+      run: |
+        mysql --host $DB_HOST --port $DB_PORT -uroot -proot -e "SET GLOBAL sql_mode = 'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'";
+    - name: Lint with flake8
+      run: |
+        poetry run flake8
+    - name: Tests
+      run: |
+        poetry run python manage.py test --settings=config.settings.testing
+
+  frontend:
+
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x]
+
+    runs-on: ubuntu-latest
+    name: Node ${{ matrix.node-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        working-directory: ./ui
+        run: yarn install
+      - name: Run ESLint
+        working-directory: ./ui
+        run: yarn lint
+      - name: Run unit tests
+        working-directory: ./ui
+        run: yarn test:unit

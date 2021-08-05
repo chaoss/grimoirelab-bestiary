@@ -28,7 +28,7 @@ from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 readme_md = os.path.join(here, 'README.md')
-#version_py = os.path.join(here, 'bestiary', '_version.py')
+# version_py = os.path.join(here, 'bestiary', '_version.py')
 
 # Pypi wants the description to be in reStrcuturedText, but
 # we have it in Markdown. So, let's convert formats.
@@ -38,12 +38,12 @@ try:
     import pypandoc
     long_description = pypandoc.convert(readme_md, 'rst')
 except (IOError, ImportError):
-    print("Warning: pypandoc module not found, or pandoc not installed. "
-          + "Using md instead of rst")
+    print("Warning: pypandoc module not found, or pandoc not installed. " +
+          "Using md instead of rst")
     with codecs.open(readme_md, encoding='utf-8') as f:
         long_description = f.read()
 
-#with codecs.open(version_py, 'r', encoding='utf-8') as fd:
+# with codecs.open(version_py, 'r', encoding='utf-8') as fd:
 #    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
 #                        fd.read(), re.MULTILINE).group(1)
 version = '0.1.0-dev'
