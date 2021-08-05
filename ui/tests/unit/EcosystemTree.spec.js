@@ -103,7 +103,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const projectTo = {
@@ -128,7 +128,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const projectTo = {
@@ -156,7 +156,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const projectTo = {
@@ -185,7 +185,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const ecosystemTo = {
@@ -209,7 +209,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const projectTo = {
@@ -236,7 +236,7 @@ describe("EcosystemTree", () => {
               id: 0
             }
           }
-        }
+        };
       }
     });
     const projectTo = {

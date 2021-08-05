@@ -1,11 +1,11 @@
 import { mount, createLocalVue } from "@vue/test-utils";
 import Vue from "vue";
 import Vuetify from "vuetify";
-import VueRouter from 'vue-router';
+import VueRouter from "vue-router";
 import ProjectList from "@/components/ProjectList";
 import router from "@/router";
 
-Vue.use(Vuetify)
+Vue.use(Vuetify);
 const localVue = createLocalVue();
 localVue.use(Vuetify);
 localVue.use(VueRouter);
@@ -85,7 +85,8 @@ describe("ProjectList", () => {
     expect(child.attributes().href).toContain("/ecosystem/1/project/child");
 
     const grandchild = listItems.at(2);
-    expect(grandchild.attributes().href)
-      .toContain("/ecosystem/1/project/grandchild");
+    expect(grandchild.attributes().href).toContain(
+      "/ecosystem/1/project/grandchild"
+    );
   });
 });

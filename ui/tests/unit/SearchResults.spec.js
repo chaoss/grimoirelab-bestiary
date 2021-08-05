@@ -1,4 +1,4 @@
-import { shallowMount, createLocalVue } from "@vue/test-utils";
+import { shallowMount } from "@vue/test-utils";
 import Vue from "vue";
 import Vuetify from "vuetify";
 import SearchResults from "@/views/SearchResults";
@@ -26,7 +26,9 @@ describe("SearchResults", () => {
       }
     });
 
-    expect(wrapper.vm.setValue).toBe(`filter1:"value" filter2:"filter 2 value"`)
+    expect(wrapper.vm.setValue).toBe(
+      `filter1:"value" filter2:"filter 2 value"`
+    );
   });
 
   test("Gets project path from parents", () => {
@@ -35,11 +37,11 @@ describe("SearchResults", () => {
         $route: {
           query: {}
         }
-      },
+      }
     });
     const project = {
       name: "sub-subproject",
-      ecosystem: { name: "ecosystem"},
+      ecosystem: { name: "ecosystem" },
       parentProject: {
         name: "subproject",
         parentProject: {
@@ -51,5 +53,5 @@ describe("SearchResults", () => {
     const path = wrapper.vm.getPath(project);
 
     expect(path).toBe("ecosystem / project / subproject / sub-subproject");
-  })
+  });
 });

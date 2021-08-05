@@ -56,4 +56,4 @@ describe("Breadcrumbs", () => {
     const grandchild = breadcrumbs.at(3);
     expect(grandchild.text()).toBe("grandchild");
   });
-})
+});

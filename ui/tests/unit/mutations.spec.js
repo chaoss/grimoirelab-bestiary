@@ -237,11 +237,7 @@ describe("Login mutations", () => {
       }
     });
 
-    const response = await Mutations.tokenAuth(
-      wrapper.vm.$apollo,
-      "username",
-      "password"
-    );
+    await Mutations.tokenAuth(wrapper.vm.$apollo, "username", "password");
 
     expect(mutate).toBeCalled();
     expect(wrapper.element).toMatchSnapshot();

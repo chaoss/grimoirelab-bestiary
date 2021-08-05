@@ -32,34 +32,29 @@ describe("Search", () => {
   });
 
   test("Shows selected filter on the search box", async () => {
-      const wrapper = mountFunction({
-        propsData: {
-          filterSelector: true,
-          validFilters: [
-            { filter: "testFilter" }
-          ]
-        }
-      });
+    const wrapper = mountFunction({
+      propsData: {
+        filterSelector: true,
+        validFilters: [{ filter: "testFilter" }]
+      }
+    });
 
-      const el = document.createElement("div");
-      el.setAttribute("data-app", true);
-      document.body.appendChild(el);
+    const el = document.createElement("div");
+    el.setAttribute("data-app", true);
+    document.body.appendChild(el);
 
-      const button = wrapper.find(".btn--focusable");
-      await button.trigger("click");
-      const filter = wrapper.find(".v-list-item");
-      await filter.trigger("click");
+    const button = wrapper.find(".btn--focusable");
+    await button.trigger("click");
+    const filter = wrapper.find(".v-list-item");
+    await filter.trigger("click");
 
-      expect(wrapper.vm.inputValue).toContain(`testFilter:"search value"`);
-    }
-  );
+    expect(wrapper.vm.inputValue).toContain(`testFilter:"search value"`);
+  });
 
   test("Validates filters", async () => {
     const wrapper = mountFunction({
       propsData: {
-        validFilters: [
-          { filter: "testFilter" }
-        ]
+        validFilters: [{ filter: "testFilter" }]
       },
       data: () => ({ inputValue: "invalidFilter:test" })
     });
@@ -70,5 +65,5 @@ describe("Search", () => {
 
     expect(errorMessage.exists()).toBe(true);
     expect(errorMessage.text()).toContain("Invalid filter");
-  })
-})
+  });
+});
