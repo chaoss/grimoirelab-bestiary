@@ -17,6 +17,7 @@ PyJWT = "^1.7.0"
 django-cors-headers = "^3.7.0"
 
 [tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

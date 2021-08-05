@@ -1,4 +1,4 @@
-# Bestiary
+# Bestiary [![Build Status](https://github.com/chaoss/grimoirelab-bestiary/workflows/tests/badge.svg?branch=unicorn)](https://github.com/chaoss/grimoirelab-bestiary/actions?query=workflow:tests+branch:unicorn+event:push)
 
 **Warning**: This is the developing branch of the new version of Bestiary. We're moving Bestiary into a service.
 The documentation below would be totally incorrect or inaccurate. 
