@@ -1,0 +1,9 @@
+@import '_variables';
+
+.v-list-item:not(:last-child) {
+  border-bottom: thin solid $border-color;
+}
+
+.v-list-item--link::before {
+  background-color: $info-color;
+}

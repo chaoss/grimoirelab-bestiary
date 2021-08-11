@@ -3,7 +3,9 @@
     <div class="d-flex justify-space-between">
       <h3 class="text-h6 d-flex align-center">
         Projects
-        <v-chip small pill class="ml-2">{{ list.length }}</v-chip>
+        <v-chip small pill class="ml-2 info--text" color="info--background">
+          {{ list.length }}
+        </v-chip>
       </h3>
       <v-btn
         class="primary--text button--lowercase"
@@ -94,14 +96,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import "../styles/_buttons";
+@import "../styles/_lists";
+
 ::v-deep .v-list-item__title span {
   font-weight: 500;
-}
-.button--lowercase {
-  text-transform: none;
-  letter-spacing: normal;
-}
-.v-list-item:not(:last-child) {
-  border-bottom: thin solid rgba(0, 0, 0, 0.12);
 }
 </style>
