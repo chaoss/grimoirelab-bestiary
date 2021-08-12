@@ -394,11 +394,35 @@ BT_DATASETS_QUERY = """{
     }
   }
 }"""
-BT_DATASETS_QUERY_FILTER = """{
+BT_DATASETS_QUERY_FILTER_CATEGORY = """{
   datasets (
     filters: {
       projectId: %d
       category: "%s"
+    }
+  ) {
+    entities {
+      id
+      datasource {
+        type {
+          name
+        }
+        uri
+      }
+      category
+      project {
+        id
+        name
+      }
+      filters
+    }
+  }
+}"""
+BT_DATASETS_QUERY_FILTER_URI = """{
+  datasets (
+    filters: {
+      projectId: %d
+      uri: "%s"
     }
   ) {
     entities {
@@ -1212,11 +1236,11 @@ class TestQueryDatasets(django.test.TestCase):
         self.assertEqual(dataset['category'], 'issues')
         self.assertEqual(dataset['filters'], self.filters)
 
-    def test_filter_registry(self):
+    def test_filter_category(self):
         """Check whether it returns the project searched when using filters"""
 
         client = graphene.test.Client(schema)
-        test_query = BT_DATASETS_QUERY_FILTER % (self.project.id, 'issues')
+        test_query = BT_DATASETS_QUERY_FILTER_CATEGORY % (self.project.id, 'issues')
         executed = client.execute(test_query,
                                   context_value=self.context_value)
 
@@ -1236,12 +1260,40 @@ class TestQueryDatasets(django.test.TestCase):
         """Check whether it returns an empty list when searched with a non existing dataset"""
 
         client = graphene.test.Client(schema)
-        test_query = BT_DATASETS_QUERY_FILTER % (11111111, 'unknown')
+        test_query = BT_DATASETS_QUERY_FILTER_CATEGORY % (11111111, 'unknown')
         executed = client.execute(test_query,
                                   context_value=self.context_value)
 
         datasets = executed['data']['datasets']['entities']
         self.assertListEqual(datasets, [])
+
+        test_query = BT_DATASETS_QUERY_FILTER_URI % (self.project.id, 'unknown')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertListEqual(datasets, [])
+
+    def test_filter_uri(self):
+        """Check whether it returns the project searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_DATASETS_QUERY_FILTER_URI % (self.project.id,
+                                                     'https://github.com/chaoss/grimoirelab-bestiary')
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(self.dataset.id))
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], self.dsource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertEqual(dataset['filters'], self.filters)
 
     def test_pagination(self):
         """Check whether it returns the projects searched when using pagination"""

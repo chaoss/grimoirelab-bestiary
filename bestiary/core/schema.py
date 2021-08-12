@@ -703,6 +703,8 @@ class BestiaryQuery(graphene.ObjectType):
             query = query.filter(datasource__type=filters['datasource_name'])
         if filters and 'category' in filters:
             query = query.filter(category=filters['category'])
+        if filters and 'uri' in filters:
+            query = query.filter(datasource__uri=filters['uri'])
 
         return DatasetPaginatedType.create_paginated_result(query,
                                                             page,
