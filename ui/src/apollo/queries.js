@@ -151,6 +151,28 @@ const GET_PROJECT_BY_NAME = gql`
   ${datasetFragment}
 `;
 
+const GET_DATASET_BY_URI = gql`
+  query getDatasetsByUri($projectId: ID!, $uri: String!) {
+    datasets(filters: { uri: $uri, projectId: $projectId }) {
+      entities {
+        id
+        category
+        filters
+        datasource {
+          type {
+            name
+          }
+          uri
+        }
+        project {
+          ...projectFields
+        }
+      }
+    }
+  }
+  ${projectFragment}
+`;
+
 const getEcosystems = (apollo, pageSize, page) => {
   const response = apollo.query({
     query: GET_ECOSYSTEMS,
@@ -225,6 +247,7 @@ const getDatasetsByUri = (apollo, projectId, uri) => {
 };
 
 export {
+  getDatasetsByUri,
   getEcosystems,
   getEcosystemByID,
   getBasicProjectInfo,

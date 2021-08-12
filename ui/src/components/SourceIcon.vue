@@ -1,9 +1,5 @@
 <template>
-  <v-icon
-    v-text="getIcon(source)"
-    :color="color"
-    :small="small"
-  />
+  <v-icon v-text="getIcon(source)" :color="color" :small="small" />
 </template>
 <script>
 export default {
@@ -49,5 +45,5 @@ export default {
       }
     }
   }
-}
+};
 </script>

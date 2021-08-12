@@ -54,6 +54,12 @@ const router = new Router({
           path: "/search",
           component: () => import("../views/SearchResults"),
           meta: { requiresAuth: true }
+        },
+        {
+          name: "datasource",
+          path: "/project/:id/datasource/:uri",
+          component: () => import("../views/Datasource"),
+          meta: { requiresAuth: true }
         }
       ]
     },
