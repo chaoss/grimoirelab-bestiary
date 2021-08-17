@@ -41,10 +41,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import "../styles/_lists";
+
 ::v-deep .v-list-item__title span {
   font-weight: 500;
-}
-.v-list-item--link::before {
-  background-color: #003756;
 }
 </style>

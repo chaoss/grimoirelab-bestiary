@@ -28,7 +28,10 @@
       :projects="project.subprojects"
       :ecosystem-id="ecosystemId"
       :parent-project="{ name: project.name, id: project.id }"
+      class="mb-9"
     />
+
+    <datasource-list :items="project.datasetSet" :project-id="project.id" />
   </div>
 </template>
 
@@ -38,10 +41,11 @@ import { deleteProject } from "../apollo/mutations";
 import { getProjectBreadcrumbs } from "../utils";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectList from "../components/ProjectList";
+import DatasourceList from "../components/DatasourceList";
 
 export default {
   name: "Project",
-  components: { Breadcrumbs, ProjectList },
+  components: { Breadcrumbs, ProjectList, DatasourceList },
   data() {
     return {
       project: null
