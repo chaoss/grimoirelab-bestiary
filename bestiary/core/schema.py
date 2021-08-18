@@ -52,6 +52,8 @@ from .models import (Ecosystem,
                      Operation,
                      DataSourceType,
                      DataSource)
+from .jobs import (find_job,
+                   get_jobs)
 
 
 @convert_django_field.register(JSONField)
@@ -152,6 +154,25 @@ class DataSourceTypeModelType(DjangoObjectType):
 class DataSourceModelType(DjangoObjectType):
     class Meta:
         model = DataSource
+
+
+class SampleJobResultType(graphene.ObjectType):
+    uuid = graphene.String()
+
+
+class JobResultType(graphene.Union):
+    class Meta:
+        # Remove SampleJobResultType and its class when adding new one
+        types = (SampleJobResultType,)
+
+
+class JobType(graphene.ObjectType):
+    job_id = graphene.String(description='Job identifier.')
+    job_type = graphene.String(description='Type of job.')
+    status = graphene.String(description='Job status (`started`, `deferred`, `finished`, `failed` or `scheduled`).')
+    result = graphene.List(JobResultType, description='List of job results.')
+    errors = graphene.List(graphene.String, description='List of errors.')
+    enqueued_at = graphene.DateTime(description='Time the job was enqueued at.')
 
 
 class EcosystemInputType(graphene.InputObjectType):
@@ -393,6 +414,11 @@ class DatasetPaginatedType(AbstractPaginatedType):
 
     entities = graphene.List(DatasetType)
     page_info = graphene.Field(PaginationType)
+
+
+class JobPaginatedType(AbstractPaginatedType):
+    entities = graphene.List(JobType, description='A list of jobs.')
+    page_info = graphene.Field(PaginationType, description='Information to aid in pagination.')
 
 
 class AddEcosystem(graphene.Mutation):
@@ -647,6 +673,17 @@ class BestiaryQuery(graphene.ObjectType):
         page=graphene.Int(),
         filters=OperationFilterType(required=False),
     )
+    job = graphene.Field(
+        JobType,
+        job_id=graphene.String(),
+        description='Find a single job by its id.'
+    )
+    jobs = graphene.Field(
+        JobPaginatedType,
+        page_size=graphene.Int(),
+        page=graphene.Int(),
+        description='Get all jobs.'
+    )
 
     @check_auth
     def resolve_ecosystems(self, info, filters=None,
@@ -757,6 +794,50 @@ class BestiaryQuery(graphene.ObjectType):
         return OperationPaginatedType.create_paginated_result(query,
                                                               page,
                                                               page_size=page_size)
+
+    @check_auth
+    def resolve_job(self, info, job_id):
+        job = find_job(job_id)
+
+        status = job.get_status()
+        job_type = job.func_name.split('.')[-1]
+        enqueued_at = job.enqueued_at
+
+        result = None
+        errors = None
+
+        # Include each job type here
+        if status == 'failed':
+            errors = [job.exc_info]
+
+        return JobType(job_id=job_id,
+                       job_type=job_type,
+                       status=status,
+                       result=result,
+                       errors=errors,
+                       enqueued_at=enqueued_at)
+
+    @check_auth
+    def resolve_jobs(self, info, page=1, page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE):
+        jobs = get_jobs()
+        result = []
+
+        for job in jobs:
+            job_id = job.get_id()
+            status = job.get_status()
+            job_type = job.func_name.split('.')[-1]
+            enqueued_at = job.enqueued_at
+
+            result.append(JobType(job_id=job_id,
+                                  job_type=job_type,
+                                  status=status,
+                                  result=[],
+                                  errors=[],
+                                  enqueued_at=enqueued_at))
+
+        return JobPaginatedType.create_paginated_result(result,
+                                                        page,
+                                                        page_size=page_size)
 
 
 class BestiaryMutation(graphene.ObjectType):

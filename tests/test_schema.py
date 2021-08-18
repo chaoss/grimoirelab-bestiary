@@ -20,8 +20,10 @@
 #     Miguel Ángel Fernández <mafesan@bitergia.com>
 #
 import json
+import unittest.mock
 
 import django.test
+import django_rq
 import graphene
 import graphene.test
 
@@ -474,6 +476,55 @@ BT_DATASETS_QUERY_PAGINATION = """{
     }
   }
 }"""
+BT_JOB_QUERY = """{
+  job(
+    jobId:"%s"
+  ){
+    jobId
+    jobType
+    status
+    errors
+    result {
+      __typename
+    }
+  }
+}
+"""
+BT_JOBS_QUERY = """{
+  jobs(page: 1) {
+    entities {
+      jobId
+      jobType
+      status
+      errors
+      result {
+        __typename
+      }
+    }
+  }
+}
+"""
+BT_JOBS_QUERY_PAGINATION = """{
+  jobs(page: %d, pageSize: %d) {
+    entities {
+      jobId
+      jobType
+      status
+      errors
+    }
+    pageInfo{
+      page
+      pageSize
+      numPages
+      hasNext
+      hasPrev
+      startIndex
+      endIndex
+      totalResults
+    }
+  }
+}
+"""
 # API endpoint to obtain a context for executing queries
 GRAPHQL_ENDPOINT = '/graphql/'
 
@@ -1406,6 +1457,176 @@ class TestQueryDatasets(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class MockJob:
+    """Class mock job queries."""
+
+    def __init__(self, job_id, func_name, status, result, error=None):
+        self.id = job_id
+        self.func_name = func_name
+        self.status = status
+        self.result = result
+        self.exc_info = error
+        self.enqueued_at = datetime_utcnow()
+
+    def get_status(self):
+        return self.status
+
+    def get_id(self):
+        return self.id
+
+
+class TestQueryJob(django.test.TestCase):
+    """Unit tests for job queries"""
+
+    def setUp(self):
+        """Set queries context"""
+
+        conn = django_rq.queues.get_redis_connection(None, True)
+        conn.flushall()
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_job(self, mock_job):
+        """Check if it returns an affiliated result type"""
+
+        result = {
+            'results': None,
+            'errors': None
+        }
+
+        job = MockJob('1234-5678-90AB-CDEF', 'sample', 'finished', result)
+        mock_job.return_value = job
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'sample')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], None)
+        self.assertEqual(job_data['result'], None)
+
+    def test_job_not_found(self):
+        """Check if it returns an error when the job is not found"""
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, "1234-5678-90AB-CDEF not found in the registry")
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_failed_job(self, mock_job):
+        """Check if it returns an error when the job has failed"""
+
+        job = MockJob('90AB-CD12-3456-78EF', 'sample', 'failed', None, 'Error')
+        mock_job.return_value = job
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY % '90AB-CD12-3456-78EF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['status'], 'failed')
+        self.assertEqual(job_data['errors'], ['Error'])
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_JOB_QUERY,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+    @unittest.mock.patch('bestiary.core.schema.get_jobs')
+    def test_jobs(self, mock_jobs):
+        """Check if it returns a list of jobs"""
+
+        job = MockJob('1234-5678-90AB-CDEF', 'sample', 'queued', None)
+        mock_jobs.return_value = [job]
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_JOBS_QUERY,
+                                  context_value=self.context_value)
+
+        jobs_entities = executed['data']['jobs']['entities']
+        self.assertEqual(len(jobs_entities), 1)
+        self.assertEqual(jobs_entities[0]['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(jobs_entities[0]['jobType'], 'sample')
+        self.assertEqual(jobs_entities[0]['status'], 'queued')
+        self.assertEqual(jobs_entities[0]['errors'], [])
+        self.assertEqual(jobs_entities[0]['result'], [])
+
+    def test_jobs_no_results(self):
+        """Check if it returns an empty list when no jobs are found"""
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_JOBS_QUERY,
+                                  context_value=self.context_value)
+
+        jobs_entities = executed['data']['jobs']['entities']
+        self.assertEqual(len(jobs_entities), 0)
+
+    @unittest.mock.patch('bestiary.core.schema.get_jobs')
+    def test_jobs_pagination(self, mock_jobs):
+        """Check if it returns a paginated list of jobs"""
+
+        job1 = MockJob('1234-5678-90AB-CDEF', 'sample_1', 'queued', None)
+        job2 = MockJob('5678-5678-90EF-GHIJ', 'sample_2', 'queued', None)
+        job3 = MockJob('9123-5678-90IJ-KLMN', 'sample_3', 'queued', None)
+        mock_jobs.return_value = [job1, job2, job3]
+
+        # Tests
+        client = graphene.test.Client(schema)
+        test_query = BT_JOBS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        jobs_entities = executed['data']['jobs']['entities']
+        self.assertEqual(len(jobs_entities), 1)
+        self.assertEqual(jobs_entities[0]['jobId'], '9123-5678-90IJ-KLMN')
+        self.assertEqual(jobs_entities[0]['jobType'], 'sample_3')
+        self.assertEqual(jobs_entities[0]['status'], 'queued')
+        self.assertEqual(jobs_entities[0]['errors'], [])
+
+        jobs_pagination = executed['data']['jobs']['pageInfo']
+        self.assertEqual(jobs_pagination['page'], 2)
+        self.assertEqual(jobs_pagination['pageSize'], 2)
+        self.assertEqual(jobs_pagination['numPages'], 2)
+        self.assertFalse(jobs_pagination['hasNext'])
+        self.assertTrue(jobs_pagination['hasPrev'])
+        self.assertEqual(jobs_pagination['startIndex'], 3)
+        self.assertEqual(jobs_pagination['endIndex'], 3)
+        self.assertEqual(jobs_pagination['totalResults'], 3)
 
 
 class TestAddEcosystemMutation(django.test.TestCase):
