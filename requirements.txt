@@ -6,3 +6,6 @@ graphene-django>=2.0,<3
 django-graphql-jwt==0.3.1
 PyJWT>=1.7.0,<2.0
 django-cors-headers
+rq>=1.4.0
+django-rq>=2.3.0
+fakeredis>=1.4.1

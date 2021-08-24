@@ -89,6 +89,7 @@ STATIC_URL = '/static/'
 SECRET_KEY = 'fake-key'
 
 INSTALLED_APPS = [
+    'django_rq',
     'bestiary.core',
     'graphene_django',
     'django.contrib.admin',
@@ -128,4 +129,14 @@ GRAPHENE = {
     'MIDDLEWARE': [
         'graphql_jwt.middleware.JSONWebTokenMiddleware',
     ],
+}
+
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'ASYNC': True
+
+    }
 }
