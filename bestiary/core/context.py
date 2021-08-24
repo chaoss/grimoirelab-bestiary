@@ -23,4 +23,7 @@
 import collections
 
 
-BestiaryContext = collections.namedtuple('BestiaryContext', ['user'])
+BestiaryContext = collections.namedtuple(
+    'BestiaryContext', ['user', 'job_id']
+)
+BestiaryContext.__new__.__defaults__ = (None, None)

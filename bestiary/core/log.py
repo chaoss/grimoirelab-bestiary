@@ -42,7 +42,8 @@ class TransactionsLog:
 
     Every object of this class is created using the `open` class method receiving
     as a parameter the name of the method opening the transaction, which creates a
-    `Transaction` object in the database.
+    `Transaction` object in the database. If the context was created by a job,
+    the logger will add the job identifier to the name of the transaction.
 
     The method `log_operation` creates a new `Operation` objects linked to the
     transaction which was generated when the object was instanced. This method
@@ -67,6 +68,9 @@ class TransactionsLog:
     def open(cls, name, ctx):
         """Create a new transaction object and save it into the DB.
 
+        When the context was created by a job, this method will add
+        the job identifier as a suffix to the name of the transaction.
+
         :param name: Name of the method opening the transaction
         :param ctx: Context from the method opening the transaction
 
@@ -81,6 +85,10 @@ class TransactionsLog:
             msg = "ctx.user must be a Django User or AnonymousUser; {} given".format(ctx.__class__.__name__)
             raise TypeError(msg)
 
+        trx_name = name
+        if ctx.job_id:
+            trx_name += '-' + str(ctx.job_id)
+
         tuid = uuid.uuid4().hex
 
         username = None
@@ -89,7 +97,7 @@ class TransactionsLog:
             validate_field('username', username)
 
         trx = Transaction(tuid=tuid,
-                          name=name,
+                          name=trx_name,
                           created_at=datetime_utcnow(),
                           authored_by=username)
 
