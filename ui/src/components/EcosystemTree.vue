@@ -128,6 +128,10 @@ export default {
     deleteEcosystem: {
       type: Function,
       required: true
+    },
+    addDataSet: {
+      type: Function,
+      required: true
     }
   },
   data() {
@@ -184,7 +188,12 @@ export default {
       this.dragged = item;
     },
     handleDrag(item, event, dragged) {
-      if (dragged && this.allowDrag(item)) {
+      const type = event.dataTransfer.getData("type");
+      if (
+        dragged &&
+        (this.allowDrag(item) ||
+          (type === "AddDatasources" && !item.projectSet))
+      ) {
         this.active.push(item.name);
       } else {
         this.active = this.active.filter(project => project.name === item.name);
@@ -207,8 +216,12 @@ export default {
       }
       return false;
     },
-    onDrop(item) {
-      if (this.dragged && this.allowDrag(item)) {
+    onDrop(item, event) {
+      const type = event.dataTransfer.getData("type");
+      if (type === "AddDatasources" && !item.projectSet) {
+        this.addDatasets(item, event);
+        return;
+      } else if (this.dragged && this.allowDrag(item)) {
         const project = this.dragged.id;
         const id = item.ecosystem ? item.id : null;
         const dialog = {
@@ -224,6 +237,41 @@ export default {
     onDragend() {
       this.dragged = null;
       this.active = [];
+    },
+    async addDatasets(project, event) {
+      const added = [];
+      const datasets = JSON.parse(event.dataTransfer.getData("text/plain"));
+      this.active = [];
+
+      try {
+        for (let dataset of datasets) {
+          const mutation = await this.addDataSet(
+            dataset.category,
+            "GitHub",
+            dataset.url,
+            project.id
+          );
+          added.push(
+            Object.assign(mutation, {
+              project: project.id
+            })
+          );
+        }
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      }
+
+      if (added.length !== 0) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: `Added ${added.length} datasets to ${project.title}`,
+          color: "success"
+        });
+      }
     }
   },
   mounted() {
