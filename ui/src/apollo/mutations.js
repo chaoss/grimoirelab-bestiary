@@ -91,6 +91,31 @@ const TOKEN_AUTH = gql`
   }
 `;
 
+const ADD_DATASET = gql`
+  mutation addDataset(
+    $category: String
+    $datasourceName: String
+    $filters: JSONString
+    $projectId: ID!
+    $uri: String
+  ) {
+    addDataset(
+      category: $category
+      datasourceName: $datasourceName
+      filters: $filters
+      projectId: $projectId
+      uri: $uri
+    ) {
+      dataset {
+        id
+        datasource {
+          uri
+        }
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -180,6 +205,27 @@ const tokenAuth = (apollo, username, password) => {
   return response;
 };
 
+const addDataSet = (
+  apollo,
+  category,
+  datasourceName,
+  uri,
+  projectId,
+  filters
+) => {
+  const response = apollo.mutate({
+    mutation: ADD_DATASET,
+    variables: {
+      category: category,
+      datasourceName: datasourceName,
+      uri: uri,
+      projectId: projectId,
+      filters: JSON.stringify(filters)
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -188,5 +234,6 @@ export {
   addEcosystem,
   updateEcosystem,
   deleteEcosystem,
-  tokenAuth
+  tokenAuth,
+  addDataSet
 };

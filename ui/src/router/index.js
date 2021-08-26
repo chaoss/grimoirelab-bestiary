@@ -60,6 +60,11 @@ const router = new Router({
           path: "/project/:id/datasource/:uri",
           component: () => import("../views/Datasource"),
           meta: { requiresAuth: true }
+        },
+        {
+          name: "github-datasources",
+          path: "/datasources/github/:jobID",
+          component: () => import("../views/GithubDatasources")
         }
       ]
     },
