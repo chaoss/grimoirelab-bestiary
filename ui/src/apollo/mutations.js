@@ -116,6 +116,14 @@ const ADD_DATASET = gql`
   }
 `;
 
+const FETCH_GITHUB_OWNER_REPOS = gql`
+  mutation fetchGithubOwnerRepos($owner: String!, $apiToken: String) {
+    fetchGithubOwnerRepos(owner: $owner, apiToken: $apiToken) {
+      jobId
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -226,6 +234,17 @@ const addDataSet = (
   return response;
 };
 
+const fetchGithubOwnerRepos = (apollo, owner, apiToken) => {
+  const response = apollo.mutate({
+    mutation: FETCH_GITHUB_OWNER_REPOS,
+    variables: {
+      owner: owner,
+      apiToken: apiToken
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -235,5 +254,6 @@ export {
   updateEcosystem,
   deleteEcosystem,
   tokenAuth,
-  addDataSet
+  addDataSet,
+  fetchGithubOwnerRepos
 };
