@@ -28,6 +28,7 @@ import graphql_jwt
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q, JSONField
+from django_rq import enqueue
 
 from graphene.types.generic import GenericScalar
 
@@ -53,7 +54,8 @@ from .models import (Ecosystem,
                      DataSourceType,
                      DataSource)
 from .jobs import (find_job,
-                   get_jobs)
+                   get_jobs,
+                   fetch_github_owner_repos)
 
 
 @convert_django_field.register(JSONField)
@@ -156,14 +158,15 @@ class DataSourceModelType(DjangoObjectType):
         model = DataSource
 
 
-class SampleJobResultType(graphene.ObjectType):
-    uuid = graphene.String()
+class GitHubRepoResultType(graphene.ObjectType):
+    url = graphene.String(description='URL of the repository.')
+    fork = graphene.Boolean(description='Whether the repository is a fork or not.')
+    has_issues = graphene.Boolean(description='Whether the repository has issues or not.')
 
 
 class JobResultType(graphene.Union):
     class Meta:
-        # Remove SampleJobResultType and its class when adding new one
-        types = (SampleJobResultType,)
+        types = (GitHubRepoResultType,)
 
 
 class JobType(graphene.ObjectType):
@@ -640,6 +643,26 @@ class MoveProject(graphene.Mutation):
         )
 
 
+class GitHubOwnerRepos(graphene.Mutation):
+    class Arguments:
+        owner = graphene.String()
+        # TODO: api_token might be in a new model
+        api_token = graphene.String()
+
+    job_id = graphene.Field(lambda: graphene.String)
+
+    @check_auth
+    def mutate(self, info, owner, api_token=None):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        job = enqueue(fetch_github_owner_repos, ctx, owner, api_token)
+
+        return GitHubOwnerRepos(
+            job_id=job.id
+        )
+
+
 class BestiaryQuery(graphene.ObjectType):
     """Queries supported by Bestiary"""
 
@@ -806,7 +829,12 @@ class BestiaryQuery(graphene.ObjectType):
         result = None
         errors = None
 
-        # Include each job type here
+        if job.result and (job_type == 'fetch_github_owner_repos'):
+            errors = job.result['errors']
+            result = [
+                GitHubRepoResultType(url=repo['url'], fork=repo['fork'], has_issues=repo['has_issues'])
+                for repo in job.result['results']
+            ]
         if status == 'failed':
             errors = [job.exc_info]
 
@@ -851,6 +879,7 @@ class BestiaryMutation(graphene.ObjectType):
     delete_project = DeleteProject.Field()
     delete_dataset = DeleteDataset.Field()
     move_project = MoveProject.Field()
+    fetch_github_owner_repos = GitHubOwnerRepos.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()
