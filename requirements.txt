@@ -9,3 +9,5 @@ django-cors-headers
 rq>=1.4.0
 django-rq>=2.3.0
 fakeredis>=1.4.1
+requests
+httpretty>=1.0.4
