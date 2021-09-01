@@ -19,16 +19,28 @@
 #     Santiago Dueñas <sduenas@bitergia.com>
 #     Jose Javier Merchante <jjmerchante@cauldron.io>
 #
+import os
+from django.test import TestCase
 
-from unittest import TestCase
-
+import httpretty
+from django.contrib.auth import get_user_model
 from django_rq import enqueue
+from grimoirelab_toolkit.datetime import datetime_utcnow
 
+from bestiary.core.context import BestiaryContext
 from bestiary.core.errors import NotFoundError
-from bestiary.core.jobs import find_job
-
+from bestiary.core.jobs import (find_job,
+                                fetch_github_owner_repos)
+from bestiary.core.models import Transaction
+from tests.retrieval.test_github import GITHUB_REPOS_URL
 
 JOB_NOT_FOUND_ERROR = "DEF not found in the registry"
+
+
+def read_file(filename, mode='r'):
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), filename), mode) as f:
+        content = f.read()
+    return content
 
 
 def job_echo(s):
@@ -54,3 +66,114 @@ class TestFindJob(TestCase):
         with self.assertRaisesRegex(NotFoundError,
                                     JOB_NOT_FOUND_ERROR):
             find_job('DEF')
+
+
+class TestGitHubOwnerReposJob(TestCase):
+    """Unit tests for fetch_github_owner_repos job"""
+
+    def setUp(self):
+        user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(user)
+
+    @httpretty.activate
+    def test_fetch_owner_repos(self):
+        """Check if the job for fetching owner repositories is executed correctly."""
+
+        repos = read_file('data/github_repos_issues.json')
+
+        httpretty.register_uri(httpretty.GET,
+                               GITHUB_REPOS_URL,
+                               body=repos,
+                               status=200)
+        expected = {
+            'errors': [],
+            'results': [{'fork': False,
+                         'has_issues': False,
+                         'url': 'https://github.com/chaoss_example/eagle'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://github.com/chaoss_example/echarts'}]
+        }
+
+        job = fetch_github_owner_repos.delay(self.ctx, 'chaoss_example')
+
+        self.assertDictEqual(job.result, expected)
+
+    @httpretty.activate
+    def test_fetch_owner_repos_token(self):
+        """Check if the job for fetching owner repositories is executed when using api_token."""
+
+        repos = read_file('data/github_repos_issues.json')
+
+        httpretty.register_uri(httpretty.GET,
+                               GITHUB_REPOS_URL,
+                               body=repos,
+                               status=200)
+        expected = {
+            'errors': [],
+            'results': [{'fork': False,
+                         'has_issues': False,
+                         'url': 'https://github.com/chaoss_example/eagle'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://github.com/chaoss_example/echarts'}]
+        }
+
+        job = fetch_github_owner_repos.delay(self.ctx, owner='chaoss_example', api_token='aaaa')
+
+        self.assertDictEqual(job.result, expected)
+        self.assertEqual(httpretty.last_request().headers["Authorization"], "token aaaa")
+
+    @httpretty.activate
+    def test_not_found_owner(self):
+        """Check if the job for fetching owner repositories returns a not found user."""
+
+        body = str({
+            "message": "Not Found",
+            "documentation_url": "https://docs.github.com/rest/reference/repos#list-repositories-for-a-user"
+        })
+        httpretty.register_uri(httpretty.GET,
+                               GITHUB_REPOS_URL,
+                               body=body,
+                               status=404)
+        expected = {'errors': ['404 Client Error: Not Found for url: '
+                               'https://api.github.com/users/chaoss_example/repos'],
+                    'results': []}
+        job = fetch_github_owner_repos.delay(self.ctx, 'chaoss_example')
+        self.assertDictEqual(job.result, expected)
+
+    @httpretty.activate
+    def test_server_error(self):
+        """Check if the job for fetching owner repositories returns a server error."""
+
+        httpretty.register_uri(httpretty.GET,
+                               GITHUB_REPOS_URL,
+                               body='',
+                               status=500)
+        expected = {'results': [],
+                    'errors': ['500 Server Error: Internal Server Error for url: '
+                               'https://api.github.com/users/chaoss_example/repos']}
+        job = fetch_github_owner_repos.delay(self.ctx, 'chaoss_example')
+        self.assertDictEqual(job.result, expected)
+
+    @httpretty.activate
+    def test_transactions(self):
+        """Check if the right transactions were created"""
+
+        timestamp = datetime_utcnow()
+
+        repos = read_file('data/github_repos_issues.json')
+        httpretty.register_uri(httpretty.GET,
+                               GITHUB_REPOS_URL,
+                               body=repos,
+                               status=200)
+        fetch_github_owner_repos.delay(self.ctx, owner='chaoss_example', job_id='1234-5678-90AB-CDEF')
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'fetch_github_owner_repos-1234-5678-90AB-CDEF')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)

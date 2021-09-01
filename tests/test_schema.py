@@ -525,6 +525,25 @@ BT_JOBS_QUERY_PAGINATION = """{
   }
 }
 """
+BT_JOB_QUERY_GH_OWNER_REPOS = """{
+  job(
+    jobId:"%s"
+  ){
+    jobId
+    jobType
+    status
+    errors
+    result {
+      __typename
+      ... on GitHubRepoResultType {
+          url
+          fork
+          hasIssues
+      }
+    }
+  }
+}
+"""
 # API endpoint to obtain a context for executing queries
 GRAPHQL_ENDPOINT = '/graphql/'
 
@@ -1627,6 +1646,99 @@ class TestQueryJob(django.test.TestCase):
         self.assertEqual(jobs_pagination['startIndex'], 3)
         self.assertEqual(jobs_pagination['endIndex'], 3)
         self.assertEqual(jobs_pagination['totalResults'], 3)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gh_owner_repos_job(self, mock_job):
+        """Check if it returns an githubOwnerRepos result type"""
+
+        result = {
+            'errors': [],
+            'results': [{'fork': False,
+                         'has_issues': False,
+                         'url': 'https://github.com/chaoss_example/eagle'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://github.com/chaoss_example/echarts'}]
+        }
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_github_owner_repos', 'finished', result)
+        mock_job.return_value = job
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY_GH_OWNER_REPOS % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_github_owner_repos')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], [])
+
+        job_results = job_data['result']
+        self.assertEqual(len(job_results), 2)
+
+        res = job_results[0]
+        self.assertEqual(res['__typename'], 'GitHubRepoResultType')
+        self.assertEqual(res['url'], 'https://github.com/chaoss_example/eagle')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], False)
+
+        res = job_results[1]
+        self.assertEqual(res['__typename'], 'GitHubRepoResultType')
+        self.assertEqual(res['url'], 'https://github.com/chaoss_example/echarts')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], True)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gh_repos_job_no_results(self, mock_job):
+        """Check if it does not fail when there are not results ready"""
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_github_owner_repos', 'queued', None)
+        mock_job.return_value = job
+
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY_GH_OWNER_REPOS % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_github_owner_repos')
+        self.assertEqual(job_data['status'], 'queued')
+        self.assertEqual(job_data['errors'], None)
+        self.assertEqual(job_data['result'], None)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gh_repos_job_errors(self, mock_job):
+        """Check job errors field"""
+
+        errors = [
+            "404 Client Error: Not Found for url: https://api.github.com/users/unknown_owner/repos"
+        ]
+        result = {
+            'results': [],
+            'errors': errors
+        }
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_github_owner_repos', 'finished', result)
+        mock_job.return_value = job
+
+        client = graphene.test.Client(schema)
+        query = BT_JOB_QUERY_GH_OWNER_REPOS % '1234-5678-90AB-CDEF'
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_github_owner_repos')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], errors)
 
 
 class TestAddEcosystemMutation(django.test.TestCase):
