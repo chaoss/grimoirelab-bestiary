@@ -5,7 +5,7 @@
       <h2 class="text-h5 font-weight-medium">{{ project.title }}</h2>
       <div>
         <v-btn
-          class="primary--text button mr-6"
+          class="button--lowercase button--secondary mr-6"
           :to="{
             name: 'project-edit',
             params: {
@@ -13,11 +13,16 @@
               name: name
             }
           }"
+          outlined
         >
           <v-icon dense left>mdi-pencil-outline</v-icon>
           Edit
         </v-btn>
-        <v-btn class="primary--text button" @click="confirmDelete">
+        <v-btn
+          class="button--lowercase button--secondary"
+          outlined
+          @click="confirmDelete"
+        >
           <v-icon dense left>mdi-trash-can-outline</v-icon>
           Delete
         </v-btn>
@@ -115,9 +120,6 @@ export default {
   }
 };
 </script>
-<style scoped>
-.button {
-  text-transform: none;
-  letter-spacing: normal;
-}
+<style lang="scss" scoped>
+@import "../styles/_buttons";
 </style>

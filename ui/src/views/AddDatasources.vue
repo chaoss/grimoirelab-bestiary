@@ -1,66 +1,68 @@
 <template>
   <section class="d-flex flex-column">
-    <h3 class="text-h6 mt-6 mb-4">
+    <h3 class="text-h6 mt-6 mb-6">
       Add data sources
     </h3>
 
-    <transition name="opacity">
-      <div v-if="isLoading" class="d-flex justify-center">
-        <v-progress-circular
-          :size="50"
-          color="primary"
-          indeterminate
-        ></v-progress-circular>
-      </div>
-    </transition>
-
-    <v-form v-if="!isLoading">
-      <p class="mt-3 mb-0 text--secondary">
-        Load all repositories from a GitHub user or organization. You will be
-        able to add all of their commits, pull requests and issues to the
-        project or review and select each one individually.
-      </p>
-      <v-row class="mt-2">
-        <v-col cols="4">
-          <v-text-field
-            v-model="owner"
-            label="GitHub owner"
-            outlined
-            dense
-            @keydown.enter.prevent="getGithubOwnerRepos"
-          />
-        </v-col>
-        <v-col>
-          <v-btn
-            :disabled="!owner"
-            color="info"
-            class="button--lowercase"
-            depressed
-            @click.prevent="getGithubOwnerRepos"
-          >
-            Load
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-form>
+    <v-tabs color="text">
+      <v-tab class="button--lowercase button--secondary">
+        <v-icon dense left>mdi-github</v-icon>
+        GitHub
+      </v-tab>
+      <v-tab-item transition="fade">
+        <div v-if="isLoading" class="d-flex justify-center">
+          <v-progress-circular
+            :size="50"
+            color="primary"
+            indeterminate
+          ></v-progress-circular>
+        </div>
+        <github-form
+          v-else
+          :get-projects="getProjects"
+          :add-data-set="addDataSet"
+          :get-repos="getGithubOwnerRepos" />
+      </v-tab-item>
+    </v-tabs>
   </section>
 </template>
 
 <script>
-import { fetchGithubOwnerRepos } from "../apollo/mutations";
+import { getProjects } from "../apollo/queries";
+import { addDataSet, fetchGithubOwnerRepos } from "../apollo/mutations";
+import GithubForm from "../components/GithubForm";
 
 export default {
   name: "AddDatasources",
+  components: { GithubForm },
   data() {
     return {
-      owner: "",
       isLoading: false
     };
   },
   methods: {
-    async getGithubOwnerRepos() {
+    async getProjects(filters, pageSize = 50, page = 1) {
+      const response = await getProjects(this.$apollo, pageSize, page, filters);
+      if (response) {
+        return response.data.projects.entities;
+      }
+    },
+    async addDataSet(category, datasourceName, uri, projectId, filters = {}) {
+      const response = await addDataSet(
+        this.$apollo,
+        category,
+        datasourceName,
+        uri,
+        projectId,
+        filters
+      );
+      if (response) {
+        return response;
+      }
+    },
+    async getGithubOwnerRepos(owner) {
       this.isLoading = true;
-      const response = await fetchGithubOwnerRepos(this.$apollo, this.owner);
+      const response = await fetchGithubOwnerRepos(this.$apollo, owner);
       if (response.data.fetchGithubOwnerRepos.jobId) {
         this.$router.push({
           name: "github-datasources",
@@ -73,14 +75,19 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import "../styles/_buttons";
+@import "../styles/_transitions";
+@import "../styles/_variables";
+
+::v-deep .v-tabs-items {
+  border-top: thin solid $border-color;
+}
+
+::v-deep .v-tabs-slider {
+  background-color: $primary-color;
+}
+
 .v-progress-circular {
   margin-top: 130px;
-}
-.opacity-enter {
-  opacity: 0;
-
-  &-active {
-    transition: opacity 2.5s;
-  }
 }
 </style>

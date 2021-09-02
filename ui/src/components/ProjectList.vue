@@ -8,7 +8,7 @@
         </v-chip>
       </h3>
       <v-btn
-        class="primary--text button--lowercase"
+        class="button--lowercase button--secondary"
         :to="{
           name: 'project-new',
           params: {
@@ -16,6 +16,7 @@
             parent: parentProject
           }
         }"
+        outlined
       >
         <v-icon dense left>mdi-plus</v-icon>
         Add project

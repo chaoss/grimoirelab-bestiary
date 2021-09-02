@@ -2,7 +2,7 @@
   <v-app>
     <v-navigation-drawer permanent app class="pa-3" color="#F5F7F8">
       <search class="mt-4" filled @search="search" ref="search" />
-      <h2 class="text-subtitle-1 ma-2">Ecosystems</h2>
+      <h2 class="text-subtitle-1 text--secondary ma-2">Ecosystems</h2>
       <div v-for="ecosystem in ecosystems" :key="ecosystem.id">
         <ecosystem-tree
           :ecosystem="ecosystem"
@@ -27,7 +27,7 @@
       <v-btn
         :to="{ name: 'add-datasources' }"
         class="link pl-2"
-        color="#3f3f3f"
+        color="text"
         text
         block
       >
@@ -198,17 +198,7 @@ export default {
 </script>
 
 <style lang="scss">
-.fade-enter-active,
-.fade-leave-active {
-  transition-duration: 0.35s;
-  transition-property: opacity;
-  transition-timing-function: ease;
-}
-
-.fade-enter,
-.fade-leave-active {
-  opacity: 0;
-}
+@import "../styles/_transitions.scss";
 
 @media (min-width: 1904px) {
   .v-main__wrap .container {

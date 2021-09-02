@@ -7,6 +7,14 @@
           {{ count }}
         </v-chip>
       </h3>
+      <v-btn
+        class="button--lowercase button--secondary"
+        outlined
+        :to="{ name: 'add-datasources' }"
+      >
+        <v-icon dense left>mdi-plus</v-icon>
+        Add data source
+      </v-btn>
     </div>
 
     <v-list>
