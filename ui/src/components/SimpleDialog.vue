@@ -55,7 +55,7 @@ export default {
     width: {
       type: [String, Number],
       required: false,
-      default: 400
+      default: 500
     }
   }
 };

@@ -5,7 +5,8 @@ export default {
   excludeStories: /.*Data$/
 };
 
-const template = '<datasource-list :items="items" project-id="1" />';
+const template =
+  '<datasource-list :items="items" project-id="1" :deleteDataset="mockFunction" />';
 
 export const Default = () => ({
   components: { DatasourceList },
@@ -82,5 +83,8 @@ export const Default = () => ({
         }
       ]
     };
+  },
+  methods: {
+    mockFunction() {}
   }
 });
