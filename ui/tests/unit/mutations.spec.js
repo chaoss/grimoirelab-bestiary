@@ -204,7 +204,8 @@ describe("Ecosystem mutations", () => {
         },
         deleteEcosystem: mutate,
         deleteProject: () => {},
-        moveProject: () => {}
+        moveProject: () => {},
+        addDataSet: () => {}
       }
     });
 

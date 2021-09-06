@@ -173,6 +173,24 @@ const GET_DATASET_BY_URI = gql`
   ${projectFragment}
 `;
 
+const GET_JOB = gql`
+  query getJob($jobId: String!) {
+    job(jobId: $jobId) {
+      status
+      result {
+        ... on GitHubRepoResultType {
+          url
+          fork
+          hasIssues
+        }
+      }
+      errors
+      jobId
+      jobType
+    }
+  }
+`;
+
 const getEcosystems = (apollo, pageSize, page) => {
   const response = apollo.query({
     query: GET_ECOSYSTEMS,
@@ -246,11 +264,23 @@ const getDatasetsByUri = (apollo, projectId, uri) => {
   return response;
 };
 
+const getJob = (apollo, jobId) => {
+  const response = apollo.query({
+    query: GET_JOB,
+    variables: {
+      jobId: jobId
+    }
+  });
+  return response;
+};
+
 export {
   getDatasetsByUri,
   getEcosystems,
   getEcosystemByID,
   getBasicProjectInfo,
   getProjects,
-  getProjectByName
+  getProjectByName,
+  getJob,
+  GET_JOB
 };

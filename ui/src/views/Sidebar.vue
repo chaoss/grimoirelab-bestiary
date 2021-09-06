@@ -2,12 +2,14 @@
   <v-app>
     <v-navigation-drawer permanent app class="pa-3" color="#F5F7F8">
       <search class="mt-4" filled @search="search" ref="search" />
+      <h2 class="text-subtitle-1 ma-2">Ecosystems</h2>
       <div v-for="ecosystem in ecosystems" :key="ecosystem.id">
         <ecosystem-tree
           :ecosystem="ecosystem"
           :delete-project="deleteProject"
           :move-project="moveProject"
           :delete-ecosystem="deleteEcosystem"
+          :add-data-set="addDataSet"
         />
       </div>
       <v-btn
@@ -19,6 +21,18 @@
       >
         <v-icon small class="mr-1">mdi-plus</v-icon>
         Add ecosystem
+      </v-btn>
+      <v-divider class="mt-3 mb-3" />
+      <h2 class="text-subtitle-1 text--secondary ma-2">Data sources</h2>
+      <v-btn
+        :to="{ name: 'add-datasources' }"
+        class="link pl-2"
+        color="#3f3f3f"
+        text
+        block
+      >
+        <v-icon small class="mr-1">mdi-plus</v-icon>
+        Add data sources
       </v-btn>
       <template v-slot:append>
         <v-divider />
@@ -39,6 +53,7 @@
         </div>
       </template>
     </v-navigation-drawer>
+
     <v-main>
       <v-container>
         <transition name="fade" mode="out-in">
@@ -58,7 +73,11 @@
       :width="dialog.width"
     >
     </simple-dialog>
-    <v-snackbar v-model="snackbar.isOpen" :color="snackbar.color">
+    <v-snackbar
+      v-model="snackbar.isOpen"
+      :color="snackbar.color"
+      timeout="8000"
+    >
       {{ snackbar.text }}
     </v-snackbar>
   </v-app>
@@ -69,7 +88,8 @@ import { getEcosystems } from "../apollo/queries";
 import {
   deleteProject,
   moveProject,
-  deleteEcosystem
+  deleteEcosystem,
+  addDataSet
 } from "../apollo/mutations";
 import { mapGetters, mapActions } from "vuex";
 import EcosystemTree from "../components/EcosystemTree";
@@ -158,6 +178,17 @@ export default {
           color: "error"
         });
       }
+    },
+    async addDataSet(category, datasourceName, uri, projectId, filters = {}) {
+      const response = await addDataSet(
+        this.$apollo,
+        category,
+        datasourceName,
+        uri,
+        projectId,
+        filters
+      );
+      return response;
     }
   },
   created() {
@@ -204,5 +235,9 @@ export default {
   .v-btn__content {
     color: #003756;
   }
+}
+
+.text-subtitle-1 {
+  color: #7a7a7a;
 }
 </style>

@@ -11,6 +11,7 @@ const ecosystemTreeTemplate = `
     :delete-project="mockAction"
     :move-project="mockAction"
     :delete-ecosystem="mockAction"
+    :add-data-set="mockAction"
   />
 `;
 

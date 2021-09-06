@@ -64,7 +64,8 @@ describe("EcosystemTree", () => {
         ecosystem: threeLevels,
         deleteProject: () => {},
         moveProject: () => {},
-        deleteEcosystem: () => {}
+        deleteEcosystem: () => {},
+        addDataSet: () => {}
       },
       ...options
     });

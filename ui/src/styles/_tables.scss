@@ -1,0 +1,16 @@
+@import '_variables';
+
+::v-deep .theme--light.v-data-table
+> .v-data-table__wrapper
+> table
+> tbody
+> tr {
+  &:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper),
+  &.v-data-table__selected {
+    background: $selected-color;
+  }
+
+  &:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper).v-data-table__selected {
+    background: darken($selected-color, 5%);
+  }
+}
