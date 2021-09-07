@@ -1,5 +1,9 @@
 <template>
-  <v-dialog v-model="isOpen" :max-width="width">
+  <v-dialog
+    v-model="isOpen"
+    :max-width="width"
+    @click:outside="$store.commit('clearDialog')"
+  >
     <v-card>
       <v-card-title class="headline">{{ title }}</v-card-title>
       <v-card-text>{{ text }}</v-card-text>
