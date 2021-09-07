@@ -34,10 +34,13 @@ from .db import (find_ecosystem,
                  find_datasource_uri as find_datasource_uri_db,
                  add_datasource as add_datasource_db,
                  add_dataset as add_dataset_db,
+                 add_credential as add_credential_db,
                  find_dataset as find_dataset_db,
                  find_datasource_type as find_datasource_type_db,
+                 find_credential as find_credential_db,
                  delete_dataset as delete_dataset_db,
-                 delete_datasource as delete_datasource_db)
+                 delete_datasource as delete_datasource_db,
+                 delete_credential as delete_credential_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -211,6 +214,61 @@ def add_dataset(ctx, project_id, datasource_name, uri, category, filters):
     trxl.close()
 
     return dataset
+
+
+@django.db.transaction.atomic
+def add_credential(ctx, user, name, datasource_name, token):
+    """Add a new credential to the registry.
+
+    This function adds a credential to the registry.
+    It checks first whether the user and datasource are already
+    on the registry.
+    When they are found, a new credential is added. In case it is duplicated
+    it raises a 'AlreadyExistsError' exception to notify that it
+    already exists.
+
+    :param ctx: context from where this method is called
+    :param user: user this credential belongs to
+    :param name: name for the credential
+    :param datasource_name: name of the type of data source
+    :param token: code that contains authentication for the datasource
+
+    :returns: a credential object
+
+    :raises ValueError: when any of the arguments is empty or not valid
+    :raises AlreadyExistsError: raised when the dataset already exists
+        in the registry
+    """
+    trxl = TransactionsLog.open('add_credential', ctx)
+
+    if not user:
+        raise InvalidValueError(msg="'user' cannot be None")
+    if not user.is_authenticated:
+        raise InvalidValueError(msg="Unauthenticated user cannot add credentials")
+    if name is None:
+        raise InvalidValueError(msg="'name' cannot be None")
+    if name == '':
+        raise InvalidValueError(msg="'name' cannot be an empty string")
+    if not datasource_name:
+        raise InvalidValueError(msg="'datasource_name' cannot be empty")
+    if not token:
+        raise InvalidValueError(msg="'token' cannot be empty")
+
+    try:
+        datasource_type = find_datasource_type_db(name=datasource_name)
+    except NotFoundError as exc:
+        raise exc
+
+    try:
+        credential = add_credential_db(trxl, user, name, datasource_type, token)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except AlreadyExistsError as exc:
+        raise exc
+
+    trxl.close()
+
+    return credential
 
 
 @django.db.transaction.atomic
@@ -419,6 +477,49 @@ def delete_dataset(ctx, dataset_id):
     dataset.id = dataset_id
 
     return dataset
+
+
+@django.db.transaction.atomic
+def delete_credential(ctx, user, credential_id):
+    """A user removes a credential from the registry.
+
+    This function removes the given credential from the registry.
+    It checks first whether the credential is already on the registry.
+    When it is found, check if the user is the owner of the credencial,
+    if so, the credential is removed. Otherwise, it will raise
+    a 'NotFoundError'.
+
+    :param ctx: context from where this method is called
+    :param user: user asking to remove the credential
+    :param credential_id: id of the credential to remove
+
+    :raises InvalidValueError: raised when credential_id is None
+    :raises NotFoundError: raised when the credential does not exist
+        in the registry
+    """
+    if credential_id is None:
+        raise InvalidValueError(msg="'credential_id' cannot be None")
+
+    trxl = TransactionsLog.open('delete_credential', ctx)
+
+    try:
+        credential = find_credential_db(credential_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    if credential.user == user:
+        delete_credential_db(trxl, credential=credential)
+    else:
+        raise PermissionError("User not allowed to remove credential ID {}.".format(credential_id))
+
+    trxl.close()
+
+    # Setting former ID manually, as it can't be referenced once it has been removed
+    credential.id = credential_id
+
+    return credential
 
 
 @django.db.transaction.atomic
