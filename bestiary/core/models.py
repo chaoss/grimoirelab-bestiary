@@ -22,6 +22,7 @@
 import hashlib
 import json
 
+from django.conf import settings
 from django.db.models import (CASCADE,
                               Model,
                               BooleanField,
@@ -29,6 +30,7 @@ from django.db.models import (CASCADE,
                               DateTimeField,
                               ForeignKey,
                               JSONField)
+from .utils import Crypto
 
 from enum import Enum
 
@@ -43,6 +45,8 @@ MAX_SIZE_CHAR_FIELD = 128
 MAX_SIZE_NAME_FIELD = 32
 MAX_SIZE_TITLE_FIELD = 80
 MAX_SIZE_SHA1_FIELD = 40
+MAX_SIZE_ENCRYPTED_FIELD = 364
+MAX_SIZE_ENCRYPTED_VALUE = 255
 
 
 class CreationDateTimeField(DateTimeField):
@@ -66,6 +70,31 @@ class LastModificationDateTimeField(DateTimeField):
         value = datetime_utcnow()
         setattr(model_instance, self.attname, value)
         return value
+
+
+class EncryptedField(CharField):
+    """Field to store encrypted data using SECRET_KEY.
+
+    The max length for this field is 255 chars which
+    are 364 encrypted chars using AES 256 encryption.
+    """
+    def __init__(self, *args, **kwargs):
+        self.crypto = Crypto(settings.SECRET_KEY)
+        super().__init__(*args, **kwargs)
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        if value is None:
+            return value
+        if len(value) > MAX_SIZE_ENCRYPTED_VALUE:
+            raise ValueError('maximum length for an encrypted key is {}'.format(MAX_SIZE_ENCRYPTED_VALUE))
+        encrypted = self.crypto.encrypt(value).decode()
+        encrypted_value = super().get_db_prep_value(encrypted, connection, prepared)
+        return encrypted_value
+
+    def from_db_value(self, value, expression, connection):
+        if value is None:
+            return value
+        return self.crypto.decrypt(value).decode()
 
 
 class EntityBase(Model):
@@ -344,3 +373,37 @@ class DataSet(EntityBase):
         filters_str = json.dumps(self.filters, sort_keys=True)
         self.filters_hash = hashlib.sha1(filters_str.encode('utf-8')).hexdigest()
         super().save(*args, **kwargs)
+
+
+class Credential(EntityBase):
+    """Model class for users data source tokens.
+
+    This class is meant to represent the tokens associated to a user
+    that can be used against a specific data source.
+
+    Every credential object must have a `token` for a specific
+    `datasource` (`DataSourceType`) and must belong to a user.
+
+    :param user: User which the token belongs to.
+    :param name: Name for the token given by the user.
+    :param token: Token for the data source.
+    :param datasource: Datasource type which the token is for.
+    """
+    user = ForeignKey(settings.AUTH_USER_MODEL,
+                      on_delete=CASCADE,
+                      help_text='user allowed to user this token.')
+    name = CharField(max_length=MAX_SIZE_TITLE_FIELD,
+                     help_text='Name of the token.')
+    token = EncryptedField(max_length=MAX_SIZE_ENCRYPTED_FIELD,
+                           help_text='token for authentication to a backend.',
+                           null=False)
+    datasource = ForeignKey(DataSourceType,
+                            on_delete=CASCADE,
+                            help_text='Related data source')
+
+    class Meta:
+        db_table = 'credentials'
+        unique_together = ['user', 'name']
+
+    def __str__(self):
+        return '%s - %s' % (self.user.id, self.name)

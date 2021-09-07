@@ -46,7 +46,6 @@ def github_owner_repositories(owner, api_token=None):
         f"owner={owner}; ..."
     )
 
-    repositories = []
     headers = {}
     if api_token:
         headers = {'Authorization': 'token {}'.format(api_token)}

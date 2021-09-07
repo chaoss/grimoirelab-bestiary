@@ -11,3 +11,4 @@ django-rq>=2.3.0
 fakeredis>=1.4.1
 requests
 httpretty>=1.0.4
+cryptography>=3.0,<4

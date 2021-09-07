@@ -34,7 +34,8 @@ from .models import (Ecosystem,
                      Operation,
                      DataSource,
                      DataSet,
-                     DataSourceType)
+                     DataSourceType,
+                     Credential)
 from .utils import validate_field, validate_name
 
 
@@ -171,6 +172,28 @@ def find_dataset(dataset_id):
         raise NotFoundError(entity='DataSet ID {}'.format(dataset_id))
     else:
         return dataset
+
+
+def find_credential(credential_id):
+    """Find a credential object.
+
+    Find a credential by its id in the database. When the
+    credential does not exist the function will raise
+    a `NotFoundError`.
+
+    :param credential_id: id of the data set to find
+
+    :returns: a credential object
+
+    :raises NotFoundError: when the credential with the
+        given `credential_id` does not exist
+    """
+    try:
+        credential = Credential.objects.get(id=credential_id)
+    except Credential.DoesNotExist:
+        raise NotFoundError(entity='Credential ID {}'.format(credential_id))
+    else:
+        return credential
 
 
 def add_ecosystem(trxl, name, title, description):
@@ -375,6 +398,60 @@ def add_dataset(trxl, project, datasource, category, filters):
                        target=str(op_args['project']))
 
     return dataset
+
+
+def add_credential(trxl, user, name, datasource, token):
+    """Add new credentials to the database.
+
+    This function adds a new credential object to the database,
+    using the given `datasource`, `token`, token name and user. Token cannot
+    be empty or `None`, the datasource must exists and there should be a user.
+
+    It returns a new `Credential` object.
+
+    :param trxl: TransactionsLog object from the method calling this one.
+    :param user: user belongs the token.
+    :param name: name for the credential.
+    :param datasource: `DataSourceType` of the token.
+    :param token: code that contains authentication for the datasource.
+
+    :returns: a new credential.
+
+    :raises ValueError: when `token` is `None` or empty, when `datasource` is empty
+        or when name is empty.
+    :raises AlreadyExistsError: when an instance with the same name
+        already exists in the database.
+    """
+    # Setting operation arguments before they are modified
+    op_args = {
+        'user': user.id,
+        'name': name,
+        'datasource': datasource.name,
+        'token': token
+    }
+
+    # Check if the name fulfills the requirements
+    validate_field('token', token, allow_none=False)
+    validate_field('name', name, allow_none=False)
+    if datasource is None:
+        raise ValueError("'datasource' cannot be an empty.")
+    if user is None:
+        raise ValueError("A token must belong to a user.")
+
+    credential = Credential(user=user,
+                            name=name,
+                            datasource=datasource,
+                            token=token)
+    try:
+        credential.save()
+    except django.db.utils.IntegrityError as exc:
+        _handle_integrity_error(Credential, exc)
+
+    trxl.log_operation(op_type=Operation.OpType.ADD, entity_type='credential',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['user']))
+
+    return credential
 
 
 def update_ecosystem(trxl, ecosystem, **kwargs):
@@ -629,6 +706,27 @@ def delete_dataset(trxl, dataset):
     dataset.project.ecosystem.save()
 
     trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+
+def delete_credential(trxl, credential):
+    """Remove a credential from the database.
+
+    Function that removes from the database the credential given.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param credential: credential to remove
+    """
+    # Setting operation arguments before they are modified
+
+    op_args = {
+        'id': credential.id
+    }
+
+    credential.delete()
+
+    trxl.log_operation(op_type=Operation.OpType.DELETE, entity_type='credential',
                        timestamp=datetime_utcnow(), args=op_args,
                        target=str(op_args['id']))
 

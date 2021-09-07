@@ -40,12 +40,14 @@ from bestiary.core.models import (Ecosystem,
                                   Operation,
                                   DataSource,
                                   DataSet,
-                                  DataSourceType)
+                                  DataSourceType,
+                                  Credential)
 
 DUPLICATED_ECOSYSTEM_ERROR = "Ecosystem 'Example' already exists in the registry"
 DUPLICATED_PROJECT_ERROR = "Project 'example' already exists in the registry"
 DUPLICATED_DATASET_ERROR = "DataSet '.+' already exists in the registry"
 DUPLICATED_DATASOURCE_ERROR = "DataSource '.+' already exists in the registry"
+DUPLICATED_CREDENTIAL_ERROR = "Credential '1-Test token' already exists in the registry"
 NAME_NONE_ERROR = "'name' cannot be None"
 NAME_EMPTY_ERROR = "'name' cannot be an empty string"
 ECOSYSTEM_ID_NONE_ERROR = "AttributeError: 'NoneType' object has no attribute 'id'"
@@ -75,6 +77,9 @@ DATASET_FILTER_ERROR = "'filters' cannot be None"
 DATASET_FILTER_LIST_ERROR = "'filters' cannot be 'list'"
 DATASET_PROJECT_ALREADY_SET_ERROR = "Project is already set to the data set"
 DATASET_PROJECT_VALUE_ERROR = "Project cannot be None"
+CREDENTIAL_NOT_FOUND_ERROR = "Credential ID 2 not found in the registry"
+CREDENTIAL_TOKEN_NONE_ERROR = "'token' cannot be None"
+CREDENTIAL_TOKEN_EMPTY_ERROR = "'token' cannot be an empty string"
 
 NAME_ALPHANUMERIC_ERROR = "'name' must start with an alphanumeric character"
 
@@ -1978,6 +1983,230 @@ class TestUpdateDataSet(TestCase):
         self.assertEqual(op1_args['id'], 1)
         self.assertEqual(op1_args['category'], 'pull-requests')
         self.assertEqual(op1_args['filters'], {'author': 'Mike'})
+
+
+class TestFindCredential(TestCase):
+    """Unit tests for find_credential"""
+
+    def setUp(self):
+        """Load initial credential"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.gh_dst = DataSourceType.objects.create(name='GitHub')
+        Credential.objects.create(id=1,
+                                  user=self.user,
+                                  datasource=self.gh_dst,
+                                  token='abcd1234')
+
+    def test_credential(self):
+        """Test if a credential is found by its id"""
+
+        credential = db.find_credential(credential_id=1)
+
+        # Tests
+        self.assertIsInstance(credential, Credential)
+        self.assertEqual(credential.id, 1)
+        self.assertEqual(credential.datasource.name, 'GitHub')
+        self.assertEqual(credential.user, self.user)
+        self.assertEqual(credential.token, 'abcd1234')
+
+    def test_credential_not_found(self):
+        """Test whether it raises an exception when the credential is not found"""
+
+        with self.assertRaisesRegex(NotFoundError, CREDENTIAL_NOT_FOUND_ERROR):
+            db.find_credential(credential_id=2)
+
+
+class TestAddCredential(TestCase):
+    """Unit tests for add_credential"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(id=1, username='test')
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+
+        self.ctx = BestiaryContext(self.user)
+
+        self.trxl = TransactionsLog.open('add_credential', self.ctx)
+
+    def test_add_credential(self):
+        """Check if a new credential is added"""
+
+        credential = db.add_credential(self.trxl,
+                                       self.user,
+                                       'Test token',
+                                       self.gh_dst,
+                                       'abcd1234')
+
+        self.assertIsInstance(credential, Credential)
+        self.assertEqual(credential.user, self.user)
+        self.assertEqual(credential.name, 'Test token')
+        self.assertEqual(credential.datasource.name, 'GitHub')
+        self.assertEqual(credential.token, 'abcd1234')
+
+        cred_db = Credential.objects.get(id=credential.id)
+        self.assertIsInstance(cred_db, Credential)
+        self.assertEqual(cred_db.id, credential.id)
+        self.assertEqual(cred_db.user, self.user)
+        self.assertEqual(cred_db.name, 'Test token')
+        self.assertEqual(cred_db.datasource.name, 'GitHub')
+        self.assertEqual(cred_db.token, 'abcd1234')
+
+    def test_token_none(self):
+        """Check whether credential with None as token cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, CREDENTIAL_TOKEN_NONE_ERROR):
+            db.add_credential(self.trxl,
+                              self.user,
+                              'Test token',
+                              self.gh_dst,
+                              None)
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_token_empty(self):
+        """Check whether credential with empty tokens cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, CREDENTIAL_TOKEN_EMPTY_ERROR):
+            db.add_credential(self.trxl,
+                              self.user,
+                              'Test token',
+                              self.gh_dst,
+                              '')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_name_empty(self):
+        """Check whether credential with empty name cannot be added"""
+
+        with self.assertRaisesRegex(ValueError, NAME_EMPTY_ERROR):
+            db.add_credential(self.trxl,
+                              self.user,
+                              '',
+                              self.gh_dst,
+                              '12345678')
+
+        with self.assertRaisesRegex(ValueError, NAME_NONE_ERROR):
+            db.add_credential(self.trxl,
+                              self.user,
+                              None,
+                              self.gh_dst,
+                              '12345678')
+
+        operations = Operation.objects.all()
+        self.assertEqual(len(operations), 0)
+
+    def test_integrity_error(self):
+        """Check whether credentials with the same fields cannot be inserted"""
+
+        with self.assertRaisesRegex(AlreadyExistsError, DUPLICATED_CREDENTIAL_ERROR):
+            db.add_credential(self.trxl, self.user, 'Test token', self.gh_dst, 'abcd1234')
+            db.add_credential(self.trxl, self.user, 'Test token', self.gh_dst, 'abcd1236')
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        cred = db.add_credential(self.trxl, self.user, 'Test token', self.gh_dst, 'abcd1234')
+        after_dt = datetime_utcnow()
+
+        # Tests
+        self.assertLessEqual(before_dt, cred.last_modified)
+        self.assertGreaterEqual(after_dt, cred.last_modified)
+
+    def test_creation_date(self):
+        """Check if creation date is correct"""
+
+        before_dt = datetime_utcnow()
+        cred = db.add_credential(self.trxl, self.user, 'Test token', self.gh_dst, 'abcd1234')
+        after_dt = datetime_utcnow()
+
+        # Tests
+        self.assertLessEqual(before_dt, cred.created_at)
+        self.assertGreaterEqual(after_dt, cred.created_at)
+
+    def test_operations(self):
+        """Check if the right operations are created when adding a credential"""
+
+        timestamp = datetime_utcnow()
+
+        db.add_credential(self.trxl, self.user, 'Test token', self.gh_dst, 'abcd1234')
+
+        transactions = Transaction.objects.all()
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op1.entity_type, 'credential')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, str(self.user.id))
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 4)
+        self.assertEqual(op1_args['user'], self.user.id)
+        self.assertEqual(op1_args['name'], 'Test token')
+        self.assertEqual(op1_args['datasource'], 'GitHub')
+        self.assertEqual(op1_args['token'], 'abcd1234')
+
+
+class TestDeleteCredential(TestCase):
+    """Unit tests for delete_credential"""
+
+    def setUp(self):
+        """Load initial credential"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.gh_dst = DataSourceType.objects.create(name='GitHub')
+        self.credential = Credential.objects.create(id=1,
+                                                    user=self.user,
+                                                    name='Test Token',
+                                                    datasource=self.gh_dst,
+                                                    token='abcd1234')
+        self.ctx = BestiaryContext(self.user)
+        self.trxl = TransactionsLog.open('delete_credential', self.ctx)
+
+    def test_delete_credential(self):
+        """Check whether it deletes a credential and its related data"""
+
+        # Check data and remove credential
+        self.assertEqual(self.credential.id, 1)
+        db.delete_credential(self.trxl, self.credential)
+
+        # Tests
+        with self.assertRaises(ObjectDoesNotExist):
+            Credential.objects.get(id=1)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a credential"""
+
+        timestamp = datetime_utcnow()
+        transactions = Transaction.objects.filter(name='delete_credential')
+        trx = transactions[0]
+
+        db.delete_credential(self.trxl, self.credential)
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.DELETE.value)
+        self.assertEqual(op1.entity_type, 'credential')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, '1')
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], 1)
 
 
 class TestLinkDatasetProject(TestCase):

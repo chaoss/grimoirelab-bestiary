@@ -22,7 +22,9 @@
 
 from django.test import TestCase
 
-from bestiary.core.utils import validate_field, validate_name
+from bestiary.core.utils import (validate_field,
+                                 validate_name,
+                                 Crypto)
 
 
 FIELD_NONE_ERROR = "'{name}' cannot be None"
@@ -140,3 +142,46 @@ class TestValidateName(TestCase):
         expected = FIELD_CONTAINS_PUNCTUATION_ERROR.format(name='name')
         with self.assertRaisesRegex(ValueError, expected):
             validate_name('Test-example(2)')
+
+
+class TestCrypto(TestCase):
+    """Unit tests for Crypto to encrypt and decrypt"""
+
+    def test_initialization(self):
+        """Check if Crypto is initialized correctly"""
+
+        crypto = Crypto('1234')
+        self.assertIsInstance(crypto, Crypto)
+
+    def test_encrypt_decrypt(self):
+        """Check if it can encrypt and decrypt using same key"""
+
+        crypto = Crypto('1234')
+        encrypted = crypto.encrypt('testing')
+        self.assertIsInstance(encrypted, bytes)
+
+        decrypted = crypto.decrypt(encrypted)
+        self.assertIsInstance(decrypted, bytes)
+        self.assertEqual(decrypted, b'testing')
+
+    def test_decrypt_new_instance(self):
+        """Check if it can decrypt using a different object with same key"""
+
+        crypto_1 = Crypto('1234')
+        encrypted = crypto_1.encrypt('testing')
+        self.assertIsInstance(encrypted, bytes)
+
+        crypto_2 = Crypto('1234')
+        decrypted = crypto_2.decrypt(encrypted)
+        self.assertIsInstance(decrypted, bytes)
+        self.assertEqual(decrypted, b'testing')
+
+    def test_wrong_key(self):
+        """Try to decrypt using the wrong key"""
+
+        crypto = Crypto('1234')
+        encrypted = crypto.encrypt('testing')
+
+        crypto_2 = Crypto('4321')
+        decrypted = crypto_2.decrypt(encrypted)
+        self.assertNotEqual(decrypted, b'testing')
