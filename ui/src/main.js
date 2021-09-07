@@ -30,11 +30,13 @@ const cache = new InMemoryCache();
 
 const AuthLink = (operation, next) => {
   const token = csrftoken;
+  const authtoken = Cookies.get("bestiary_authtoken");
   operation.setContext(context => ({
     ...context,
     headers: {
       ...context.headers,
-      "X-CSRFToken": token
+      "X-CSRFToken": token,
+      Authorization: authtoken ? `JWT ${authtoken}` : ""
     }
   }));
   return next(operation);
