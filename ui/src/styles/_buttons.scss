@@ -1,3 +1,5 @@
+@import '_variables';
+
 // Outlined button with thick border on focus
 .v-btn--outlined.btn--focusable {
   border-color: rgba(0, 0, 0, 0.42);
@@ -44,4 +46,22 @@
 .button--lowercase {
   text-transform: none;
   letter-spacing: normal;
+}
+
+// Medium emphasis button
+.button--secondary {
+  color: $text-color;
+  background-color: #ffffff;
+  border-color: $border-color;
+}
+
+// Toggle buttons
+.theme--light.v-btn-toggle:not(.v-btn-toggle--group)
+  ::v-deep
+  .v-btn.v-btn--active {
+  border-color: $info-color !important;
+}
+
+.v-application--is-ltr .v-btn-toggle > .v-btn.v-btn:not(:first-child) {
+  border-left-width: thin;
 }

@@ -26,43 +26,11 @@
         @change="filterForks($event)"
       />
 
-      <v-menu
-        v-model="showMenu"
-        max-height="40vh"
-        offset-y
-        :close-on-content-click="false"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            v-bind="attrs"
-            v-on="on"
-            :disabled="selected.length === 0"
-            color="info"
-            depressed
-            class="button--lowercase"
-            @click="loadProjects({ term: '' })"
-          >
-            Add selected to project
-            <v-icon right small>mdi-chevron-down</v-icon>
-          </v-btn>
-        </template>
-
-        <v-card class="pa-2 pt-0">
-          <search @search="loadProjects" class="search pt-2" filled />
-          <v-list dense class="pt-0">
-            <v-list-item
-              v-for="project in projects"
-              :key="project.id"
-              class="v-list-item--link"
-              @click="addDatasets(project)"
-            >
-              <v-list-item-content>
-                <v-list-item-subtitle v-html="project.path" />
-              </v-list-item-content>
-            </v-list-item>
-          </v-list>
-        </v-card>
-      </v-menu>
+      <project-selector
+        :get-projects="getProjects"
+        :disabled="selected.length === 0"
+        @selectedProject="addDatasets"
+      />
     </v-row>
 
     <v-data-table
@@ -153,11 +121,11 @@
 </template>
 
 <script>
-import Search from "../components/Search";
+import ProjectSelector from "../components/ProjectSelector";
 
 export default {
   name: "GitHubTable",
-  components: { Search },
+  components: { ProjectSelector },
   props: {
     items: {
       type: Array,
