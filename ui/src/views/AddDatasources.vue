@@ -21,15 +21,22 @@
           v-else
           :get-projects="getProjects"
           :add-data-set="addDataSet"
-          :get-repos="getGithubOwnerRepos" />
+          :get-repos="getGithubOwnerRepos"
+          :get-token="getToken"
+          :add-token="addToken"
+        />
       </v-tab-item>
     </v-tabs>
   </section>
 </template>
 
 <script>
-import { getProjects } from "../apollo/queries";
-import { addDataSet, fetchGithubOwnerRepos } from "../apollo/mutations";
+import { getProjects, getDatasourceCredentials } from "../apollo/queries";
+import {
+  addDataSet,
+  addCredential,
+  fetchGithubOwnerRepos
+} from "../apollo/mutations";
 import GithubForm from "../components/GithubForm";
 
 export default {
@@ -69,6 +76,19 @@ export default {
           params: { jobID: response.data.fetchGithubOwnerRepos.jobId }
         });
       }
+    },
+    async getToken(datasource) {
+      const response = await getDatasourceCredentials(this.$apollo, datasource);
+      return response;
+    },
+    async addToken(datasource, token, name) {
+      const response = await addCredential(
+        this.$apollo,
+        datasource,
+        token,
+        name
+      );
+      return response;
     }
   }
 };

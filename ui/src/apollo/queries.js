@@ -192,6 +192,16 @@ const GET_JOB = gql`
   }
 `;
 
+const GET_DATASOURCE_CREDENTIALS = gql`
+  query getDatasourceCredentials($datasource: String!) {
+    credentials(filters: { datasourceName: $datasource }) {
+      entities {
+        token
+      }
+    }
+  }
+`;
+
 const getEcosystems = (apollo, pageSize, page) => {
   const response = apollo.query({
     query: GET_ECOSYSTEMS,
@@ -276,6 +286,16 @@ const getJob = (apollo, jobId) => {
   return response;
 };
 
+const getDatasourceCredentials = (apollo, datasource) => {
+  const response = apollo.query({
+    query: GET_DATASOURCE_CREDENTIALS,
+    variables: {
+      datasource: datasource
+    }
+  });
+  return response;
+};
+
 export {
   getDatasetsByUri,
   getEcosystems,
@@ -284,5 +304,6 @@ export {
   getProjects,
   getProjectByName,
   getJob,
-  GET_JOB
+  GET_JOB,
+  getDatasourceCredentials
 };

@@ -134,6 +134,16 @@ const FETCH_GITHUB_OWNER_REPOS = gql`
   }
 `;
 
+const ADD_CREDENTIAL = gql`
+  mutation addCredential($datasourceName: String!, $token: String!) {
+    addCredential(datasourceName: $datasourceName, token: $token) {
+      credential {
+        id
+      }
+    }
+  }
+`;
+
 const addProject = (apollo, data) => {
   const response = apollo.mutate({
     mutation: ADD_PROJECT,
@@ -264,6 +274,17 @@ const deleteDataset = (apollo, id) => {
   return response;
 };
 
+const addCredential = (apollo, datasourceName, token) => {
+  const response = apollo.mutate({
+    mutation: ADD_CREDENTIAL,
+    variables: {
+      datasourceName: datasourceName,
+      token: token
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -275,5 +296,6 @@ export {
   tokenAuth,
   addDataSet,
   deleteDataset,
-  fetchGithubOwnerRepos
+  fetchGithubOwnerRepos,
+  addCredential
 };
