@@ -10,7 +10,8 @@ const getProjectBreadcrumbs = project => {
     if (parent) {
       breadcrumbs.splice(0, 0, {
         text: parent.name,
-        to: `/ecosystem/${ecosystem.id}/project/${parent.name}`
+        to: `/ecosystem/${ecosystem.id}/project/${parent.name}`,
+        exact: true
       });
       findParents(parent.parentProject, ecosystem);
     } else {

@@ -1,13 +1,6 @@
 <template>
   <div class="pa-5">
-    <h2 v-if="project" class="text-body-1 font-weight-light mb-9">
-      Bestiary / {{ project.ecosystem.name }} /
-      <span v-if="project.parentProject">
-        {{ project.parentProject.name }} /
-      </span>
-      {{ name }} /
-      <span class="font-weight-bold">Edit project</span>
-    </h2>
+    <breadcrumbs :items="breadcrumbs" />
     <project-form
       v-if="showForm"
       :ecosystemId="ecosystemId"
@@ -25,13 +18,15 @@
 </template>
 
 <script>
+import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectForm from "../components/ProjectForm";
 import { getProjects, getProjectByName } from "../apollo/queries";
 import { moveProject, updateProject } from "../apollo/mutations";
+import { getViewBreadCrumbs } from "../utils";
 
 export default {
   name: "EditProject",
-  components: { ProjectForm },
+  components: { Breadcrumbs, ProjectForm },
   data() {
     return {
       error: null,
@@ -45,6 +40,16 @@ export default {
     },
     name() {
       return this.$route.params.name;
+    },
+    breadcrumbs() {
+      if (this.project) {
+        return getViewBreadCrumbs(
+          "Edit project",
+          this.project.ecosystem,
+          this.project
+        );
+      }
+      return [];
     }
   },
   methods: {
