@@ -116,6 +116,16 @@ const ADD_DATASET = gql`
   }
 `;
 
+const DELETE_DATASET = gql`
+  mutation deleteDataset($id: ID!) {
+    deleteDataset(id: $id) {
+      dataset {
+        id
+      }
+    }
+  }
+`;
+
 const FETCH_GITHUB_OWNER_REPOS = gql`
   mutation fetchGithubOwnerRepos($owner: String!, $apiToken: String) {
     fetchGithubOwnerRepos(owner: $owner, apiToken: $apiToken) {
@@ -245,6 +255,16 @@ const fetchGithubOwnerRepos = (apollo, owner, apiToken) => {
   return response;
 };
 
+const deleteDataset = (apollo, id) => {
+  const response = apollo.mutate({
+    mutation: DELETE_DATASET,
+    variables: {
+      id: id
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -255,5 +275,6 @@ export {
   deleteEcosystem,
   tokenAuth,
   addDataSet,
+  deleteDataset,
   fetchGithubOwnerRepos
 };

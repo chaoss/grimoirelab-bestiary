@@ -32,6 +32,7 @@ const datasetFragment = gql`
       }
       uri
     }
+    id
     filters
     category
   }
@@ -259,7 +260,8 @@ const getDatasetsByUri = (apollo, projectId, uri) => {
     variables: {
       projectId: projectId,
       uri: uri
-    }
+    },
+    fetchPolicy: "no-cache"
   });
   return response;
 };

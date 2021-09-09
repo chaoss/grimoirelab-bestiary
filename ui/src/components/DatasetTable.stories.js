@@ -5,7 +5,8 @@ export default {
   excludeStories: /.*Data$/
 };
 
-const template = '<dataset-table :datasets="datasets" />';
+const template =
+  '<dataset-table :datasets="datasets" :delete-dataset="mockFunction" />';
 
 export const Default = () => ({
   components: { DatasetTable },
@@ -44,5 +45,8 @@ export const Default = () => ({
         }
       ]
     };
+  },
+  methods: {
+    mockFunction() {}
   }
 });

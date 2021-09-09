@@ -36,13 +36,18 @@
       class="mb-9"
     />
 
-    <datasource-list :items="project.datasetSet" :project-id="project.id" />
+    <datasource-list
+      :items="project.datasetSet"
+      :project-id="project.id"
+      :delete-dataset="deleteDataset"
+      @updateDatasets="getProject"
+    />
   </div>
 </template>
 
 <script>
 import { getProjectByName } from "../apollo/queries";
-import { deleteProject } from "../apollo/mutations";
+import { deleteProject, deleteDataset } from "../apollo/mutations";
 import { getProjectBreadcrumbs } from "../utils";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectList from "../components/ProjectList";
@@ -108,6 +113,10 @@ export default {
           color: "error"
         });
       }
+    },
+    async deleteDataset(id) {
+      const response = await deleteDataset(this.$apollo, id);
+      return response;
     }
   },
   mounted() {

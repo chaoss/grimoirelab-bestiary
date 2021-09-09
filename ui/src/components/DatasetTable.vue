@@ -21,6 +21,9 @@
             <th class="text-left">
               Filters
             </th>
+            <th class="text-right">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -61,6 +64,14 @@
                 </span>
               </p>
             </td>
+
+            <td class="text-right">
+              <v-btn icon color="text" @click="confirmDelete(item)">
+                <v-icon small>
+                  mdi-trash-can-outline
+                </v-icon>
+              </v-btn>
+            </td>
           </tr>
         </tbody>
       </template>
@@ -78,6 +89,39 @@ export default {
     datasets: {
       type: Array,
       required: true
+    },
+    deleteDataset: {
+      type: Function,
+      required: true
+    }
+  },
+  methods: {
+    confirmDelete(item) {
+      const dialog = {
+        isOpen: true,
+        title: `Remove ${item.datasource.type.name} ${item.category}?`,
+        action: () => this.removeDataset(item)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    async removeDataset(dataset) {
+      try {
+        await this.deleteDataset(dataset.id);
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Data set removed successfully",
+          color: "success"
+        });
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      } finally {
+        this.$store.commit("clearDialog");
+        this.$emit("updateDatasets");
+      }
     }
   }
 };

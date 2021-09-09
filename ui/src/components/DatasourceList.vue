@@ -31,8 +31,8 @@
         custom
         v-slot="{ href, route, navigate }"
       >
-        <v-list-item :href="href" @click="navigate">
-          <v-list-item-content>
+        <v-list-item class="v-list-item--link">
+          <v-list-item-content :href="href" @click="navigate">
             <v-list-item-title>
               <span class="mr-4">{{ uri }}</span>
               <v-chip
@@ -51,6 +51,13 @@
               </v-chip>
             </v-list-item-title>
           </v-list-item-content>
+          <v-list-item-action>
+            <v-btn icon color="text" @click.stop="confirmDelete(value, uri)">
+              <v-icon small>
+                mdi-trash-can-outline
+              </v-icon>
+            </v-btn>
+          </v-list-item-action>
         </v-list-item>
       </router-link>
     </v-list>
@@ -71,6 +78,10 @@ export default {
     projectId: {
       type: [String, Number],
       required: true
+    },
+    deleteDataset: {
+      type: Function,
+      required: true
     }
   },
   data() {
@@ -90,10 +101,44 @@ export default {
         acc[current.datasource.uri].push(current);
         return acc;
       }, {});
+    },
+    confirmDelete(datasets, uri) {
+      const dialog = {
+        isOpen: true,
+        title: `Remove all datasets for ${uri}?`,
+        action: () => this.deleteDatasets(datasets)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    async deleteDatasets(datasets) {
+      try {
+        for (let dataset of datasets) {
+          await this.deleteDataset(dataset.id);
+        }
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Data source removed successfully",
+          color: "success"
+        });
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      } finally {
+        this.$store.commit("clearDialog");
+        this.$emit("updateDatasets");
+      }
     }
   },
   mounted() {
     this.list = this.groupByUri(this.items);
+  },
+  watch: {
+    items(items) {
+      this.list = this.groupByUri(items);
+    }
   }
 };
 </script>
