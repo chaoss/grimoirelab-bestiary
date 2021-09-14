@@ -31,8 +31,16 @@
         text
         block
       >
-        <v-icon small class="mr-1">mdi-plus</v-icon>
         Add data sources
+      </v-btn>
+      <v-btn
+        :to="{ name: 'credentials' }"
+        class="link pl-2"
+        color="text"
+        text
+        block
+      >
+        Credentials
       </v-btn>
       <template v-slot:append>
         <v-divider />

@@ -193,10 +193,31 @@ const GET_JOB = gql`
 `;
 
 const GET_DATASOURCE_CREDENTIALS = gql`
-  query getDatasourceCredentials($datasource: String!) {
+  query getDatasourceCredentials($datasource: ID) {
     credentials(filters: { datasourceName: $datasource }) {
       entities {
         token
+      }
+    }
+  }
+`;
+
+const GET_USER_CREDENTIALS = gql`
+  query getUserCredentials($page: Int, $pageSize: Int) {
+    credentials(page: $page, pageSize: $pageSize) {
+      entities {
+        createdAt
+        id
+        name
+        datasource {
+          name
+        }
+      }
+      pageInfo {
+        page
+        pageSize
+        numPages
+        totalResults
       }
     }
   }
@@ -291,7 +312,20 @@ const getDatasourceCredentials = (apollo, datasource) => {
     query: GET_DATASOURCE_CREDENTIALS,
     variables: {
       datasource: datasource
-    }
+    },
+    fetchPolicy: "no-cache"
+  });
+  return response;
+};
+
+const getUserCredentials = (apollo, page, pageSize) => {
+  const response = apollo.query({
+    query: GET_USER_CREDENTIALS,
+    variables: {
+      pageSize,
+      page
+    },
+    fetchPolicy: "no-cache"
   });
   return response;
 };
@@ -305,5 +339,6 @@ export {
   getProjectByName,
   getJob,
   GET_JOB,
-  getDatasourceCredentials
+  getDatasourceCredentials,
+  getUserCredentials
 };
