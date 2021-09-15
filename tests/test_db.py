@@ -2323,3 +2323,175 @@ class TestLinkDatasetProject(TestCase):
         self.assertEqual(len(op1_args), 2)
         self.assertEqual(op1_args['dataset'], self.dataset.id)
         self.assertEqual(op1_args['project'], new_proj.id)
+
+
+class TestArchiveDataSet(TestCase):
+    """Unit tests for archive_dataset"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(name='GitHub')
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dset = DataSet.objects.create(id=1,
+                                           project=project,
+                                           datasource=dsource,
+                                           category='issues',
+                                           filters=json.dumps({'tag': 'test'}))
+
+        self.trxl = TransactionsLog.open('archive_dataset', self.ctx)
+
+    def test_archive_dataset(self):
+        """Check whether it archives a dataset"""
+
+        self.assertEqual(self.dset.is_archived, False)
+        self.assertEqual(self.dset.archived_at, None)
+
+        before_dt = datetime_utcnow()
+        archived_dataset = db.archive_dataset(self.trxl, self.dset)
+        after_dt = datetime_utcnow()
+
+        self.assertIsInstance(archived_dataset, DataSet)
+        self.assertEqual(self.dset, archived_dataset)
+
+        self.assertEqual(archived_dataset.is_archived, True)
+        self.assertLessEqual(before_dt, archived_dataset.archived_at)
+        self.assertGreaterEqual(after_dt, archived_dataset.archived_at)
+
+        dataset_db = DataSet.objects.get(id=self.dset.id)
+        self.assertEqual(archived_dataset, dataset_db)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a dataset"""
+
+        timestamp = datetime_utcnow()
+        transactions = Transaction.objects.filter(name='archive_dataset')
+        trx = transactions[0]
+
+        db.archive_dataset(self.trxl, self.dset)
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'dataset')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, '1')
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], 1)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        db.archive_dataset(self.trxl, self.dset)
+        after_dt = datetime_utcnow()
+
+        # Tests
+        self.assertLessEqual(before_dt, self.dset.last_modified)
+        self.assertLessEqual(before_dt, self.dset.project.last_modified)
+        self.assertLessEqual(before_dt, self.dset.project.ecosystem.last_modified)
+        self.assertGreaterEqual(after_dt, self.dset.last_modified)
+        self.assertGreaterEqual(after_dt, self.dset.project.last_modified)
+        self.assertGreaterEqual(after_dt, self.dset.project.ecosystem.last_modified)
+
+
+class TestUnarchiveDataSet(TestCase):
+    """Unit tests for unarchive_dataset"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(name='GitHub')
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dset = DataSet.objects.create(id=1,
+                                           project=project,
+                                           datasource=dsource,
+                                           category='issues',
+                                           filters=json.dumps({'tag': 'test'}),
+                                           is_archived=True,
+                                           archived_at=datetime_utcnow())
+
+        self.trxl = TransactionsLog.open('unarchive_dataset', self.ctx)
+
+    def test_unarchive_dataset(self):
+        """Check whether it unarchives a dataset"""
+
+        self.assertEqual(self.dset.is_archived, True)
+        self.assertIsNotNone(self.dset.archived_at)
+
+        unarchived_dataset = db.unarchive_dataset(self.trxl, self.dset)
+
+        self.assertIsInstance(unarchived_dataset, DataSet)
+        self.assertEqual(self.dset, unarchived_dataset)
+
+        self.assertEqual(unarchived_dataset.is_archived, False)
+        self.assertIsNone(unarchived_dataset.archived_at)
+
+        dataset_db = DataSet.objects.get(id=self.dset.id)
+        self.assertEqual(unarchived_dataset, dataset_db)
+        self.assertEqual(dataset_db.is_archived, False)
+
+    def test_operations(self):
+        """Check if the right operations are created when unarchiving a dataset"""
+
+        timestamp = datetime_utcnow()
+        transactions = Transaction.objects.filter(name='unarchive_dataset')
+        trx = transactions[0]
+
+        db.unarchive_dataset(self.trxl, self.dset)
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'dataset')
+        self.assertEqual(op1.trx, trx)
+        self.assertEqual(op1.target, '1')
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], 1)
+
+    def test_last_modified(self):
+        """Check if last modification date is updated"""
+
+        before_dt = datetime_utcnow()
+        unarchived_dataset = db.unarchive_dataset(self.trxl, self.dset)
+        after_dt = datetime_utcnow()
+
+        # Tests
+        self.assertLessEqual(before_dt, unarchived_dataset.last_modified)
+        self.assertLessEqual(before_dt, unarchived_dataset.project.last_modified)
+        self.assertLessEqual(before_dt, unarchived_dataset.project.ecosystem.last_modified)
+        self.assertGreaterEqual(after_dt, unarchived_dataset.last_modified)
+        self.assertGreaterEqual(after_dt, unarchived_dataset.project.last_modified)
+        self.assertGreaterEqual(after_dt, unarchived_dataset.project.ecosystem.last_modified)

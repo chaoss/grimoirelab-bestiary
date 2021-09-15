@@ -836,6 +836,76 @@ def link_dataset_project(trxl, dataset, project):
     return dataset
 
 
+def archive_dataset(trxl, dataset):
+    """Archive a dataset.
+
+    This function allows to archive the given dataset
+
+    As a result, it will return the `DataSet` object with
+    the updated data.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param dataset: dataset which will be archived
+
+    :returns: the archived dataset object
+
+    :raises ValueError: raised when the given dataset is already archived
+    """
+    op_args = {
+        'id': dataset.id
+    }
+
+    if dataset.is_archived:
+        raise ValueError('Dataset is already archived.')
+
+    dataset.is_archived = True
+    dataset.archived_at = datetime_utcnow()
+    dataset.save()
+    dataset.project.save()
+    dataset.project.ecosystem.save()
+
+    trxl.log_operation(op_type=Operation.OpType.UPDATE, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+    return dataset
+
+
+def unarchive_dataset(trxl, dataset):
+    """Unarchive a dataset.
+
+    This function allows to unarchive the given dataset
+
+    As a result, it will return the `DataSet` object with
+    the updated data.
+
+    :param trxl: TransactionsLog object from the method calling this one
+    :param dataset: dataset which will be unarchived
+
+    :returns: the unarchived dataset object
+
+    :raises ValueError: raised when the given dataset is not archived
+    """
+    op_args = {
+        'id': dataset.id
+    }
+
+    if not dataset.is_archived:
+        raise ValueError('Dataset is not archived.')
+
+    dataset.is_archived = False
+    dataset.archived_at = None
+    dataset.save()
+    dataset.project.save()
+    dataset.project.ecosystem.save()
+
+    trxl.log_operation(op_type=Operation.OpType.UPDATE, entity_type='dataset',
+                       timestamp=datetime_utcnow(), args=op_args,
+                       target=str(op_args['id']))
+
+    return dataset
+
+
 _MYSQL_DUPLICATE_ENTRY_ERROR_REGEX = re.compile(r"Duplicate entry '(?P<value>.+)' for key")
 
 
