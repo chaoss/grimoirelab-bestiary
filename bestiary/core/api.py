@@ -40,7 +40,9 @@ from .db import (find_ecosystem,
                  find_credential as find_credential_db,
                  delete_dataset as delete_dataset_db,
                  delete_datasource as delete_datasource_db,
-                 delete_credential as delete_credential_db)
+                 delete_credential as delete_credential_db,
+                 archive_dataset as archive_dataset_db,
+                 unarchive_dataset as unarchive_dataset_db)
 from .errors import AlreadyExistsError, InvalidValueError, NotFoundError
 from .log import TransactionsLog
 
@@ -564,3 +566,73 @@ def move_project(ctx, from_project_id, to_project_id):
     from_project = link_parent_project_db(trxl, from_project, to_project)
 
     return from_project
+
+
+@django.db.transaction.atomic
+def archive_dataset(ctx, dataset_id):
+    """Archive a dataset.
+
+    This function archives the given dataset.
+    It checks first whether the dataset is on the registry.
+    When it is found, the dataset is archived. Otherwise,
+    it will raise a 'NotFoundError'.
+
+    :param ctx: context from where this method is called
+    :param dataset_id: id of the dataset to archive
+
+    :raises InvalidValueError: raised when dataset_id is None
+    :raises NotFoundError: raised when the dataset does not exist
+        in the registry
+    """
+    if dataset_id is None:
+        raise InvalidValueError(msg="'dataset_id' cannot be None")
+
+    trxl = TransactionsLog.open('archive_dataset', ctx)
+
+    try:
+        dataset = find_dataset_db(dataset_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    dataset_archived = archive_dataset_db(trxl, dataset=dataset)
+
+    trxl.close()
+
+    return dataset_archived
+
+
+@django.db.transaction.atomic
+def unarchive_dataset(ctx, dataset_id):
+    """Unarchive a dataset.
+
+    This function unarchives the given dataset.
+    It checks first whether the dataset is on the registry.
+    When it is found, the dataset is unarchived. Otherwise,
+    it will raise a 'NotFoundError'.
+
+    :param ctx: context from where this method is called
+    :param dataset_id: id of the dataset to unarchive
+
+    :raises InvalidValueError: raised when dataset_id is None
+    :raises NotFoundError: raised when the dataset does not exist
+        in the registry
+    """
+    if dataset_id is None:
+        raise InvalidValueError(msg="'dataset_id' cannot be None")
+
+    trxl = TransactionsLog.open('unarchive_dataset', ctx)
+
+    try:
+        dataset = find_dataset_db(dataset_id)
+    except ValueError as e:
+        raise InvalidValueError(msg=str(e))
+    except NotFoundError as exc:
+        raise exc
+
+    dataset_unarchived = unarchive_dataset_db(trxl, dataset=dataset)
+
+    trxl.close()
+
+    return dataset_unarchived

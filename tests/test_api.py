@@ -2508,3 +2508,210 @@ class TestMoveProject(TestCase):
         self.assertEqual(len(op1_args), 2)
         self.assertEqual(op1_args['id'], self.project.id)
         self.assertEqual(op1_args['parent_id'], self.parent_project.id)
+
+
+class TestArchiveDataset(TestCase):
+    """Unit tests for archive_dataset"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(name='GitHub')
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dataset = DataSet.objects.create(id=1,
+                                              project=project,
+                                              datasource=dsource,
+                                              category='issues',
+                                              filters='{"tag": "test"}')
+
+    def test_archive_dataset(self):
+        """Check if everything goes OK when archiving a dataset"""
+
+        before_dt = datetime_utcnow()
+        archived_dataset = api.archive_dataset(self.ctx, dataset_id=self.dataset.id)
+        after_dt = datetime_utcnow()
+
+        self.assertIsInstance(archived_dataset, DataSet)
+        self.assertEqual(self.dataset, archived_dataset)
+
+        self.assertEqual(archived_dataset.is_archived, True)
+        self.assertLessEqual(before_dt, archived_dataset.archived_at)
+        self.assertGreaterEqual(after_dt, archived_dataset.archived_at)
+
+    def test_archive_non_existing_dataset(self):
+        """Check if it fails when archiving a non existing dataset"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(NotFoundError, DATASET_NOT_FOUND_ERROR.format(dset_id='99999')):
+            api.archive_dataset(self.ctx, 99999)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_dataset_id_none(self):
+        """Check if it fails when dataset id is `None`"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(InvalidValueError, DATASET_ID_NONE_OR_EMPTY_ERROR):
+            api.archive_dataset(self.ctx, dataset_id=None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when archiving a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.archive_dataset(self.ctx, dataset_id=self.dataset.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'archive_dataset')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when archiving a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.archive_dataset(self.ctx, dataset_id=self.dataset.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'dataset')
+        self.assertEqual(op1.target, str(self.dataset.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], self.dataset.id)
+
+
+class TestUnarchiveDataset(TestCase):
+    """Unit tests for unarchive_dataset"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(self.user)
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(name='GitHub')
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dataset = DataSet.objects.create(id=1,
+                                              project=project,
+                                              datasource=dsource,
+                                              category='issues',
+                                              filters='{"tag": "test"}',
+                                              is_archived=True,
+                                              archived_at=datetime_utcnow())
+
+    def test_unarchive_dataset(self):
+        """Check if everything goes OK when unarchiving a dataset"""
+
+        unarchived_dataset = api.unarchive_dataset(self.ctx, dataset_id=self.dataset.id)
+
+        self.assertIsInstance(unarchived_dataset, DataSet)
+        self.assertEqual(self.dataset, unarchived_dataset)
+
+        self.assertEqual(unarchived_dataset.is_archived, False)
+        self.assertIsNone(unarchived_dataset.archived_at)
+
+    def test_unarchive_non_existing_dataset(self):
+        """Check if it fails when unarchiving a non existing dataset"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(NotFoundError, DATASET_NOT_FOUND_ERROR.format(dset_id='99999')):
+            api.unarchive_dataset(self.ctx, 99999)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_dataset_id_none(self):
+        """Check if it fails when dataset id is `None`"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(InvalidValueError, DATASET_ID_NONE_OR_EMPTY_ERROR):
+            api.unarchive_dataset(self.ctx, dataset_id=None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when unarchiving a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.unarchive_dataset(self.ctx, dataset_id=self.dataset.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'unarchive_dataset')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when unarchiving a dataset"""
+
+        timestamp = datetime_utcnow()
+
+        api.unarchive_dataset(self.ctx, dataset_id=self.dataset.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.UPDATE.value)
+        self.assertEqual(op1.entity_type, 'dataset')
+        self.assertEqual(op1.target, str(self.dataset.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], self.dataset.id)
