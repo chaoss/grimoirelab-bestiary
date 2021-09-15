@@ -1,0 +1,11 @@
+---
+title: Archive datasets
+category: added
+author: Jose Javier Merchante <jjmerchante@cauldron.io>
+issue: 104
+notes: >
+    This feature allows to archive datasets from Bestiary.
+
+    There are two new queries: `archiveDataset` and `unarchiveDataset`
+    that allows to change the archive status of a dataset based on their ID.
+

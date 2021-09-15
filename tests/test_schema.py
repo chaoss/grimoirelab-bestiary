@@ -65,6 +65,7 @@ CREDENTIAL_DOES_NOT_EXIST_ERROR = "Credential ID .+ not found in the registry"
 CREDENTIAL_DELETE_NOT_ALLOWED = "User not allowed to remove credential ID .+"
 ADD_CREDENTIAL_USER_REQUIRED = "Unauthenticated user cannot add credentials"
 QUERY_CREDENTIAL_USER_REQUIRED = "Unauthenticated user cannot get credentials"
+DATASET_NOT_ARCHIVED = "Dataset is not archived."
 
 # Test queries
 BT_TRANSACTIONS_QUERY = """{
@@ -399,6 +400,8 @@ BT_DATASETS_QUERY = """{
         name
       }
       filters
+      isArchived
+      archivedAt
     }
   }
 }"""
@@ -447,6 +450,31 @@ BT_DATASETS_QUERY_FILTER_URI = """{
         name
       }
       filters
+    }
+  }
+}"""
+BT_DATASETS_QUERY_FILTER_ARCHIVED = """{
+  datasets (
+    filters: {
+      isArchived: %s
+    }
+  ) {
+    entities {
+      id
+      datasource {
+        type {
+          name
+        }
+        uri
+      }
+      category
+      project {
+        id
+        name
+      }
+      filters
+      isArchived
+      archivedAt
     }
   }
 }"""
@@ -1399,6 +1427,8 @@ class TestQueryDatasets(django.test.TestCase):
         self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
         self.assertEqual(dataset['category'], 'issues')
         self.assertEqual(dataset['filters'], self.filters)
+        self.assertEqual(dataset['isArchived'], False)
+        self.assertEqual(dataset['archivedAt'], None)
 
     def test_filter_category(self):
         """Check whether it returns the project searched when using filters"""
@@ -1458,6 +1488,35 @@ class TestQueryDatasets(django.test.TestCase):
         self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
         self.assertEqual(dataset['category'], 'issues')
         self.assertEqual(dataset['filters'], self.filters)
+
+    def test_filter_archived(self):
+        """Check whether it returns the project searched when using filters"""
+
+        self.dataset_2 = DataSet.objects.create(id=2,
+                                                project=self.project,
+                                                datasource=self.dsource,
+                                                category='prs',
+                                                filters=json.dumps(self.filters),
+                                                is_archived=True,
+                                                archived_at=datetime_utcnow())
+
+        client = graphene.test.Client(schema)
+        test_query = BT_DATASETS_QUERY_FILTER_ARCHIVED % 'true'
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        datasets = executed['data']['datasets']['entities']
+        self.assertEqual(len(datasets), 1)
+
+        dataset = datasets[0]
+        self.assertEqual(dataset['id'], str(self.dataset_2.id))
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], self.dsource.type.name)
+        self.assertEqual(dataset['datasource']['uri'], self.dsource.uri)
+        self.assertEqual(dataset['category'], 'prs')
+        self.assertEqual(dataset['filters'], self.filters)
+        self.assertEqual(dataset['isArchived'], True)
 
     def test_pagination(self):
         """Check whether it returns the projects searched when using pagination"""
@@ -3750,3 +3809,237 @@ class TestMoveProjectMutation(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestArchiveDatasetMutation(django.test.TestCase):
+    """Unit tests for mutation to archive datasets"""
+
+    BT_ARCHIVE_DATASET = """
+      mutation archiveDatasetTest($id: ID) {
+        archiveDataset(id: $id) {
+          dataset {
+            id
+            datasource {
+              type {
+                name
+              }
+              uri
+            }
+            category
+            isArchived
+            archivedAt
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(id=1, name='GitHub')
+
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dataset_1 = DataSet.objects.create(id=1,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='issues',
+                                                filters=json.dumps({'tag': 'test'}))
+
+        self.dataset_2 = DataSet.objects.create(id=2,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='pull-requests',
+                                                filters=json.dumps({'tag': 'test'}))
+
+    def test_archive_dataset(self):
+        """Check whether it archives a dataset"""
+
+        params = {
+            'id': 1
+        }
+
+        before_dt = datetime_utcnow()
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ARCHIVE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+        after_dt = datetime_utcnow()
+
+        # Check result
+        dataset = executed['data']['archiveDataset']['dataset']
+        self.assertEqual(dataset['id'], '1')
+        self.assertEqual(dataset['datasource']['type']['name'], 'GitHub')
+        self.assertEqual(dataset['datasource']['uri'],
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertEqual(dataset['isArchived'], True)
+        self.assertLessEqual(before_dt, str_to_datetime(dataset['archivedAt']))
+        self.assertGreaterEqual(after_dt, str_to_datetime(dataset['archivedAt']))
+
+        dataset_db = DataSet.objects.get(id=1)
+        self.assertTrue(dataset_db.is_archived, True)
+        self.assertLessEqual(before_dt, dataset_db.archived_at)
+        self.assertGreaterEqual(after_dt, dataset_db.archived_at)
+
+    def test_not_found_dataset(self):
+        """Check if it returns an error when a dataset does not exist"""
+
+        params = {
+            'id': 11111111
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ARCHIVE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DATASET_DOES_NOT_EXIST_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_ARCHIVE_DATASET,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestUnarchiveDatasetMutation(django.test.TestCase):
+    """Unit tests for mutation to unarchive datasets"""
+
+    BT_UNARCHIVE_DATASET = """
+      mutation unarchiveDatasetTest($id: ID) {
+        unarchiveDataset(id: $id) {
+          dataset {
+            id
+            datasource {
+              type {
+                name
+              }
+              uri
+            }
+            category
+            isArchived
+            archivedAt
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        eco = Ecosystem.objects.create(name='Eco-example')
+        project = Project.objects.create(id=1,
+                                         name='example',
+                                         title='Project title',
+                                         ecosystem=eco)
+        dstype = DataSourceType.objects.create(id=1, name='GitHub')
+
+        dsource = DataSource.objects.create(id=1,
+                                            type=dstype,
+                                            uri='https://github.com/chaoss/grimoirelab-bestiary')
+        self.dataset_1 = DataSet.objects.create(id=1,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='issues',
+                                                filters=json.dumps({'tag': 'test'}),
+                                                is_archived=True,
+                                                archived_at=datetime_utcnow())
+
+        self.dataset_2 = DataSet.objects.create(id=2,
+                                                project=project,
+                                                datasource=dsource,
+                                                category='pull-requests',
+                                                filters=json.dumps({'tag': 'test'}))
+
+    def test_unarchive_dataset(self):
+        """Check whether it unarchives a dataset"""
+
+        params = {
+            'id': 1
+        }
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_UNARCHIVE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        dataset = executed['data']['unarchiveDataset']['dataset']
+        self.assertEqual(dataset['id'], '1')
+        self.assertEqual(dataset['datasource']['type']['name'], 'GitHub')
+        self.assertEqual(dataset['datasource']['uri'],
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset['category'], 'issues')
+        self.assertFalse(dataset['isArchived'])
+        self.assertIsNone(dataset['archivedAt'])
+
+        dataset_db = DataSet.objects.get(id=1)
+        self.assertFalse(dataset_db.is_archived)
+        self.assertIsNone(dataset_db.archived_at)
+
+    def test_not_found_dataset(self):
+        """Check if it returns an error when a dataset does not exist"""
+
+        params = {
+            'id': 11111111
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_UNARCHIVE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DATASET_DOES_NOT_EXIST_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_UNARCHIVE_DATASET,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+    def test_already_unarchived(self):
+        """Check if it fails when the dataset is not archived"""
+
+        params = {
+            'id': 2
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_UNARCHIVE_DATASET,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, DATASET_NOT_ARCHIVED)
