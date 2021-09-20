@@ -5,8 +5,14 @@ export default {
   excludeStories: /.*Data$/
 };
 
-const template =
-  '<datasource-list :items="items" project-id="1" :deleteDataset="mockFunction" />';
+const template = `
+  <datasource-list
+    :items="items"
+    project-id="1"
+    :deleteDataset="mockFunction"
+    :archive-dataset="mockFunction"
+    :unarchive-dataset="mockFunction"
+  />`;
 
 export const Default = () => ({
   components: { DatasourceList },
@@ -21,7 +27,8 @@ export const Default = () => ({
             },
             uri: "https://github.com/organization/repository-1"
           },
-          category: "issue"
+          category: "issue",
+          isArchived: false
         },
         {
           datasource: {
@@ -30,7 +37,8 @@ export const Default = () => ({
             },
             uri: "https://github.com/organization/repository-1"
           },
-          category: "prs"
+          category: "prs",
+          isArchived: false
         },
         {
           datasource: {
@@ -40,7 +48,8 @@ export const Default = () => ({
             uri: "https://github.com/organization/repository-2"
           },
           filters: { tags: ["python", "bug"], from_date: "2021-01-01" },
-          category: "issue"
+          category: "issue",
+          isArchived: false
         },
         {
           datasource: {
@@ -49,7 +58,8 @@ export const Default = () => ({
             },
             uri: "https://github.com/organization/repository-1"
           },
-          category: "commit"
+          category: "commit",
+          isArchived: false
         },
         {
           datasource: {
@@ -59,7 +69,8 @@ export const Default = () => ({
             uri: "https://github.com/organization/repository-2"
           },
           filters: { branches: ["branch_1", "branch_2"] },
-          category: "commit"
+          category: "commit",
+          isArchived: false
         },
         {
           datasource: {
@@ -69,7 +80,8 @@ export const Default = () => ({
             uri: "https://jira.organization.com"
           },
           filters: {},
-          category: "issue"
+          category: "issue",
+          isArchived: true
         },
         {
           datasource: {
@@ -79,7 +91,8 @@ export const Default = () => ({
             uri: "@organization"
           },
           filters: {},
-          category: "tweet"
+          category: "tweet",
+          isArchived: true
         }
       ]
     };
