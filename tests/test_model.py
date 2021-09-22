@@ -22,6 +22,8 @@
 
 import json
 
+from django.db import connection
+from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from django.test import TransactionTestCase
 
@@ -33,7 +35,8 @@ from bestiary.core.models import (Ecosystem,
                                   Operation,
                                   DataSourceType,
                                   DataSource,
-                                  DataSet)
+                                  DataSet,
+                                  Credential)
 
 # Test check errors messages
 DUPLICATE_CHECK_ERROR = "Duplicate entry .+"
@@ -388,6 +391,118 @@ class TestDataSet(TransactionTestCase):
 
         self.assertGreaterEqual(dataset.last_modified, before_modified_dt)
         self.assertLessEqual(dataset.last_modified, after_modified_dt)
+
+
+class TestCredential(TransactionTestCase):
+    """Unit tests for Credential class"""
+
+    def setUp(self):
+        """Load initial data for credentials"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.gh_dst = DataSourceType.objects.create(name='GitHub')
+
+    def test_unique_credentials(self):
+        """Check whether credentials are unique based on user, token, and datasource"""
+
+        with self.assertRaises(IntegrityError):
+            Credential.objects.create(id=1,
+                                      user=self.user,
+                                      name='Test token',
+                                      datasource=self.gh_dst,
+                                      token='abcd1234')
+            Credential.objects.create(id=1,
+                                      user=self.user,
+                                      name='Test token',
+                                      datasource=self.gh_dst,
+                                      token='abcd1234')
+
+    def test_not_null_datasource_type(self):
+        """Check whether every data source is assigned to a data source type"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            Credential.objects.create(id=1,
+                                      user=self.user,
+                                      name='Test token',
+                                      datasource=None,
+                                      token='abcd1234')
+
+    def test_not_null_user(self):
+        """Check whether every data source is assigned to a data source type"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            Credential.objects.create(id=1,
+                                      user=None,
+                                      name='Test token',
+                                      datasource=self.gh_dst,
+                                      token='abcd1234')
+
+    def test_token_encrypted(self):
+        """Test whether the token is encrypted at database level"""
+
+        Credential.objects.create(id=1,
+                                  user=self.user,
+                                  datasource=self.gh_dst,
+                                  token='abcd1234')
+
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT token FROM credentials WHERE id=1')
+            token = cursor.fetchone()[0]
+
+        self.assertNotEqual(token, 'abcd1234')
+
+        cred_db = Credential.objects.get(id=1)
+        self.assertEqual(cred_db.token, 'abcd1234')
+
+    def test_token_null(self):
+        """Test whether it fails when token is None"""
+
+        with self.assertRaisesRegex(IntegrityError, NULL_VALUE_CHECK_ERROR):
+            Credential.objects.create(id=1,
+                                      user=self.user,
+                                      name="Token 1",
+                                      datasource=self.gh_dst,
+                                      token=None)
+
+    def test_created_at(self):
+        """Check creation date is only set when the object is created"""
+
+        before_dt = datetime_utcnow()
+        credential = Credential.objects.create(id=1,
+                                               user=self.user,
+                                               name="Token 1",
+                                               datasource=self.gh_dst,
+                                               token='abcd1234')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(credential.created_at, before_dt)
+        self.assertLessEqual(credential.created_at, after_dt)
+
+        credential.save()
+
+        self.assertGreaterEqual(credential.created_at, before_dt)
+        self.assertLessEqual(credential.created_at, after_dt)
+
+    def test_last_modified(self):
+        """Check last modification date is set when the object is updated"""
+
+        before_dt = datetime_utcnow()
+        credential = Credential.objects.create(id=1,
+                                               user=self.user,
+                                               name="Token 1",
+                                               datasource=self.gh_dst,
+                                               token='abcd1234')
+        after_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(credential.last_modified, before_dt)
+        self.assertLessEqual(credential.last_modified, after_dt)
+
+        before_modified_dt = datetime_utcnow()
+        credential.save()
+        after_modified_dt = datetime_utcnow()
+
+        self.assertGreaterEqual(credential.last_modified, before_modified_dt)
+        self.assertLessEqual(credential.last_modified, after_modified_dt)
 
 
 class TestTransaction(TransactionTestCase):

@@ -127,8 +127,8 @@ const DELETE_DATASET = gql`
 `;
 
 const FETCH_GITHUB_OWNER_REPOS = gql`
-  mutation fetchGithubOwnerRepos($owner: String!, $apiToken: String) {
-    fetchGithubOwnerRepos(owner: $owner, apiToken: $apiToken) {
+  mutation fetchGithubOwnerRepos($owner: String!) {
+    fetchGithubOwnerRepos(owner: $owner) {
       jobId
     }
   }
@@ -244,12 +244,11 @@ const addDataSet = (
   return response;
 };
 
-const fetchGithubOwnerRepos = (apollo, owner, apiToken) => {
+const fetchGithubOwnerRepos = (apollo, owner) => {
   const response = apollo.mutate({
     mutation: FETCH_GITHUB_OWNER_REPOS,
     variables: {
-      owner: owner,
-      apiToken: apiToken
+      owner: owner
     }
   });
   return response;

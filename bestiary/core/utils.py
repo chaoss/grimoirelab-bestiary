@@ -19,9 +19,15 @@
 #     Santiago Dueñas <sduenas@bitergia.com>
 #     Miguel Ángel Fernández <mafesan@bitergia.com>
 #
-
+import base64
+import os
 import re
 import string
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, modes, algorithms
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from django.utils.encoding import force_bytes
 
 
 def validate_field(name, value, allow_none=False):
@@ -97,3 +103,54 @@ def validate_name(name):
         raise ValueError("'name' cannot contain whitespace characters")
     if contains_punctuation(name):
         raise ValueError("'name' cannot contain punctuation characters except hyphens")
+
+
+class Crypto:
+    """Encrypt and decrypt data using a given key.
+
+    This class derives the key provided to make it suitable
+    for use as input to an asymmetric algorithm.
+    Given some data as input, returns an encrypted value.
+    It also include the reverse method to decrypt.
+    """
+    def __init__(self, key):
+        kdf = HKDF(algorithm=hashes.SHA256(),
+                   length=32,
+                   salt=None,
+                   info=b"hkdf-secret-key")
+        self.key = kdf.derive(force_bytes(key))
+
+    def encrypt(self, data):
+        """Encrypt the given data.
+
+        :param data: object to encrypt.
+
+        :returns: encrypted binary object
+        """
+        iv = os.urandom(16)
+
+        encryptor = Cipher(
+            algorithms.AES(self.key),
+            modes.CTR(iv)
+        ).encryptor()
+
+        ciphertext = encryptor.update(force_bytes(data)) + encryptor.finalize()
+        return base64.b64encode(iv + ciphertext)
+
+    def decrypt(self, data):
+        """Decrypt the given data.
+
+        :param data: binary object to decrypt.
+
+        :returns: decrypted binary object.
+        """
+        enc = base64.b64decode(data)
+        iv = enc[:16]
+        ciphertext = enc[16:]
+
+        decryptor = Cipher(
+            algorithms.AES(self.key),
+            modes.CTR(iv)
+        ).decryptor()
+
+        return decryptor.update(ciphertext) + decryptor.finalize()

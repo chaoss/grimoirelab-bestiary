@@ -29,7 +29,7 @@ import graphene.test
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 
 from grimoirelab_toolkit.datetime import datetime_utcnow, str_to_datetime
 
@@ -41,7 +41,8 @@ from bestiary.core.models import (Ecosystem,
                                   DataSourceType,
                                   DataSource,
                                   Transaction,
-                                  Operation)
+                                  Operation,
+                                  Credential)
 from bestiary.core.schema import BestiaryQuery, BestiaryMutation
 
 AUTHENTICATION_ERROR = "You do not have permission to perform this action"
@@ -59,6 +60,11 @@ INVALID_NAME_WHITESPACES = "'name' cannot contain whitespace characters"
 DATASOURCE_NAME_DOES_NOT_EXIST_ERROR = "DataSourceType name .+ not found in the registry"
 DUPLICATED_DATASET_ERROR = "DataSet '.+' already exists in the registry"
 DATASET_DOES_NOT_EXIST_ERROR = "DataSet ID .+ not found in the registry"
+DUPLICATED_CREDENTIAL_ERROR = "Credential '.+' already exists in the registry"
+CREDENTIAL_DOES_NOT_EXIST_ERROR = "Credential ID .+ not found in the registry"
+CREDENTIAL_DELETE_NOT_ALLOWED = "User not allowed to remove credential ID .+"
+ADD_CREDENTIAL_USER_REQUIRED = "Unauthenticated user cannot add credentials"
+QUERY_CREDENTIAL_USER_REQUIRED = "Unauthenticated user cannot get credentials"
 
 # Test queries
 BT_TRANSACTIONS_QUERY = """{
@@ -476,6 +482,94 @@ BT_DATASETS_QUERY_PAGINATION = """{
     }
   }
 }"""
+BT_CREDENTIALS_QUERY = """{
+  credentials {
+    entities {
+      id
+      name
+      datasource {
+        name
+      }
+      token
+    }
+  }
+}"""
+BT_CREDENTIALS_QUERY_FILTER_DATASOURCE = """{
+  credentials (
+    filters: {
+      datasourceName: "%s"
+    }
+  ) {
+    entities {
+      id
+      name
+      datasource {
+        name
+      }
+      token
+    }
+  }
+}"""
+BT_CREDENTIALS_QUERY_FILTER_ID = """{
+  credentials (
+    filters: {
+      id: %d
+    }
+  ) {
+    entities {
+      id
+      name
+      datasource {
+        name
+      }
+      token
+    }
+  }
+}
+"""
+BT_CREDENTIALS_QUERY_FILTER_NAME = """{
+  credentials (
+    filters: {
+      name: "%s"
+    }
+  ) {
+    entities {
+      id
+      name
+      datasource {
+        name
+      }
+      token
+    }
+  }
+}
+"""
+BT_CREDENTIALS_QUERY_PAGINATION = """{
+  credentials (
+    page: %d
+    pageSize: %d
+  ) {
+    entities {
+      id
+      name
+      datasource {
+        name
+      }
+      token
+    }
+    pageInfo{
+      page
+      pageSize
+      numPages
+      hasNext
+      hasPrev
+      startIndex
+      endIndex
+      totalResults
+    }
+  }
+}
+"""
 BT_JOB_QUERY = """{
   job(
     jobId:"%s"
@@ -1478,6 +1572,248 @@ class TestQueryDatasets(django.test.TestCase):
         self.assertEqual(msg, AUTHENTICATION_ERROR)
 
 
+class TestQueryCredentials(django.test.TestCase):
+    """Unit tests for credentials queries"""
+
+    def setUp(self):
+        """Load initial credentials and set queries context"""
+
+        self.user = get_user_model().objects.create(id=1, username='test')
+        self.user2 = get_user_model().objects.create(id=2, username='test2')
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+        self.gl_dst = DataSourceType.objects.create(id=2, name='GitLab')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.credential_1 = Credential.objects.create(id=1,
+                                                      user=self.user,
+                                                      name='Test token 1 GH',
+                                                      datasource=self.gh_dst,
+                                                      token='test1tokengh')
+        self.credential_2 = Credential.objects.create(id=2,
+                                                      user=self.user,
+                                                      name='Test token 1 GL',
+                                                      datasource=self.gl_dst,
+                                                      token='test1tokengl')
+        self.credential_3 = Credential.objects.create(id=3,
+                                                      user=self.user2,
+                                                      name='Test token 1 GH',
+                                                      datasource=self.gh_dst,
+                                                      token='test2token1')
+
+    def test_credential(self):
+        """Check if it returns the list of credentials"""
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_CREDENTIALS_QUERY,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+
+        # Credential 3 is for user 2 so it should not be here
+        self.assertEqual(len(credentials), 2)
+
+        credential_1 = credentials[0]
+        self.assertEqual(credential_1['id'], str(self.credential_1.id))
+        self.assertEqual(credential_1['name'], str(self.credential_1.name))
+        self.assertEqual(credential_1['datasource']['name'], str(self.credential_1.datasource.name))
+        self.assertEqual(credential_1['token'], self.credential_1.token)
+
+        credential_2 = credentials[1]
+        self.assertEqual(credential_2['id'], str(self.credential_2.id))
+        self.assertEqual(credential_2['name'], str(self.credential_2.name))
+        self.assertEqual(credential_2['datasource']['name'], str(self.credential_2.datasource.name))
+        self.assertEqual(credential_2['token'], self.credential_2.token)
+
+    def test_filter_datasource(self):
+        """Check whether it returns the credentials searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_FILTER_DATASOURCE % 'GitHub'
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertEqual(len(credentials), 1)
+
+        credential = credentials[0]
+        self.assertEqual(credential['id'], str(self.credential_1.id))
+        self.assertEqual(credential['name'], str(self.credential_1.name))
+        self.assertEqual(credential['datasource']['name'], str(self.credential_1.datasource.name))
+        self.assertEqual(credential['token'], self.credential_1.token)
+
+    def test_filter_non_existing_registry(self):
+        """Check whether it returns an empty list when searched with a non existing dataset"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_FILTER_DATASOURCE % 'Unknown'
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertListEqual(credentials, [])
+
+    def test_filter_id(self):
+        """Check whether it returns the credentials searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_FILTER_ID % 2
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertEqual(len(credentials), 1)
+
+        credential = credentials[0]
+        self.assertEqual(credential['id'], str(self.credential_2.id))
+        self.assertEqual(credential['name'], str(self.credential_2.name))
+        self.assertEqual(credential['datasource']['name'], str(self.credential_2.datasource.name))
+        self.assertEqual(credential['token'], self.credential_2.token)
+
+    def test_filter_name(self):
+        """Check whether it returns the credentials searched when using filters"""
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_FILTER_NAME % "token 1 GH"
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertEqual(len(credentials), 1)
+
+        credential = credentials[0]
+        self.assertEqual(credential['id'], str(self.credential_1.id))
+        self.assertEqual(credential['name'], str(self.credential_1.name))
+        self.assertEqual(credential['datasource']['name'], str(self.credential_1.datasource.name))
+        self.assertEqual(credential['token'], self.credential_1.token)
+
+    def test_pagination(self):
+        """Check whether it returns the credentials searched when using pagination"""
+
+        # Create additional credentials
+        credential_4 = Credential.objects.create(id=4,
+                                                 user=self.user,
+                                                 name="test token GH 2",
+                                                 datasource=self.gh_dst,
+                                                 token='test1tokengh2')
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_PAGINATION % (1, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertEqual(len(credentials), 2)
+
+        credential = credentials[0]
+        self.assertEqual(credential['id'], str(self.credential_1.id))
+        self.assertEqual(credential['name'], str(self.credential_1.name))
+        self.assertEqual(credential['datasource']['name'], str(self.credential_1.datasource.name))
+        self.assertEqual(credential['token'], self.credential_1.token)
+
+        credential = credentials[1]
+        self.assertEqual(credential['id'], str(self.credential_2.id))
+        self.assertEqual(credential['name'], str(self.credential_2.name))
+        self.assertEqual(credential['datasource']['name'], str(self.credential_2.datasource.name))
+        self.assertEqual(credential['token'], self.credential_2.token)
+
+        pag_data = executed['data']['credentials']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 1)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertTrue(pag_data['hasNext'])
+        self.assertFalse(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 1)
+        self.assertEqual(pag_data['endIndex'], 2)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+        # Testing whether it returns different results in the second page
+        test_query = BT_CREDENTIALS_QUERY_PAGINATION % (2, 2)
+        executed = client.execute(test_query,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertEqual(len(credentials), 1)
+
+        credential = credentials[0]
+        self.assertEqual(credential['id'], str(credential_4.id))
+        self.assertEqual(credential['name'], str(credential_4.name))
+        self.assertEqual(credential['datasource']['name'], str(credential_4.datasource.name))
+        self.assertEqual(credential['token'], credential_4.token)
+
+        pag_data = executed['data']['credentials']['pageInfo']
+        self.assertEqual(len(pag_data), 8)
+        self.assertEqual(pag_data['page'], 2)
+        self.assertEqual(pag_data['pageSize'], 2)
+        self.assertEqual(pag_data['numPages'], 2)
+        self.assertFalse(pag_data['hasNext'])
+        self.assertTrue(pag_data['hasPrev'])
+        self.assertEqual(pag_data['startIndex'], 3)
+        self.assertEqual(pag_data['endIndex'], 3)
+        self.assertEqual(pag_data['totalResults'], 3)
+
+    def test_empty_registry(self):
+        """Check whether it returns an empty list when the registry is empty"""
+
+        # Delete Credentials created in `setUp` method
+        Credential.objects.all().delete()
+        credentials = DataSet.objects.all()
+
+        self.assertEqual(len(credentials), 0)
+
+        # Test query
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_CREDENTIALS_QUERY,
+                                  context_value=self.context_value)
+
+        credentials = executed['data']['credentials']['entities']
+        self.assertListEqual(credentials, [])
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(BT_CREDENTIALS_QUERY,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+    @override_settings(AUTHENTICATION_REQUIRED=False)
+    def test_unauthenticated_query(self):
+        """(Auth not required) Check when a non-authenticated user tries to get credentials"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(BT_CREDENTIALS_QUERY,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, QUERY_CREDENTIAL_USER_REQUIRED)
+
+    @override_settings(AUTHENTICATION_REQUIRED=False)
+    def test_unauthenticated_pagination(self):
+        """(Auth not required) Check when a non-authenticated user tries to get credentials"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+        test_query = BT_CREDENTIALS_QUERY_PAGINATION % (1, 2)
+        executed = client.execute(test_query,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, QUERY_CREDENTIAL_USER_REQUIRED)
+
+
 class MockJob:
     """Class mock job queries."""
 
@@ -2283,7 +2619,7 @@ class TestAddDatasetMutation(django.test.TestCase):
         self.assertEqual(len(datasets), 0)
 
     def test_integrity_error(self):
-        """Check whether there shouldn't be identical data sets"""
+        """Check whether there shouldn't be identical datasets"""
 
         params = {
             'projectId': 1,
@@ -2332,6 +2668,129 @@ class TestAddDatasetMutation(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestAddCredentialMutation(django.test.TestCase):
+    """Unit tests for mutation to add credentials"""
+
+    BT_ADD_CREDENTIAL = """
+      mutation addCredential($name: String,
+                             $datasourceName: String,
+                             $token: String) {
+        addCredential(name: $name,
+                      datasourceName: $datasourceName,
+                      token: $token)
+        {
+            credential {
+                id
+                name
+                token
+                datasource {
+                    name
+                }
+            }
+        }
+    }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+
+    def test_add_credential(self):
+        """Check if a new credential is added"""
+
+        params = {
+            "name": "Test token GH",
+            "datasourceName": "GitHub",
+            "token": "1234567890"
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        credential = executed['data']['addCredential']['credential']
+
+        self.assertEqual(credential['datasource']['name'], 'GitHub')
+        self.assertEqual(credential['token'], '1234567890')
+        self.assertEqual(credential['name'], 'Test token GH')
+
+        # Check database
+        cred_db = Credential.objects.get(id=int(credential['id']))
+        self.assertEqual(cred_db.id, int(credential['id']))
+        self.assertEqual(cred_db.name, "Test token GH")
+        self.assertEqual(cred_db.datasource.name, 'GitHub')
+        self.assertEqual(cred_db.token, '1234567890')
+
+    def test_integrity_error(self):
+        """Check whether there shouldn't be identical credentials"""
+
+        params = {
+            "name": "Test token GH",
+            "datasourceName": "GitHub",
+            "token": "1234567890"
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+        credential = executed['data']['addCredential']['credential']
+        credential_id = int(credential['id'])
+
+        # Check database
+        cred_db = Credential.objects.get(id=credential_id)
+        self.assertEqual(cred_db.id, int(credential['id']))
+        self.assertEqual(cred_db.name, "Test token GH")
+        self.assertEqual(cred_db.datasource.name, 'GitHub')
+        self.assertEqual(cred_db.token, '1234567890')
+
+        # Try to insert it twice
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DUPLICATED_CREDENTIAL_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_ADD_CREDENTIAL,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+    @override_settings(AUTHENTICATION_REQUIRED=False)
+    def test_unauthenticated_add(self):
+        """(Auth not required) Check it fails when a non-authenticated user tries to add credentials"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        params = {
+            "name": "Test token GH",
+            "datasourceName": "GitHub",
+            "token": "1234567890"
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_CREDENTIAL,
+                                  context_value=context_value,
+                                  variables=params)
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, ADD_CREDENTIAL_USER_REQUIRED)
 
 
 class TestDeleteEcosystemMutation(django.test.TestCase):
@@ -2620,6 +3079,147 @@ class TestDeleteDatasetMutation(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
+class TestDeleteCredentialMutation(django.test.TestCase):
+    """Unit tests for mutation to delete credentials"""
+
+    BT_DELETE_CREDENTIAL = """
+      mutation delCredentialTest($id: ID) {
+        deleteCredential(id: $id) {
+          credential {
+            id
+            name
+            token
+            datasource {
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+        self.credential_1 = Credential.objects.create(id=1,
+                                                      user=self.user,
+                                                      name="Test 1",
+                                                      datasource=self.gh_dst,
+                                                      token='test1token1')
+        self.credential_2 = Credential.objects.create(id=2,
+                                                      user=self.user,
+                                                      name="Test 2",
+                                                      datasource=self.gh_dst,
+                                                      token='test1token2')
+
+    def test_delete_credential(self):
+        """Check whether it deletes a credential"""
+
+        params = {
+            'id': 1
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        credential = executed['data']['deleteCredential']['credential']
+        self.assertEqual(credential['id'], '1')
+        self.assertEqual(credential['name'], 'Test 1')
+        self.assertEqual(credential['datasource']['name'], 'GitHub')
+        self.assertEqual(credential['token'], 'test1token1')
+
+        # Tests
+        with self.assertRaises(django.core.exceptions.ObjectDoesNotExist):
+            Credential.objects.get(id=1)
+
+        ncredentials = Credential.objects.count()
+        self.assertEqual(ncredentials, 1)
+
+    def test_not_found_credential(self):
+        """Check if it returns an error when a credential does not exist"""
+
+        params = {
+            'id': 11111111
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, CREDENTIAL_DOES_NOT_EXIST_ERROR)
+
+        credentials = Credential.objects.all()
+        self.assertEqual(len(credentials), 2)
+
+    def test_not_allowed(self):
+        """Check if it returns an error when a user tries to remove a not own credential"""
+
+        user = get_user_model().objects.create(username='test2')
+        credential = Credential.objects.create(id=10,
+                                               user=user,
+                                               name="Test u2",
+                                               datasource=self.gh_dst,
+                                               token='test2token1')
+
+        params = {
+            'id': 10
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_CREDENTIAL,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, CREDENTIAL_DELETE_NOT_ALLOWED)
+
+        credentials = Credential.objects.all()
+        self.assertEqual(len(credentials), 3)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        params = {
+            'id': 1
+        }
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_DELETE_CREDENTIAL,
+                                  context_value=context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+    @override_settings(AUTHENTICATION_REQUIRED=False)
+    def test_unauthenticated_delete(self):
+        """(Auth not required) Check it fails when a non-authenticated user tries to delete credentials"""
+
+        params = {
+            'id': 1
+        }
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_DELETE_CREDENTIAL,
+                                  context_value=context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, CREDENTIAL_DELETE_NOT_ALLOWED)
 
 
 class TestUpdateEcosystemMutation(django.test.TestCase):

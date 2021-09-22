@@ -27,6 +27,7 @@ import graphql_jwt
 
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, JSONField
 from django_rq import enqueue
 
@@ -38,17 +39,20 @@ from graphene_django.types import DjangoObjectType
 from .api import (add_ecosystem,
                   add_project,
                   add_dataset,
+                  add_credential,
                   update_ecosystem,
                   update_project,
                   delete_ecosystem,
                   delete_project,
                   delete_dataset,
+                  delete_credential,
                   move_project)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
                      Project,
                      DataSet,
+                     Credential,
                      Transaction,
                      Operation,
                      DataSourceType,
@@ -147,8 +151,14 @@ class DatasetType(DjangoObjectType):
         model = DataSet
 
 
-class DataSourceTypeModelType(DjangoObjectType):
+class CredentialType(DjangoObjectType):
+    """Credential objects are meant to define an authentication code for a datasource"""
 
+    class Meta:
+        model = Credential
+
+
+class DataSourceTypeModelType(DjangoObjectType):
     class Meta:
         model = DataSourceType
 
@@ -328,6 +338,21 @@ class DatasetFilterType(graphene.InputObjectType):
         description="Filter datasets by category.")
 
 
+class CredentialFilterType(graphene.InputObjectType):
+    """Fields which can be used as a filter for CredentialPaginatedType objects"""
+
+    id = graphene.ID(
+        required=False,
+        description="Find a credential by its unique identifier.")
+    name = graphene.String(
+        required=False,
+        description="Find a credential by its name."
+    )
+    datasource_name = graphene.ID(
+        required=False,
+        description="Filter credential using the name of the datasource.")
+
+
 class AbstractPaginatedType(graphene.ObjectType):
     """Generic class for objects returning paginated results
 
@@ -344,6 +369,7 @@ class AbstractPaginatedType(graphene.ObjectType):
     object with the results, the number of the page to show
     and the page size.
     """
+
     @classmethod
     def create_paginated_result(cls, query, page=1,
                                 page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE):
@@ -416,6 +442,13 @@ class DatasetPaginatedType(AbstractPaginatedType):
     """Type returning paginated results of Dataset objects"""
 
     entities = graphene.List(DatasetType)
+    page_info = graphene.Field(PaginationType)
+
+
+class CredentialPaginatedType(AbstractPaginatedType):
+    """Type returning paginated results of Credentials objects"""
+
+    entities = graphene.List(CredentialType)
     page_info = graphene.Field(PaginationType)
 
 
@@ -496,6 +529,28 @@ class AddDataset(graphene.Mutation):
 
         return AddDataset(
             dataset=dataset
+        )
+
+
+class AddCredential(graphene.Mutation):
+    """Mutation which adds a new Credential on the registry"""
+
+    class Arguments:
+        name = graphene.String()
+        datasource_name = graphene.String()
+        token = graphene.String()
+
+    credential = graphene.Field(lambda: CredentialType)
+
+    @check_auth
+    def mutate(self, info, name, datasource_name, token):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        credential = add_credential(ctx, user, name, datasource_name, token)
+
+        return AddCredential(
+            credential=credential
         )
 
 
@@ -616,6 +671,29 @@ class DeleteDataset(graphene.Mutation):
         )
 
 
+class DeleteCredential(graphene.Mutation):
+    """Mutation which deletes an existing credential from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    credential = graphene.Field(lambda: CredentialType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        credential = delete_credential(ctx, user, id_value)
+
+        return DeleteCredential(
+            credential=credential
+        )
+
+
 class MoveProject(graphene.Mutation):
     """Mutation which can move a project to a parent project"""
 
@@ -646,15 +724,20 @@ class MoveProject(graphene.Mutation):
 class GitHubOwnerRepos(graphene.Mutation):
     class Arguments:
         owner = graphene.String()
-        # TODO: api_token might be in a new model
-        api_token = graphene.String()
 
     job_id = graphene.Field(lambda: graphene.String)
 
     @check_auth
-    def mutate(self, info, owner, api_token=None):
+    def mutate(self, info, owner):
         user = info.context.user
         ctx = BestiaryContext(user)
+
+        api_token = None
+        if user.is_authenticated:
+            credential = Credential.objects.filter(user=user,
+                                                   datasource__name='GitHub').first()
+            if credential:
+                api_token = credential.token
 
         job = enqueue(fetch_github_owner_repos, ctx, owner, api_token)
 
@@ -683,6 +766,12 @@ class BestiaryQuery(graphene.ObjectType):
         page_size=graphene.Int(),
         page=graphene.Int(),
         filters=DatasetFilterType(required=False)
+    )
+    credentials = graphene.Field(
+        CredentialPaginatedType,
+        page_size=graphene.Int(),
+        page=graphene.Int(),
+        filters=CredentialFilterType(required=False)
     )
     transactions = graphene.Field(
         TransactionPaginatedType,
@@ -769,6 +858,29 @@ class BestiaryQuery(graphene.ObjectType):
         return DatasetPaginatedType.create_paginated_result(query,
                                                             page,
                                                             page_size=page_size)
+
+    @check_auth
+    def resolve_credentials(self, info, filters=None,
+                            page=1,
+                            page_size=settings.DEFAULT_GRAPHQL_PAGE_SIZE,
+                            **kwargs):
+        user = info.context.user
+        if not user.is_authenticated:
+            raise PermissionDenied("Unauthenticated user cannot get credentials")
+
+        query = Credential.objects.order_by('id')
+        query = query.filter(user=user)
+
+        if filters and 'id' in filters:
+            query = query.filter(id=filters['id'])
+        if filters and 'name' in filters:
+            query = query.filter(name__icontains=filters['name'])
+        if filters and 'datasource_name' in filters:
+            query = query.filter(datasource__name=filters['datasource_name'])
+
+        return CredentialPaginatedType.create_paginated_result(query,
+                                                               page,
+                                                               page_size=page_size)
 
     @check_auth
     def resolve_transactions(self, info, filters=None,
@@ -873,11 +985,13 @@ class BestiaryMutation(graphene.ObjectType):
     add_ecosystem = AddEcosystem.Field()
     add_project = AddProject.Field()
     add_dataset = AddDataset.Field()
+    add_credential = AddCredential.Field()
     update_ecosystem = UpdateEcosystem.Field()
     update_project = UpdateProject.Field()
     delete_ecosystem = DeleteEcosystem.Field()
     delete_project = DeleteProject.Field()
     delete_dataset = DeleteDataset.Field()
+    delete_credential = DeleteCredential.Field()
     move_project = MoveProject.Field()
     fetch_github_owner_repos = GitHubOwnerRepos.Field()
 

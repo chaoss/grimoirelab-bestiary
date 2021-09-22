@@ -39,7 +39,8 @@ from bestiary.core.models import (Ecosystem,
                                   Operation,
                                   DataSourceType,
                                   DataSource,
-                                  DataSet)
+                                  DataSet,
+                                  Credential)
 
 NAME_NONE_OR_EMPTY_ERROR = "'name' cannot be"
 ECOSYSTEM_ID_NONE_OR_EMPTY_ERROR = "'ecosystem_id' cannot be"
@@ -59,7 +60,6 @@ TITLE_EMPTY_ERROR = "'title' cannot be"
 TITLE_VALUE_ERROR = "field 'title' value must be a string;"
 DESCRIPTION_EMPTY_ERROR = "'description' cannot be"
 DESCRIPTION_VALUE_ERROR = "field 'description' value must be a string;"
-TITLE_VALUE_ERROR = "field 'title' value must be a string;"
 FIELD_VALUE_ERROR_INT = "field value must be a string; int given"
 ID_INVALID_LITERAL = "invalid literal for int()"
 NAME_LENGTH_ERROR = "'name' cannot have more than"
@@ -72,6 +72,13 @@ CATEGORY_EMPTY_ERROR = "'category' cannot be"
 FILTERS_NONE_ERROR = "'filters' cannot be None"
 DATASET_NOT_FOUND_ERROR = "DataSet ID {dset_id} not found in the registry"
 DATASET_ID_NONE_OR_EMPTY_ERROR = "'dataset_id' cannot be"
+CREDENTIAL_ALREADY_EXISTS_ERROR = "Credential '1-Test token' already exists in the registry"
+USER_EMPTY_ERROR = "'user' cannot be"
+DATASOURCE_NAME_EMPTY_ERROR = "'datasource_name' cannot be"
+TOKEN_EMPTY_ERROR = "'token' cannot be"
+CREDENTIAL_NOT_FOUND_ERROR = "Credential ID {cred_id} not found in the registry"
+CREDENTIAL_ID_NONE_OR_EMPTY_ERROR = "'credential_id' cannot be"
+CREDENTIAL_USER_NOT_ALLOWED = "User not allowed to remove credential ID .+"
 
 
 class TestAddEcosystem(TestCase):
@@ -1024,6 +1031,184 @@ class TestAddDataset(TestCase):
         self.assertEqual(op2_args['filters'], {})
 
 
+class TestAddCredential(TestCase):
+    """Unit tests for add_credential"""
+
+    def setUp(self):
+        """Load initial values"""
+
+        self.user = get_user_model().objects.create(id=1, username='test')
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+        self.ctx = BestiaryContext(self.user)
+
+    def test_add_new_credential(self):
+        """Check if everything goes OK when adding a new credential"""
+
+        cred = api.add_credential(self.ctx,
+                                  self.user,
+                                  'Test token',
+                                  'GitHub',
+                                  'abcd12345')
+
+        # Tests
+        self.assertIsInstance(cred, Credential)
+        self.assertEqual(cred.user, self.user)
+        self.assertEqual(cred.name, 'Test token')
+        self.assertEqual(cred.datasource.name, 'GitHub')
+        self.assertEqual(cred.token, 'abcd12345')
+
+        cred_db = Credential.objects.filter(id=cred.id)
+        self.assertEqual(len(cred_db), 1)
+
+        cred1 = cred_db[0]
+        self.assertEqual(cred, cred1)
+
+    def test_add_duplicate_credential(self):
+        """Check if it fails when adding a duplicate credential"""
+
+        cred = api.add_credential(self.ctx,
+                                  self.user,
+                                  'Test token',
+                                  'GitHub',
+                                  'abcd12345')
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(AlreadyExistsError,
+                                    CREDENTIAL_ALREADY_EXISTS_ERROR):
+            api.add_credential(self.ctx,
+                               self.user,
+                               'Test token',
+                               'GitHub',
+                               '12345abcd')
+
+        credentials = Credential.objects.filter(user=self.user)
+        self.assertEqual(len(credentials), 1)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_user_none(self):
+        """Check if it fails when user is `None`"""
+
+        with self.assertRaisesRegex(InvalidValueError, USER_EMPTY_ERROR):
+            api.add_credential(self.ctx,
+                               None,
+                               'Test token',
+                               'GitHub',
+                               'abcd12345')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_datasource_empty(self):
+        """Check if fails the data source is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    DATASOURCE_NAME_EMPTY_ERROR):
+            api.add_credential(self.ctx,
+                               self.user,
+                               'Test token',
+                               '',
+                               'abcd12345')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_token_empty(self):
+        """Check if fails the token is empty"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    TOKEN_EMPTY_ERROR):
+            api.add_credential(self.ctx,
+                               self.user,
+                               'Test token',
+                               self.gh_dst,
+                               '')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_name_empty(self):
+        """Check if fails the token is empty or None"""
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    NAME_NONE_OR_EMPTY_ERROR):
+            api.add_credential(self.ctx,
+                               self.user,
+                               '',
+                               self.gh_dst,
+                               'abcd1234')
+
+        with self.assertRaisesRegex(InvalidValueError,
+                                    NAME_NONE_OR_EMPTY_ERROR):
+            api.add_credential(self.ctx,
+                               self.user,
+                               None,
+                               self.gh_dst,
+                               'abcd1234')
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when adding a credential"""
+
+        timestamp = datetime_utcnow()
+
+        api.add_credential(self.ctx,
+                           self.user,
+                           'Test token',
+                           self.gh_dst,
+                           'abcde1234')
+
+        transactions = Transaction.objects.all()
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'add_credential')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when adding a credential"""
+
+        timestamp = datetime_utcnow()
+
+        api.add_credential(self.ctx,
+                           self.user,
+                           'Test token',
+                           self.gh_dst,
+                           'abcde1234')
+
+        transactions = Transaction.objects.all()
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.ADD.value)
+        self.assertEqual(op1.entity_type, 'credential')
+        self.assertEqual(op1.target, str(self.user.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 4)
+        self.assertEqual(op1_args['user'], self.user.id)
+        self.assertEqual(op1_args['name'], 'Test token')
+        self.assertEqual(op1_args['datasource'], 'GitHub')
+        self.assertEqual(op1_args['token'], 'abcde1234')
+
+
 class TestDeleteEcosystem(TestCase):
     """Unit tests for delete_ecosystem"""
 
@@ -1378,6 +1563,128 @@ class TestDeleteDataset(TestCase):
         op1_args = json.loads(op1.args)
         self.assertEqual(len(op1_args), 1)
         self.assertEqual(op1_args['id'], self.dataset_1.id)
+
+
+class TestDeleteCredential(TestCase):
+    """Unit tests for delete_credential"""
+
+    def setUp(self):
+        """Load initial dataset"""
+
+        self.user = get_user_model().objects.create(id=1, username='test')
+        self.user2 = get_user_model().objects.create(id=2, username='test2')
+        self.gh_dst = DataSourceType.objects.create(id=1, name='GitHub')
+        self.ctx = BestiaryContext(self.user)
+
+        self.credential_1 = Credential.objects.create(id=1,
+                                                      user=self.user,
+                                                      name='Test token GH 1',
+                                                      datasource=self.gh_dst,
+                                                      token='test1token1')
+        self.credential_2 = Credential.objects.create(id=2,
+                                                      user=self.user,
+                                                      name='Test token GH 2',
+                                                      datasource=self.gh_dst,
+                                                      token='test1token2')
+        self.credential_3 = Credential.objects.create(id=3,
+                                                      user=self.user2,
+                                                      name='Test token GH 3',
+                                                      datasource=self.gh_dst,
+                                                      token='test2token1')
+
+    def test_delete_credential(self):
+        """Check if everything goes OK when deleting a credential"""
+
+        api.delete_credential(self.ctx, user=self.user, credential_id=self.credential_1.id)
+
+        credentials = Credential.objects.filter(id=self.credential_1.id)
+        self.assertEqual(len(credentials), 0)
+
+        credentials = Credential.objects.all()
+        self.assertEqual(len(credentials), 2)
+
+        cred1 = credentials[0]
+        self.assertEqual(cred1.id, self.credential_2.id)
+
+        cred2 = credentials[1]
+        self.assertEqual(cred2.id, self.credential_3.id)
+
+    def test_delete_non_existing_credential(self):
+        """Check if it fails when deleting a non existing dataset"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(NotFoundError, CREDENTIAL_NOT_FOUND_ERROR.format(cred_id='99999')):
+            api.delete_credential(self.ctx, self.user, 99999)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_dataset_id_none(self):
+        """Check if it fails when credential id is `None`"""
+
+        trx_date = datetime_utcnow()  # After this datetime no transactions should be created
+
+        with self.assertRaisesRegex(InvalidValueError, CREDENTIAL_ID_NONE_OR_EMPTY_ERROR):
+            api.delete_credential(self.ctx, self.user, credential_id=None)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_delete_not_allowed(self):
+        """Check if it fails when a user tries to delete other user credential"""
+
+        trx_date = datetime_utcnow()
+
+        with self.assertRaisesRegex(PermissionError, CREDENTIAL_USER_NOT_ALLOWED):
+            api.delete_credential(self.ctx, self.user2, credential_id=1)
+
+        # Check if there are no transactions created when there is an error
+        transactions = Transaction.objects.filter(created_at__gt=trx_date)
+        self.assertEqual(len(transactions), 0)
+
+    def test_transaction(self):
+        """Check if a transaction is created when deleting a credential"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_credential(self.ctx, self.user, credential_id=self.credential_2.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'delete_credential')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+    def test_operations(self):
+        """Check if the right operations are created when deleting a credential"""
+
+        timestamp = datetime_utcnow()
+
+        api.delete_credential(self.ctx, self.user, credential_id=self.credential_2.id)
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        trx = transactions[0]
+
+        operations = Operation.objects.filter(trx=trx)
+        self.assertEqual(len(operations), 1)
+
+        op1 = operations[0]
+        self.assertIsInstance(op1, Operation)
+        self.assertEqual(op1.op_type, Operation.OpType.DELETE.value)
+        self.assertEqual(op1.entity_type, 'credential')
+        self.assertEqual(op1.target, str(self.credential_2.id))
+        self.assertEqual(op1.trx, trx)
+        self.assertGreater(op1.timestamp, timestamp)
+
+        op1_args = json.loads(op1.args)
+        self.assertEqual(len(op1_args), 1)
+        self.assertEqual(op1_args['id'], self.credential_2.id)
 
 
 class TestUpdateEcosystem(TestCase):
