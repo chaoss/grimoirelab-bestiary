@@ -9,8 +9,56 @@
         Load all from owner
       </v-btn>
     </v-btn-toggle>
+    <v-form v-if="!token">
+      <h5 class="text-subtitle-2 mt-8 mb-2">Add a GitHub token (optional)</h5>
+      <p class="text-body-2 text--secondary">
+        You can add a token to access the GitHub API and a name to identify it.
+      </p>
+      <v-row class="mt-4 pb-4">
+        <v-col cols="6">
+          <v-text-field
+            v-model="newToken"
+            label="Token"
+            color="info"
+            hide-details
+            outlined
+            dense
+          />
+        </v-col>
+      </v-row>
+      <v-row class="mt-4">
+        <v-col cols="6">
+          <v-text-field
+            v-model="tokenName"
+            label="Name"
+            color="info"
+            hide-details
+            outlined
+            dense
+          />
+        </v-col>
+      </v-row>
+      <div class="d-flex justify-end pb-4">
+        <v-btn
+          :disabled="!newToken || !tokenName"
+          color="info"
+          class="button--lowercase"
+          depressed
+          @click.prevent="addCredential"
+        >
+          Save
+        </v-btn>
+      </div>
+      <v-divider class="mt-4" />
+    </v-form>
+
     <transition name="fade" mode="out-in">
       <v-form v-if="mode === 'single'" class="v-list" key="single">
+        <h5 class="text-subtitle-2 mt-6 mb-2">Add repositories</h5>
+        <p class="text-body-2  text--secondary">
+          Add the URL of the repository and select the data that you want to
+          analyze.
+        </p>
         <fieldset
           v-for="(repo, index) in repositories"
           :key="index"
@@ -83,13 +131,14 @@
         </div>
       </v-form>
       <v-form v-else>
-        <p class="mt-3 mb-0 text--secondary">
+        <h5 class="text-subtitle-2 mt-6 mb-2">GitHub owner</h5>
+        <p class="mt-3 mb-0 text-body-2  text--secondary">
           Load all repositories from a GitHub user or organization. You will be
           able to add all of their commits, pull requests and issues to the
           project or review and select each one individually.
         </p>
         <v-row class="mt-2">
-          <v-col cols="4">
+          <v-col cols="6">
             <v-text-field
               v-model="owner"
               label="GitHub owner"
@@ -133,6 +182,14 @@ export default {
     getRepos: {
       type: Function,
       required: true
+    },
+    getToken: {
+      type: Function,
+      required: true
+    },
+    addToken: {
+      type: Function,
+      required: true
     }
   },
   data() {
@@ -144,9 +201,11 @@ export default {
           selected: ["commit", "pr", "issue"]
         }
       ],
-      showMenu: false,
       projects: [],
-      owner: ""
+      owner: "",
+      token: null,
+      newToken: "",
+      tokenName: ""
     };
   },
   computed: {
@@ -180,7 +239,6 @@ export default {
       this.repositories.splice(index, 1);
     },
     async addDatasets(project) {
-      this.showMenu = false;
       let added = [];
       try {
         for (let repo of this.repositoriesByCategory) {
@@ -217,6 +275,33 @@ export default {
           }
         });
       }
+    },
+    async addCredential() {
+      this.error = null;
+      try {
+        const response = await this.addToken("GitHub", this.newToken, this.tokenName);
+        if (response.data.addCredential.credential.id) {
+          this.newToken = "";
+          this.tokenName = "";
+          this.$store.commit("setSnackbar", {
+            isOpen: true,
+            text: `Token added successfully.`,
+            color: "success"
+          });
+        }
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      }
+    }
+  },
+  async mounted() {
+    const response = await this.getToken("GitHub");
+    if (response.data.credentials.entities.length > 0) {
+      this.token = response.data.credentials.entities.[0].token;
     }
   }
 };
