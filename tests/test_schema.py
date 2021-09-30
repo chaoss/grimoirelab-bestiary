@@ -666,6 +666,25 @@ BT_JOB_QUERY_GH_OWNER_REPOS = """{
   }
 }
 """
+BT_JOB_QUERY_GL_OWNER_REPOS = """{
+  job(
+    jobId:"%s"
+  ){
+    jobId
+    jobType
+    status
+    errors
+    result {
+      __typename
+      ... on GitLabRepoResultType {
+          url
+          fork
+          hasIssues
+      }
+    }
+  }
+}
+"""
 # API endpoint to obtain a context for executing queries
 GRAPHQL_ENDPOINT = '/graphql/'
 
@@ -2132,6 +2151,108 @@ class TestQueryJob(django.test.TestCase):
         job_data = executed['data']['job']
         self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
         self.assertEqual(job_data['jobType'], 'fetch_github_owner_repos')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], errors)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gitlab_owner_repos_job(self, mock_job):
+        """Check if it returns an gitlabOwnerRepos result type"""
+
+        result = {
+            'errors': [],
+            'results': [{'fork': True,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-1'},
+                        {'fork': False,
+                         'has_issues': False,
+                         'url': 'https://gitlab.com/user_example/project-2'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-3'}]
+        }
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_gitlab_owner_repos', 'finished', result)
+        mock_job.return_value = job
+
+        # Tests
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY_GL_OWNER_REPOS % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_gitlab_owner_repos')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], [])
+
+        job_results = job_data['result']
+        self.assertEqual(len(job_results), 3)
+
+        res = job_results[0]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-1')
+        self.assertEqual(res['fork'], True)
+        self.assertEqual(res['hasIssues'], True)
+
+        res = job_results[1]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-2')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], False)
+
+        res = job_results[2]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-3')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], True)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gitlab_repos_job_no_results(self, mock_job):
+        """Check if it does not fail when there are not results ready"""
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_gitlab_owner_repos', 'queued', None)
+        mock_job.return_value = job
+
+        client = graphene.test.Client(schema)
+
+        query = BT_JOB_QUERY_GL_OWNER_REPOS % '1234-5678-90AB-CDEF'
+
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_gitlab_owner_repos')
+        self.assertEqual(job_data['status'], 'queued')
+        self.assertEqual(job_data['errors'], None)
+        self.assertEqual(job_data['result'], None)
+
+    @unittest.mock.patch('bestiary.core.schema.find_job')
+    def test_gitlab_repos_job_errors(self, mock_job):
+        """Check job errors field"""
+
+        errors = [
+            'GitLab owner "user_unknown" not found'
+        ]
+        result = {
+            'results': [],
+            'errors': errors
+        }
+
+        job = MockJob('1234-5678-90AB-CDEF', 'fetch_gitlab_owner_repos', 'finished', result)
+        mock_job.return_value = job
+
+        client = graphene.test.Client(schema)
+        query = BT_JOB_QUERY_GH_OWNER_REPOS % '1234-5678-90AB-CDEF'
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_gitlab_owner_repos')
         self.assertEqual(job_data['status'], 'finished')
         self.assertEqual(job_data['errors'], errors)
 
@@ -4043,3 +4164,92 @@ class TestUnarchiveDatasetMutation(django.test.TestCase):
 
         msg = executed['errors'][0]['message']
         self.assertEqual(msg, DATASET_NOT_ARCHIVED)
+
+
+class TestFetchGitLabOwnerMutation(django.test.TestCase):
+
+    BT_MUTATION_FETCH_REPOS = """
+      mutation fetchRepos($owner: String) {
+        fetchGitlabOwnerRepos(owner: $owner) {
+          jobId
+        }
+      }
+    """
+
+    def setUp(self):
+        """Load initial data and set queries context"""
+        conn = django_rq.queues.get_redis_connection(None, True)
+        conn.flushall()
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.ctx = BestiaryContext(self.user)
+
+    @unittest.mock.patch('bestiary.core.jobs.rq.job.uuid4')
+    @unittest.mock.patch('bestiary.core.jobs.fetch_gitlab_owner_repos')
+    def test_fetch_repos(self, mock_fetch, mock_job_id_gen):
+        """Check if all the individuals stored in the registry are affiliated"""
+
+        mock_job_id_gen.return_value = "1234-5678-90AB-CDEF"
+
+        mock_fetch.return_value = {
+            'errors': [],
+            'results': [{'fork': True,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-1'},
+                        {'fork': False,
+                         'has_issues': False,
+                         'url': 'https://gitlab.com/user_example/project-2'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-3'}]
+        }
+
+        client = graphene.test.Client(schema)
+
+        # Create the job with a mutation
+        params = {
+            'owner': 'user_example'
+        }
+        executed = client.execute(self.BT_MUTATION_FETCH_REPOS,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check the job ID
+        job_id = executed['data']['fetchGitlabOwnerRepos']['jobId']
+        self.assertEqual(job_id, "1234-5678-90AB-CDEF")
+
+        # Query the job results
+        query = BT_JOB_QUERY_GL_OWNER_REPOS % '1234-5678-90AB-CDEF'
+        executed = client.execute(query,
+                                  context_value=self.context_value)
+
+        # Check results are right
+        job_data = executed['data']['job']
+        self.assertEqual(job_data['jobId'], '1234-5678-90AB-CDEF')
+        self.assertEqual(job_data['jobType'], 'fetch_gitlab_owner_repos')
+        self.assertEqual(job_data['status'], 'finished')
+        self.assertEqual(job_data['errors'], [])
+
+        job_results = job_data['result']
+        self.assertEqual(len(job_results), 3)
+
+        res = job_results[0]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-1')
+        self.assertEqual(res['fork'], True)
+        self.assertEqual(res['hasIssues'], True)
+
+        res = job_results[1]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-2')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], False)
+
+        res = job_results[2]
+        self.assertEqual(res['__typename'], 'GitLabRepoResultType')
+        self.assertEqual(res['url'], 'https://gitlab.com/user_example/project-3')
+        self.assertEqual(res['fork'], False)
+        self.assertEqual(res['hasIssues'], True)
