@@ -30,9 +30,13 @@ from grimoirelab_toolkit.datetime import datetime_utcnow
 from bestiary.core.context import BestiaryContext
 from bestiary.core.errors import NotFoundError
 from bestiary.core.jobs import (find_job,
-                                fetch_github_owner_repos)
+                                fetch_github_owner_repos, fetch_gitlab_owner_repos)
 from bestiary.core.models import Transaction
+
 from tests.retrieval.test_github import GITHUB_REPOS_URL
+from tests.retrieval.test_gitlab import (GITLAB_USER_REPOS_URL,
+                                         GITLAB_USER_URL,
+                                         GITLAB_API_URL)
 
 JOB_NOT_FOUND_ERROR = "DEF not found in the registry"
 
@@ -175,5 +179,110 @@ class TestGitHubOwnerReposJob(TestCase):
         trx = transactions[0]
         self.assertIsInstance(trx, Transaction)
         self.assertEqual(trx.name, 'fetch_github_owner_repos-1234-5678-90AB-CDEF')
+        self.assertGreater(trx.created_at, timestamp)
+        self.assertEqual(trx.authored_by, self.ctx.user.username)
+
+
+class TestGitLabOwnerReposJob(TestCase):
+    """Unit tests for fetch_gitlab_owner_repos job"""
+
+    def setUp(self):
+        user = get_user_model().objects.create(username='test')
+        self.ctx = BestiaryContext(user)
+
+    @httpretty.activate
+    def test_fetch_owner_repos(self):
+        """Check if the job for fetching owner repositories is executed correctly."""
+
+        body_user = read_file('data/gitlab_user.json')
+        body_repos = read_file('data/gitlab_user_repos_1.json')
+
+        httpretty.register_uri(httpretty.GET,
+                               GITLAB_USER_URL,
+                               body=body_user,
+                               status=200)
+        httpretty.register_uri(httpretty.GET,
+                               GITLAB_USER_REPOS_URL,
+                               body=body_repos,
+                               status=200)
+
+        expected = {
+            'errors': [],
+            'results': [{'fork': True,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-1'},
+                        {'fork': False,
+                         'has_issues': False,
+                         'url': 'https://gitlab.com/user_example/project-2'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-3'}]
+        }
+
+        job = fetch_gitlab_owner_repos.delay(self.ctx, owner='user_example', api_token='aaaa')
+
+        self.assertDictEqual(job.result, expected)
+        self.assertEqual(httpretty.last_request().headers["Authorization"], "Bearer aaaa")
+
+    @httpretty.activate
+    def test_not_found_owner(self):
+        """Check if the job for fetching owner repositories returns a not found error."""
+
+        user_unknown = 'user_unknown'
+        user_unknown_url = "{}/users?username={}".format(GITLAB_API_URL, user_unknown)
+        group_unknown_url = "{}/groups/{}".format(GITLAB_API_URL, user_unknown)
+
+        httpretty.register_uri(httpretty.GET,
+                               user_unknown_url,
+                               body="[]",
+                               status=200)
+
+        httpretty.register_uri(httpretty.GET,
+                               group_unknown_url,
+                               body=str({"message": "404 Group Not Found"}),
+                               status=404)
+        expected = {'errors': ['GitLab owner "user_unknown" not found'],
+                    'results': []}
+        job = fetch_gitlab_owner_repos.delay(self.ctx, 'user_unknown')
+        self.assertDictEqual(job.result, expected)
+
+    @httpretty.activate
+    def test_transactions(self):
+        """Check if the right transactions were created"""
+
+        body_user = read_file('data/gitlab_user.json')
+        body_repos = read_file('data/gitlab_user_repos_1.json')
+
+        httpretty.register_uri(httpretty.GET,
+                               GITLAB_USER_URL,
+                               body=body_user,
+                               status=200)
+        httpretty.register_uri(httpretty.GET,
+                               GITLAB_USER_REPOS_URL,
+                               body=body_repos,
+                               status=200)
+
+        expected = {
+            'errors': [],
+            'results': [{'fork': True,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-1'},
+                        {'fork': False,
+                         'has_issues': False,
+                         'url': 'https://gitlab.com/user_example/project-2'},
+                        {'fork': False,
+                         'has_issues': True,
+                         'url': 'https://gitlab.com/user_example/project-3'}]
+        }
+
+        timestamp = datetime_utcnow()
+        job = fetch_gitlab_owner_repos.delay(self.ctx, owner='user_example', job_id='1234-5678-90AB-CDEF')
+
+        transactions = Transaction.objects.filter(created_at__gte=timestamp)
+        self.assertEqual(len(transactions), 1)
+
+        trx = transactions[0]
+        self.assertIsInstance(trx, Transaction)
+        self.assertEqual(trx.name, 'fetch_gitlab_owner_repos-1234-5678-90AB-CDEF')
         self.assertGreater(trx.created_at, timestamp)
         self.assertEqual(trx.authored_by, self.ctx.user.username)
