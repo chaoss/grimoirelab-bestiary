@@ -46,7 +46,9 @@ from .api import (add_ecosystem,
                   delete_project,
                   delete_dataset,
                   delete_credential,
-                  move_project)
+                  move_project,
+                  archive_dataset,
+                  unarchive_dataset)
 from .context import BestiaryContext
 from .decorators import check_auth
 from .models import (Ecosystem,
@@ -336,6 +338,9 @@ class DatasetFilterType(graphene.InputObjectType):
     category = graphene.String(
         required=False,
         description="Filter datasets by category.")
+    is_archived = graphene.Boolean(
+        required=False,
+        description="Filter datasets by archived status.")
 
 
 class CredentialFilterType(graphene.InputObjectType):
@@ -721,6 +726,52 @@ class MoveProject(graphene.Mutation):
         )
 
 
+class ArchiveDataset(graphene.Mutation):
+    """Mutation which archives an existing dataset from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    dataset = graphene.Field(lambda: DatasetType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        dataset = archive_dataset(ctx, id_value)
+
+        return ArchiveDataset(
+            dataset=dataset
+        )
+
+
+class UnarchiveDataset(graphene.Mutation):
+    """Mutation which unarchives an existing dataset from the registry"""
+
+    class Arguments:
+        id = graphene.ID()
+
+    dataset = graphene.Field(lambda: DatasetType)
+
+    @check_auth
+    def mutate(self, info, id):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        # Forcing this conversion explicitly, as input value is taken as a string
+        id_value = int(id)
+
+        dataset = unarchive_dataset(ctx, id_value)
+
+        return UnarchiveDataset(
+            dataset=dataset
+        )
+
+
 class GitHubOwnerRepos(graphene.Mutation):
     class Arguments:
         owner = graphene.String()
@@ -854,6 +905,8 @@ class BestiaryQuery(graphene.ObjectType):
             query = query.filter(category=filters['category'])
         if filters and 'uri' in filters:
             query = query.filter(datasource__uri=filters['uri'])
+        if filters and 'is_archived' in filters:
+            query = query.filter(is_archived=filters['is_archived'])
 
         return DatasetPaginatedType.create_paginated_result(query,
                                                             page,
@@ -993,6 +1046,8 @@ class BestiaryMutation(graphene.ObjectType):
     delete_dataset = DeleteDataset.Field()
     delete_credential = DeleteCredential.Field()
     move_project = MoveProject.Field()
+    archive_dataset = ArchiveDataset.Field()
+    unarchive_dataset = UnarchiveDataset.Field()
     fetch_github_owner_repos = GitHubOwnerRepos.Field()
 
     # JWT authentication

@@ -349,6 +349,8 @@ class DataSet(EntityBase):
     :param filters: attributes to filter the view of the data source.
         They are serialized in JSON format.
     :param filters_hash: sha1 representation of filters field
+    :param is_archived: boolean value, `True` if the dataset is archived
+    :param archived_at: datetime when the dataset was archived
     """
     project = ForeignKey(Project,
                          on_delete=CASCADE,
@@ -361,13 +363,21 @@ class DataSet(EntityBase):
     filters = JSONField(help_text='Filters for the data source')
     filters_hash = CharField(max_length=MAX_SIZE_SHA1_FIELD,
                              help_text='Data source category')
+    is_archived = BooleanField(default=False,
+                               help_text='Boolean value, `True` if the dataset is archived')
+    archived_at = DateTimeField(null=True,
+                                help_text='Datetime when the dataset was archived')
 
     class Meta:
         db_table = 'datasets'
         unique_together = ['project', 'datasource', 'category', 'filters_hash']
 
     def __str__(self):
-        return '%s - %s - %s - %s' % (self.project, self.datasource, self.category, self.filters)
+        return '%s - %s - %s - %s - %s' % (self.project,
+                                           self.datasource,
+                                           self.category,
+                                           self.filters,
+                                           self.is_archived)
 
     def save(self, *args, **kwargs):
         filters_str = json.dumps(self.filters, sort_keys=True)
