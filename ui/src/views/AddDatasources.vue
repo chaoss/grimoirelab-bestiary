@@ -9,7 +9,7 @@
         <v-icon dense left>mdi-github</v-icon>
         GitHub
       </v-tab>
-      <v-tab-item transition="fade">
+      <v-tab-item transition="fade" reverse-transition="fade">
         <div v-if="isLoading" class="d-flex justify-center">
           <v-progress-circular
             :size="50"
@@ -26,6 +26,28 @@
           :add-token="addToken"
         />
       </v-tab-item>
+
+      <v-tab class="button--lowercase button--secondary">
+        <v-icon dense left>mdi-gitlab</v-icon>
+        GitLab
+      </v-tab>
+      <v-tab-item transition="fade" reverse-transition="fade" eager>
+        <div v-if="isLoading" class="d-flex justify-center">
+          <v-progress-circular
+            :size="50"
+            color="primary"
+            indeterminate
+          ></v-progress-circular>
+        </div>
+        <gitlab-form
+          v-else
+          :get-projects="getProjects"
+          :add-data-set="addDataSet"
+          :get-repos="getGitlabOwnerRepos"
+          :get-token="getToken"
+          :add-token="addToken"
+        />
+      </v-tab-item>
     </v-tabs>
   </section>
 </template>
@@ -35,13 +57,15 @@ import { getProjects, getDatasourceCredentials } from "../apollo/queries";
 import {
   addDataSet,
   addCredential,
-  fetchGithubOwnerRepos
+  fetchGithubOwnerRepos,
+  fetchGitlabOwnerRepos
 } from "../apollo/mutations";
 import GithubForm from "../components/GithubForm";
+import GitlabForm from "../components/GitlabForm";
 
 export default {
   name: "AddDatasources",
-  components: { GithubForm },
+  components: { GithubForm, GitlabForm },
   data() {
     return {
       isLoading: false
@@ -72,8 +96,24 @@ export default {
       const response = await fetchGithubOwnerRepos(this.$apollo, owner);
       if (response.data.fetchGithubOwnerRepos.jobId) {
         this.$router.push({
-          name: "github-datasources",
-          params: { jobID: response.data.fetchGithubOwnerRepos.jobId }
+          name: "datasources-job",
+          params: {
+            jobID: response.data.fetchGithubOwnerRepos.jobId,
+            datasource: "github"
+          }
+        });
+      }
+    },
+    async getGitlabOwnerRepos(owner) {
+      this.isLoading = true;
+      const response = await fetchGitlabOwnerRepos(this.$apollo, owner);
+      if (response.data.fetchGitlabOwnerRepos.jobId) {
+        this.$router.push({
+          name: "datasources-job",
+          params: {
+            jobID: response.data.fetchGitlabOwnerRepos.jobId,
+            datasource: "gitlab"
+          }
         });
       }
     },
