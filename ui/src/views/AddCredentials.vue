@@ -58,7 +58,7 @@ export default {
   name: "AddCredentials",
   data() {
     return {
-      sources: ["GitHub"],
+      sources: ["GitHub", "GitLab"],
       datasource: null,
       token: "",
       name: ""
