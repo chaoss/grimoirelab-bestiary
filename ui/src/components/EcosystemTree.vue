@@ -247,7 +247,6 @@ export default {
         for (let dataset of datasets) {
           const mutation = await this.addDataSet(
             dataset.category,
-            "GitHub",
             dataset.url,
             project.id
           );

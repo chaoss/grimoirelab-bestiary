@@ -15,7 +15,7 @@
       {{ error }}
     </v-alert>
 
-    <git-hub-table
+    <repository-table
       :items="items"
       :add-data-set="addDataSet"
       :get-projects="getProjects"
@@ -42,11 +42,11 @@
 <script>
 import { getProjects, GET_JOB } from "../apollo/queries";
 import { addDataSet } from "../apollo/mutations";
-import GitHubTable from "../components/GitHubTable";
+import RepositoryTable from "../components/RepositoryTable";
 
 export default {
-  name: "GithubDatasources",
-  components: { GitHubTable },
+  name: "DatasourcesJob",
+  components: { RepositoryTable },
   data() {
     return {
       items: [],
@@ -55,6 +55,9 @@ export default {
     };
   },
   computed: {
+    datasourceName() {
+      return this.$route.params.datasource;
+    },
     jobID() {
       return this.$route.params.jobID;
     }
@@ -66,11 +69,11 @@ export default {
         return response.data.projects.entities;
       }
     },
-    async addDataSet(category, datasourceName, uri, projectId, filters = {}) {
+    async addDataSet(category, uri, projectId, filters = {}) {
       const response = await addDataSet(
         this.$apollo,
         category,
-        datasourceName,
+        this.datasourceName,
         uri,
         projectId,
         filters

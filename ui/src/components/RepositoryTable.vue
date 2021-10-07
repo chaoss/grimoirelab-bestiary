@@ -124,7 +124,7 @@
 import ProjectSelector from "../components/ProjectSelector";
 
 export default {
-  name: "GitHubTable",
+  name: "RepositoryTable",
   components: { ProjectSelector },
   props: {
     items: {
@@ -199,42 +199,21 @@ export default {
       const dragImage = document.querySelector(".dragged-item");
       event.dataTransfer.setDragImage(dragImage, 0, 0);
     },
-    async loadProjects(term) {
-      const response = await this.getProjects(term);
-      if (response) {
-        this.projects = response;
-        this.projects.forEach(res => {
-          Object.assign(res, { path: this.getPath(res) });
-        });
-      }
-    },
-    getPath(project) {
-      const path = [project.name];
-
-      function findParents(parent) {
-        if (parent) {
-          path.push(parent.name);
-          findParents(parent.parentProject);
-        }
-      }
-
-      findParents(project.parentProject);
-
-      return path
-        .reverse()
-        .toString()
-        .replace(/,/g, " / ");
-    },
     async addDatasets(project) {
       this.showMenu = false;
       this.error = null;
       let added = [];
 
+      this.$store.commit("setSnackbar", {
+        isOpen: true,
+        text: `Adding datasets to ${project.title}`,
+        color: "info"
+      });
+
       try {
         for (let selected of this.selectedByCategory) {
           const mutation = await this.addDataSet(
             selected.category,
-            "GitHub",
             selected.url,
             project.id
           );
@@ -246,6 +225,9 @@ export default {
         }
       } catch (error) {
         this.error = error;
+        this.$store.commit("setSnackbar", {
+          isOpen: false
+        });
       }
 
       if (added.length !== 0) {
