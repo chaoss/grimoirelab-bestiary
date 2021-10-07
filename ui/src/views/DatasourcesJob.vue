@@ -96,16 +96,21 @@ export default {
         };
       },
       result(result) {
-        // Stop running the query if its status is 'finished'
-        if (result.data && result.data.job.status === "finished") {
+        // Stop running the query if its status is 'finished' or 'failed'
+        if (
+          (result.data && result.data.job.status === "finished") ||
+          result.data.job.status === "failed"
+        ) {
           this.$apollo.queries.job.stopPolling();
-          this.items = result.data.job.result;
-          this.error = "";
           this.isLoading = false;
 
-          if (result.data.job.errors) {
+          if (result.data.job.errors.length > 0) {
             this.error = result.data.job.errors;
+            return;
           }
+
+          this.items = result.data.job.result;
+          this.error = "";
         }
       },
       error(error) {
