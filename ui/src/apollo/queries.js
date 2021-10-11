@@ -35,6 +35,7 @@ const datasetFragment = gql`
     id
     filters
     category
+    isArchived
   }
 `;
 
@@ -159,6 +160,8 @@ const GET_DATASET_BY_URI = gql`
         id
         category
         filters
+        isArchived
+        archivedAt
         datasource {
           type {
             name

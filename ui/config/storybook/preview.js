@@ -5,7 +5,6 @@ import router from "./../../src/router";
 import store from "./../../src/store";
 import * as _Vuetify from "vuetify/lib";
 import { configure, addDecorator } from "@storybook/vue";
-import '@mdi/font/css/materialdesignicons.css';
 
 const Vuetify = _Vuetify.default;
 

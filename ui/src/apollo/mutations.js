@@ -126,6 +126,28 @@ const DELETE_DATASET = gql`
   }
 `;
 
+const ARCHIVE_DATASET = gql`
+  mutation archiveDataset($id: ID!) {
+    archiveDataset(id: $id) {
+      dataset {
+        id
+        isArchived
+      }
+    }
+  }
+`;
+
+const UNARCHIVE_DATASET = gql`
+  mutation unarchiveDataset($id: ID!) {
+    unarchiveDataset(id: $id) {
+      dataset {
+        id
+        isArchived
+      }
+    }
+  }
+`;
+
 const FETCH_GITHUB_OWNER_REPOS = gql`
   mutation fetchGithubOwnerRepos($owner: String!) {
     fetchGithubOwnerRepos(owner: $owner) {
@@ -310,6 +332,26 @@ const deleteCredential = (apollo, id) => {
   return response;
 };
 
+const archiveDataset = (apollo, id) => {
+  const response = apollo.mutate({
+    mutation: ARCHIVE_DATASET,
+    variables: {
+      id: id
+    }
+  });
+  return response;
+};
+
+const unarchiveDataset = (apollo, id) => {
+  const response = apollo.mutate({
+    mutation: UNARCHIVE_DATASET,
+    variables: {
+      id: id
+    }
+  });
+  return response;
+};
+
 export {
   addProject,
   deleteProject,
@@ -323,5 +365,7 @@ export {
   deleteDataset,
   fetchGithubOwnerRepos,
   addCredential,
-  deleteCredential
+  deleteCredential,
+  archiveDataset,
+  unarchiveDataset
 };

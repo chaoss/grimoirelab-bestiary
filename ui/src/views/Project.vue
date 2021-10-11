@@ -40,6 +40,8 @@
       :items="project.datasetSet"
       :project-id="project.id"
       :delete-dataset="deleteDataset"
+      :archive-dataset="archiveDataset"
+      :unarchive-dataset="unarchiveDataset"
       @updateDatasets="getProject"
     />
   </div>
@@ -47,7 +49,12 @@
 
 <script>
 import { getProjectByName } from "../apollo/queries";
-import { deleteProject, deleteDataset } from "../apollo/mutations";
+import {
+  deleteProject,
+  deleteDataset,
+  archiveDataset,
+  unarchiveDataset
+} from "../apollo/mutations";
 import { getProjectBreadcrumbs } from "../utils";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ProjectList from "../components/ProjectList";
@@ -116,6 +123,14 @@ export default {
     },
     async deleteDataset(id) {
       const response = await deleteDataset(this.$apollo, id);
+      return response;
+    },
+    async archiveDataset(id) {
+      const response = await archiveDataset(this.$apollo, id);
+      return response;
+    },
+    async unarchiveDataset(id) {
+      const response = await unarchiveDataset(this.$apollo, id);
       return response;
     }
   },

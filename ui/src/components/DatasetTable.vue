@@ -21,17 +21,23 @@
             <th class="text-left">
               Filters
             </th>
+            <th></th>
             <th class="text-right">
               Actions
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, i) in datasets" :key="i" class="table-row">
+          <tr
+            v-for="(item, i) in datasets"
+            :key="i"
+            class="table-row"
+            :class="{ 'text--disabled': item.isArchived }"
+          >
             <td class="text-start">
               <source-icon
                 :source="item.datasource.type.name"
-                color="rgba(0, 0, 0, 0.87)"
+                :color="item.isArchived ? 'disabled' : 'text'"
                 class="mr-2"
                 small
               />
@@ -65,7 +71,43 @@
               </p>
             </td>
 
+            <td class="text-center">
+              <span v-if="item.isArchived" class="font-italic">
+                Archived {{ new Date(item.archivedAt).toLocaleDateString() }}
+              </span>
+            </td>
+
             <td class="text-right">
+              <v-tooltip v-if="item.isArchived" bottom>
+                <template v-slot:activator="{ on }">
+                  <v-btn
+                    icon
+                    color="text"
+                    v-on="on"
+                    @click.stop="confirmUnarchive(item)"
+                  >
+                    <v-icon small>
+                      mdi-archive-off-outline
+                    </v-icon>
+                  </v-btn>
+                </template>
+                <span>Unarchive</span>
+              </v-tooltip>
+              <v-tooltip v-else bottom>
+                <template v-slot:activator="{ on }">
+                  <v-btn
+                    icon
+                    color="text"
+                    v-on="on"
+                    @click.stop="confirmArchive(item)"
+                  >
+                    <v-icon small>
+                      mdi-archive-arrow-down-outline
+                    </v-icon>
+                  </v-btn>
+                </template>
+                <span>Archive</span>
+              </v-tooltip>
               <v-btn icon color="text" @click="confirmDelete(item)">
                 <v-icon small>
                   mdi-trash-can-outline
@@ -93,6 +135,14 @@ export default {
     deleteDataset: {
       type: Function,
       required: true
+    },
+    archiveDataset: {
+      type: Function,
+      required: true
+    },
+    unarchiveDataset: {
+      type: Function,
+      required: true
     }
   },
   methods: {
@@ -110,6 +160,60 @@ export default {
         this.$store.commit("setSnackbar", {
           isOpen: true,
           text: "Data set removed successfully",
+          color: "success"
+        });
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      } finally {
+        this.$store.commit("clearDialog");
+        this.$emit("updateDatasets");
+      }
+    },
+    confirmArchive(dataset) {
+      const dialog = {
+        isOpen: true,
+        title: `Archive data set?`,
+        action: () => this.archive(dataset)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    confirmUnarchive(dataset) {
+      const dialog = {
+        isOpen: true,
+        title: `Restore data set?`,
+        action: () => this.unarchive(dataset)
+      };
+      this.$store.commit("setDialog", dialog);
+    },
+    async archive(dataset) {
+      try {
+        await this.archiveDataset(dataset.id);
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Data set archived successfully",
+          color: "success"
+        });
+      } catch (error) {
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: error,
+          color: "error"
+        });
+      } finally {
+        this.$store.commit("clearDialog");
+        this.$emit("updateDatasets");
+      }
+    },
+    async unarchive(dataset) {
+      try {
+        await this.unarchiveDataset(dataset.id);
+        this.$store.commit("setSnackbar", {
+          isOpen: true,
+          text: "Data set restored successfully",
           color: "success"
         });
       } catch (error) {
