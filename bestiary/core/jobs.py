@@ -27,6 +27,7 @@ from .context import BestiaryContext
 from .retrieval.github import github_owner_repositories
 from .errors import NotFoundError
 from .log import TransactionsLog
+from .retrieval.gitlab import GitLab
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,52 @@ def fetch_github_owner_repos(ctx, owner, api_token=None):
 
     logger.info(
         f"Job {job.id} 'fetch GitHub owner repositories' completed; "
+        f"{len(results)} repositories fetched"
+    )
+    return job_result
+
+
+@django_rq.job
+def fetch_gitlab_owner_repos(ctx, owner, api_token=None):
+    """Fetch a list of GitLab repositories from an owner.
+
+    This function fetches a list of repositories from a given owner.
+    This job returns a list of repositories. For each repository includes
+    its url, if it is a fork and if issues are enabled.
+
+    :param ctx: context where this job is run
+    :param owner: GitLab owner to fetch repositories
+    :param api_token: GitLab auth token to access the API
+
+    :returns: a list of repositories including url, has_issues and fork.
+    """
+    job = rq.get_current_job()
+
+    logger.info(f"Running job {job.id} 'GitLab owner repositories'; owner={owner}; ...")
+
+    results = []
+    errors = []
+    job_result = {
+        'results': results,
+        'errors': errors
+    }
+
+    job_ctx = BestiaryContext(ctx.user, job.id)
+    trxl = TransactionsLog.open('fetch_gitlab_owner_repos', job_ctx)
+
+    gitlab = GitLab(api_token=api_token)
+    try:
+        for repository in gitlab.fetch_repositories(owner):
+            results.append(repository)
+    except Exception as e:
+        msg = str(e)
+        errors.append(msg)
+        logger.warning(msg)
+
+    trxl.close()
+
+    logger.info(
+        f"Job {job.id} 'fetch GitLab owner repositories' completed; "
         f"{len(results)} repositories fetched"
     )
     return job_result

@@ -61,7 +61,8 @@ from .models import (Ecosystem,
                      DataSource)
 from .jobs import (find_job,
                    get_jobs,
-                   fetch_github_owner_repos)
+                   fetch_github_owner_repos,
+                   fetch_gitlab_owner_repos)
 
 
 @convert_django_field.register(JSONField)
@@ -176,9 +177,15 @@ class GitHubRepoResultType(graphene.ObjectType):
     has_issues = graphene.Boolean(description='Whether the repository has issues or not.')
 
 
+class GitLabRepoResultType(graphene.ObjectType):
+    url = graphene.String(description='URL of the repository.')
+    fork = graphene.Boolean(description='Whether the repository is a fork or not.')
+    has_issues = graphene.Boolean(description='Whether the repository has issues or not.')
+
+
 class JobResultType(graphene.Union):
     class Meta:
-        types = (GitHubRepoResultType,)
+        types = (GitHubRepoResultType, GitLabRepoResultType)
 
 
 class JobType(graphene.ObjectType):
@@ -797,6 +804,31 @@ class GitHubOwnerRepos(graphene.Mutation):
         )
 
 
+class GitLabOwnerRepos(graphene.Mutation):
+    class Arguments:
+        owner = graphene.String()
+
+    job_id = graphene.Field(lambda: graphene.String)
+
+    @check_auth
+    def mutate(self, info, owner):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        api_token = None
+        if user.is_authenticated:
+            credential = Credential.objects.filter(user=user,
+                                                   datasource__name='GitLab').first()
+            if credential:
+                api_token = credential.token
+
+        job = enqueue(fetch_gitlab_owner_repos, ctx, owner, api_token)
+
+        return GitLabOwnerRepos(
+            job_id=job.id
+        )
+
+
 class BestiaryQuery(graphene.ObjectType):
     """Queries supported by Bestiary"""
 
@@ -1000,6 +1032,12 @@ class BestiaryQuery(graphene.ObjectType):
                 GitHubRepoResultType(url=repo['url'], fork=repo['fork'], has_issues=repo['has_issues'])
                 for repo in job.result['results']
             ]
+        elif job.result and (job_type == 'fetch_gitlab_owner_repos'):
+            errors = job.result['errors']
+            result = [
+                GitLabRepoResultType(url=repo['url'], fork=repo['fork'], has_issues=repo['has_issues'])
+                for repo in job.result['results']
+            ]
         if status == 'failed':
             errors = [job.exc_info]
 
@@ -1049,6 +1087,7 @@ class BestiaryMutation(graphene.ObjectType):
     archive_dataset = ArchiveDataset.Field()
     unarchive_dataset = UnarchiveDataset.Field()
     fetch_github_owner_repos = GitHubOwnerRepos.Field()
+    fetch_gitlab_owner_repos = GitLabOwnerRepos.Field()
 
     # JWT authentication
     token_auth = graphql_jwt.ObtainJSONWebToken.Field()

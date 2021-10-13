@@ -1,0 +1,16 @@
+[
+  {
+    "model": "core.datasourcetype",
+    "pk": 1,
+    "fields": {
+      "name": "GitHub"
+    }
+  },
+  {
+    "model": "core.datasourcetype",
+    "pk": 2,
+    "fields": {
+      "name": "GitLab"
+    }
+  }
+]
