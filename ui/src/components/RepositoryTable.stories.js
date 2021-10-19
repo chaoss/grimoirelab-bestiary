@@ -1,12 +1,12 @@
-import GitHubTable from "./GitHubTable.vue";
+import RepositoryTable from "./RepositoryTable.vue";
 
 export default {
-  title: "GitHubTable",
+  title: "RepositoryTable",
   excludeStories: /.*Data$/
 };
 
 const template = `
-  <git-hub-table
+  <repository-table
     :items="items"
     :get-projects="getProjects"
     :add-data-set="addDataSet"
@@ -15,7 +15,7 @@ const template = `
 `;
 
 export const Default = () => ({
-  components: { GitHubTable },
+  components: { RepositoryTable },
   template: template,
   data() {
     return {
@@ -70,7 +70,7 @@ export const Default = () => ({
 });
 
 export const Loading = () => ({
-  components: { GitHubTable },
+  components: { RepositoryTable },
   template: template,
   data() {
     return {
@@ -95,7 +95,7 @@ export const Loading = () => ({
 });
 
 export const NoResults = () => ({
-  components: { GitHubTable },
+  components: { RepositoryTable },
   template: template,
   data() {
     return {

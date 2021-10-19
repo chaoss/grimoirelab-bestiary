@@ -187,11 +187,11 @@ export default {
         });
       }
     },
-    async addDataSet(category, datasourceName, uri, projectId, filters = {}) {
+    async addDataSet(category, uri, projectId, filters = {}) {
       const response = await addDataSet(
         this.$apollo,
         category,
-        datasourceName,
+        this.$route.params.datasource,
         uri,
         projectId,
         filters

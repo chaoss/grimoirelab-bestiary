@@ -67,9 +67,9 @@ const router = new Router({
           component: () => import("../views/AddDatasources")
         },
         {
-          name: "github-datasources",
-          path: "/datasources/github/:jobID",
-          component: () => import("../views/GithubDatasources")
+          name: "datasources-job",
+          path: "/datasources/:datasource/:jobID",
+          component: () => import("../views/DatasourcesJob")
         },
         {
           name: "credentials",

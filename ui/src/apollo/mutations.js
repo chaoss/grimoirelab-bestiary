@@ -156,6 +156,14 @@ const FETCH_GITHUB_OWNER_REPOS = gql`
   }
 `;
 
+const FETCH_GITLAB_OWNER_REPOS = gql`
+  mutation fetchGitlabOwnerRepos($owner: String!) {
+    fetchGitlabOwnerRepos(owner: $owner) {
+      jobId
+    }
+  }
+`;
+
 const ADD_CREDENTIAL = gql`
   mutation addCredential(
     $datasourceName: String!
@@ -300,6 +308,16 @@ const fetchGithubOwnerRepos = (apollo, owner) => {
   return response;
 };
 
+const fetchGitlabOwnerRepos = (apollo, owner) => {
+  const response = apollo.mutate({
+    mutation: FETCH_GITLAB_OWNER_REPOS,
+    variables: {
+      owner: owner
+    }
+  });
+  return response;
+};
+
 const deleteDataset = (apollo, id) => {
   const response = apollo.mutate({
     mutation: DELETE_DATASET,
@@ -364,6 +382,7 @@ export {
   addDataSet,
   deleteDataset,
   fetchGithubOwnerRepos,
+  fetchGitlabOwnerRepos,
   addCredential,
   deleteCredential,
   archiveDataset,

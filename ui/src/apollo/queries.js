@@ -182,7 +182,15 @@ const GET_JOB = gql`
     job(jobId: $jobId) {
       status
       result {
+        __typename
         ... on GitHubRepoResultType {
+          __typename
+          url
+          fork
+          hasIssues
+        }
+        ... on GitLabRepoResultType {
+          __typename
           url
           fork
           hasIssues

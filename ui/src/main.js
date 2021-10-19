@@ -7,7 +7,10 @@ import VueApollo from "vue-apollo";
 import VueRouter from "vue-router";
 import { ApolloClient } from "apollo-client";
 import { createHttpLink } from "apollo-link-http";
-import { InMemoryCache } from "apollo-cache-inmemory";
+import {
+  InMemoryCache,
+  IntrospectionFragmentMatcher
+} from "apollo-cache-inmemory";
 import Cookies from "js-cookie";
 import { ApolloLink } from "apollo-link";
 
@@ -25,8 +28,17 @@ const httpLink = createHttpLink({
   credentials: "include"
 });
 
+// Match types for fragments and unions (... on Type)
+const fragmentMatcher = new IntrospectionFragmentMatcher({
+  introspectionQueryResultData: {
+    __schema: {
+      types: []
+    }
+  }
+});
+
 // Cache implementation
-const cache = new InMemoryCache();
+const cache = new InMemoryCache({ fragmentMatcher });
 
 const AuthLink = (operation, next) => {
   const token = csrftoken;
