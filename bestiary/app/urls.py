@@ -11,5 +11,5 @@ from .schema import schema
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name="index.html")),
-    path('graphql/', GraphQLView.as_view(graphiql=settings.DEBUG, schema=schema))
+    path('api/', GraphQLView.as_view(graphiql=settings.DEBUG, schema=schema))
 ]

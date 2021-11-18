@@ -14,17 +14,18 @@ import {
 import Cookies from "js-cookie";
 import { ApolloLink } from "apollo-link";
 
+const API_URL = "/api/";
+
 // Force HTTP GET to the Django Server for getting the csrf token
 let xmlHttp = new XMLHttpRequest();
-xmlHttp.open("GET", "http://localhost:8000/graphql/", false); // false for synchronous request
+xmlHttp.open("GET", API_URL, false); // false for synchronous request
 xmlHttp.withCredentials = true;
 xmlHttp.send(null);
 const csrftoken = Cookies.get("csrftoken");
 
 // HTTP connection to the API
-const uri = `http://localhost:8000/graphql/`;
 const httpLink = createHttpLink({
-  uri,
+  uri: API_URL,
   credentials: "include"
 });
 
