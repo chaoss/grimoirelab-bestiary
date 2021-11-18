@@ -84,9 +84,6 @@ SECRET_KEY = 'fake-key'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3,2/howto/static-files/
 
-STATICFILES_DIRS = [
-    "./bestiary/core/static",
-]
 STATIC_ROOT = "/tmp/static/"
 
 STATIC_URL = '/'

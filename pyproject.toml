@@ -5,6 +5,33 @@ description = "A tool to visually manage software development ecosystems descrip
 authors = ["GrimoireLab Developers"]
 license = "GPL-3.0+"
 
+readme = "README.md"
+
+homepage = "https://chaoss.github.io/grimoirelab/"
+repository = "https://github.com/chaoss/grimoirelab-bestiary"
+
+keywords = [
+    "development",
+    "grimoirelab"
+]
+
+packages = [
+    { include = "bestiary" },
+    { include = "tests", format = "sdist" },
+]
+
+classifiers = [
+   "Development Status :: 4 - Beta",
+   "Intended Audience :: Developers",
+   "Topic :: Software Development",
+   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+   "Programming Language :: Python :: 3"
+]
+
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/chaoss/grimoirelab-bestiary/issues"
+
 [tool.poetry.scripts]
 bestiaryd = "bestiary.server.bestiaryd:bestiaryd"
 
@@ -22,6 +49,7 @@ rq = "^1.4.1"
 django-rq = "^2.3.0"
 requests = "^2.26.0"
 cryptography = "^3"
+uWSGI = "^2.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"

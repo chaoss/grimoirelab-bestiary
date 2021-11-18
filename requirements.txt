@@ -12,3 +12,4 @@ fakeredis>=1.4.1
 requests
 httpretty>=1.0.4
 cryptography>=3.0,<4
+uWSGI>=2.0
