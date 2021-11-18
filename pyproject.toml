@@ -5,6 +5,9 @@ description = "A tool to visually manage software development ecosystems descrip
 authors = ["GrimoireLab Developers"]
 license = "GPL-3.0+"
 
+[tool.poetry.scripts]
+bestiaryd = "bestiary.server.bestiaryd:bestiaryd"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 django = "3.1"

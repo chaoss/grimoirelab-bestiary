@@ -72,5 +72,9 @@ setup(
         'pandoc'
     ],
     install_requires=[],
+    entry_points="""
+        [console_scripts]
+        bestiaryd=bestiary.server.bestiaryd:bestiaryd
+      """,
     zip_safe=False
 )
