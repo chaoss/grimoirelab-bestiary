@@ -79,14 +79,22 @@ USE_I18N = True
 USE_L10N = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.0/howto/static-files/
+SECRET_KEY = 'fake-key'
 
-STATIC_URL = '/static/'
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3,2/howto/static-files/
+
+STATICFILES_DIRS = [
+    "./bestiary/core/static",
+]
+STATIC_ROOT = "/tmp/static/"
+
+STATIC_URL = '/'
+
+MEDIA_URL = 'http://media.example.com/'
 
 # Application parameters
 
-SECRET_KEY = 'fake-key'
 
 INSTALLED_APPS = [
     'django_rq',
