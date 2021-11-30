@@ -2850,6 +2850,208 @@ class TestAddDatasetMutation(django.test.TestCase):
         self.assertEqual(msg, AUTHENTICATION_ERROR)
 
 
+class TestAddDatasetsMutation(django.test.TestCase):
+    """Unit tests for mutation to add multiple datasets"""
+
+    BT_ADD_DATASETS = """
+      mutation addDatasetsTest ($projectId: ID,
+                           $datasourceName:String,
+                           $datasets: [DatasetInputType]) {
+        addDatasets(projectId: $projectId,
+                   datasourceName: $datasourceName,
+                   datasets: $datasets)
+        {
+          datasets {
+            id
+            datasource {
+              type {
+                name
+              }
+              uri
+            }
+            category
+            project {
+              id
+              name
+            }
+          }
+        }
+      }
+    """
+
+    def setUp(self):
+        """Set queries context"""
+
+        self.user = get_user_model().objects.create(username='test')
+        self.context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        self.context_value.user = self.user
+
+        self.eco = Ecosystem.objects.create(name='Eco-example')
+        self.project = Project.objects.create(id=1,
+                                              name='example',
+                                              title='Project title',
+                                              ecosystem=self.eco)
+        self.dstype = DataSourceType.objects.create(id=1, name='GitHub')
+
+    def test_add_dataset(self):
+        """Check if a new dataset is added"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitHub',
+            'datasets': [
+                {
+                    'uri': 'https://github.com/chaoss/grimoirelab-bestiary',
+                    'category': 'issues',
+                    'filters': '{"a": 1}'
+                },
+                {
+                    'uri': 'https://github.com/chaoss/grimoirelab-bestiary',
+                    'category': 'prs',
+                    'filters': '{"a": 1}'
+                }
+            ]
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check result
+        datasets = executed['data']['addDatasets']['datasets']
+
+        self.assertEqual(len(datasets), 2)
+        dataset = datasets[0]
+        self.assertEqual(dataset['project']['id'], str(self.project.id))
+        self.assertEqual(dataset['project']['name'], self.project.name)
+        self.assertEqual(dataset['datasource']['type']['name'], 'GitHub')
+        self.assertEqual(dataset['datasource']['uri'],
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset['category'], 'issues')
+
+        # Check database
+        dset_db = DataSet.objects.get(id=int(dataset['id']))
+        self.assertEqual(dset_db.id, int(dataset['id']))
+        self.assertEqual(dset_db.project.id, self.project.id)
+        self.assertEqual(dset_db.project.name, self.project.name)
+        self.assertEqual(dset_db.datasource.type.name, 'GitHub')
+        self.assertEqual(dset_db.datasource.uri,
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dset_db.category, 'issues')
+
+    def test_not_found_project(self):
+        """Check whether datasets cannot be added when the project is not found"""
+
+        Project.objects.filter(id=11111111).delete()
+        params = {
+            'projectId': 11111111,
+            'datasourceName': 'GitHub',
+            'datasets': [
+                {
+                    'uri': 'https://github.com/chaoss/grimoirelab',
+                    'category': 'issues',
+                    'filters': '{"a": 1}'
+                }
+            ]
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, PROJECT_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        datasets = DataSet.objects.filter(
+            datasource__uri='https://github.com/chaoss/grimoirelab')
+        self.assertEqual(len(datasets), 0)
+
+    def test_not_found_parent(self):
+        """Check whether datasets cannot be added when the data source type is not found"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitLab',
+            'datasets': [
+                {
+                    'uri': 'https://github.com/chaoss/grimoirelab',
+                    'category': 'issues',
+                    'filters': '{"a": 1}'
+                }
+            ]
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        # Check error
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DATASOURCE_NAME_DOES_NOT_EXIST_ERROR)
+
+        # Check database
+        datasets = DataSet.objects.filter(
+            datasource__uri='https://github.com/chaoss/grimoirelab')
+        self.assertEqual(len(datasets), 0)
+
+    def test_integrity_error(self):
+        """Check whether there shouldn't be identical datasets"""
+
+        params = {
+            'projectId': 1,
+            'datasourceName': 'GitHub',
+            'datasets': [
+                {
+                    'uri': 'https://github.com/chaoss/grimoirelab-bestiary',
+                    'category': 'issues',
+                    'filters': '{}'
+                }
+            ]
+        }
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=self.context_value,
+                                  variables=params)
+        dataset = executed['data']['addDatasets']['datasets'][0]
+        dataset_id = int(dataset['id'])
+
+        # Check database
+        dataset_db = DataSet.objects.get(id=dataset_id)
+        self.assertEqual(dataset_db.id, dataset_id)
+        self.assertEqual(dataset_db.project.id, self.project.id)
+        self.assertEqual(dataset_db.project.name, self.project.name)
+        self.assertEqual(dataset_db.datasource.type.name, 'GitHub')
+        self.assertEqual(dataset_db.datasource.uri,
+                         'https://github.com/chaoss/grimoirelab-bestiary')
+        self.assertEqual(dataset_db.category, 'issues')
+        self.assertEqual(dataset_db.filters, '{}')
+
+        # Try to insert it twice
+        client = graphene.test.Client(schema)
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=self.context_value,
+                                  variables=params)
+
+        msg = executed['errors'][0]['message']
+        self.assertRegex(msg, DUPLICATED_DATASET_ERROR)
+
+    def test_authentication(self):
+        """Check if it fails when a non-authenticated user executes the query"""
+
+        context_value = RequestFactory().get(GRAPHQL_ENDPOINT)
+        context_value.user = AnonymousUser()
+
+        client = graphene.test.Client(schema)
+
+        executed = client.execute(self.BT_ADD_DATASETS,
+                                  context_value=context_value)
+
+        msg = executed['errors'][0]['message']
+        self.assertEqual(msg, AUTHENTICATION_ERROR)
+
+
 class TestAddCredentialMutation(django.test.TestCase):
     """Unit tests for mutation to add credentials"""
 

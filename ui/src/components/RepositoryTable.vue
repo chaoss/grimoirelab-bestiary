@@ -135,7 +135,7 @@ export default {
       type: Function,
       required: true
     },
-    addDataSet: {
+    addDataSets: {
       type: Function,
       required: true
     },
@@ -211,18 +211,7 @@ export default {
       });
 
       try {
-        for (let selected of this.selectedByCategory) {
-          const mutation = await this.addDataSet(
-            selected.category,
-            selected.url,
-            project.id
-          );
-          added.push(
-            Object.assign(mutation, {
-              project: project.id
-            })
-          );
-        }
+        added = await this.addDataSets(this.selectedByCategory, project.id);
       } catch (error) {
         this.error = error;
         this.$store.commit("setSnackbar", {

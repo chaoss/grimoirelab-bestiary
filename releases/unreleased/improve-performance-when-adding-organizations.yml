@@ -1,0 +1,9 @@
+---
+title: Improve performance when adding organizations
+category: performance
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: 104
+notes: >
+    This change allows to decrease the number of queries
+    to the server and reduce the time when adding a lot 
+    of repositories from a single organization.

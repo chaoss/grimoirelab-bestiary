@@ -17,7 +17,7 @@
 
     <repository-table
       :items="items"
-      :add-data-set="addDataSet"
+      :add-data-sets="addDataSets"
       :get-projects="getProjects"
       :show-loader="isLoading"
       class="pa-5"
@@ -41,7 +41,7 @@
 
 <script>
 import { getProjects, GET_JOB } from "../apollo/queries";
-import { addDataSet } from "../apollo/mutations";
+import { addDataSets } from "../apollo/mutations";
 import RepositoryTable from "../components/RepositoryTable";
 
 export default {
@@ -69,18 +69,26 @@ export default {
         return response.data.projects.entities;
       }
     },
-    async addDataSet(category, uri, projectId, filters = {}) {
-      const response = await addDataSet(
-        this.$apollo,
-        category,
-        this.datasourceName,
-        uri,
-        projectId,
-        filters
-      );
-      if (response) {
-        return response;
+    async addDataSets(datasets, project_id) {
+      let batch = [];
+      let added = [];
+      for (let dataset of datasets) {
+        batch.push({
+          uri: dataset.url,
+          category: dataset.category,
+          filters: "{}"
+        });
+        if (batch.length >= 100) {
+          let response = await addDataSets(this.$apollo, project_id, this.datasourceName, batch);
+          added.push.apply(added, response.data.addDatasets.datasets)
+          batch = [];
+        }
       }
+      if (batch.length > 0) {
+        let response = await addDataSets(this.$apollo, project_id, this.datasourceName, batch);
+        added.push.apply(added, response.data.addDatasets.datasets)
+      }
+      return added;
     }
   },
   mounted() {

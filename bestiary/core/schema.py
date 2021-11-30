@@ -39,6 +39,7 @@ from graphene_django.types import DjangoObjectType
 from .api import (add_ecosystem,
                   add_project,
                   add_dataset,
+                  add_datasets,
                   add_credential,
                   update_ecosystem,
                   update_project,
@@ -145,6 +146,13 @@ class ProjectType(DjangoObjectType):
 
     class Meta:
         model = Project
+
+
+class DatasetInputType(graphene.InputObjectType):
+    """Dataset objects are meant to define a data source analysis"""
+    uri = graphene.String()
+    category = graphene.String()
+    filters = graphene.JSONString()
 
 
 class DatasetType(DjangoObjectType):
@@ -541,6 +549,28 @@ class AddDataset(graphene.Mutation):
 
         return AddDataset(
             dataset=dataset
+        )
+
+
+class AddDatasets(graphene.Mutation):
+    """Mutation which adds a new Dataset on the registry"""
+
+    class Arguments:
+        project_id = graphene.ID()
+        datasource_name = graphene.String()
+        datasets = graphene.List(DatasetInputType)
+
+    datasets = graphene.List(lambda: DatasetType)
+
+    @check_auth
+    def mutate(self, info, project_id, datasource_name, datasets):
+        user = info.context.user
+        ctx = BestiaryContext(user)
+
+        datasets = add_datasets(ctx, project_id, datasource_name, datasets)
+
+        return AddDatasets(
+            datasets=datasets
         )
 
 
@@ -1076,6 +1106,7 @@ class BestiaryMutation(graphene.ObjectType):
     add_ecosystem = AddEcosystem.Field()
     add_project = AddProject.Field()
     add_dataset = AddDataset.Field()
+    add_datasets = AddDatasets.Field()
     add_credential = AddCredential.Field()
     update_ecosystem = UpdateEcosystem.Field()
     update_project = UpdateProject.Field()

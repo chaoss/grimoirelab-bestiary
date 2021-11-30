@@ -116,6 +116,27 @@ const ADD_DATASET = gql`
   }
 `;
 
+const ADD_DATASETS = gql`
+  mutation addDatasets(
+    $projectId: ID!
+    $datasourceName: String
+    $datasets: [DatasetInputType]
+  ) {
+    addDatasets(
+      projectId: $projectId
+      datasourceName: $datasourceName
+      datasets: $datasets
+    ) {
+      datasets {
+        id
+        datasource {
+          uri
+        }
+      }
+    }
+  }
+`;
+
 const DELETE_DATASET = gql`
   mutation deleteDataset($id: ID!) {
     deleteDataset(id: $id) {
@@ -298,6 +319,23 @@ const addDataSet = (
   return response;
 };
 
+const addDataSets = (
+  apollo,
+  projectId,
+  datasourceName,
+  datasets
+) => {
+  const response = apollo.mutate({
+    mutation: ADD_DATASETS,
+    variables: {
+      projectId: projectId,
+      datasourceName: datasourceName,
+      datasets: datasets
+    }
+  });
+  return response;
+};
+
 const fetchGithubOwnerRepos = (apollo, owner) => {
   const response = apollo.mutate({
     mutation: FETCH_GITHUB_OWNER_REPOS,
@@ -380,6 +418,7 @@ export {
   deleteEcosystem,
   tokenAuth,
   addDataSet,
+  addDataSets,
   deleteDataset,
   fetchGithubOwnerRepos,
   fetchGitlabOwnerRepos,
