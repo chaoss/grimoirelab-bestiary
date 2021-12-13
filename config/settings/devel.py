@@ -27,7 +27,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware'
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = 'bestiary.app.urls'
 
 TEMPLATES = [
     {
@@ -45,7 +45,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = 'bestiary.app.wsgi.application'
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
 
@@ -79,14 +79,19 @@ USE_I18N = True
 USE_L10N = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.0/howto/static-files/
+SECRET_KEY = 'fake-key'
 
-STATIC_URL = '/static/'
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3,2/howto/static-files/
+
+STATIC_ROOT = "/tmp/static/"
+
+STATIC_URL = '/'
+
+MEDIA_URL = 'http://media.example.com/'
 
 # Application parameters
 
-SECRET_KEY = 'fake-key'
 
 INSTALLED_APPS = [
     'django_rq',
@@ -113,6 +118,31 @@ DATABASES = {
             'COLLATION': 'utf8mb4_unicode_520_ci',
         }
     }
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '[{asctime}] {message}',
+            'style': '{',
+        },
+        'verbose': {
+            'format': '[{asctime} - {levelname} - {name}:{lineno}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
 }
 
 DEFAULT_GRAPHQL_PAGE_SIZE = 10
