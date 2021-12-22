@@ -157,6 +157,60 @@ def add_project(ctx, ecosystem_id, name, title=None, parent_id=None):
 
 
 @django.db.transaction.atomic
+def add_datasets(ctx, project_id, datasource_name, datasets):
+    """Add datasets to the registry
+
+    This functions adds a list of datasets to the registry.
+    All datasets have in common that are from the same datasource type
+    and inserted in the same project.
+
+    :param ctx: context from where this method is called
+    :param project_id: ID of the project where this dataset belongs to
+    :param datasource_name: name of the type of data source
+    :param datasets: uri, category and filters for the datasets
+
+    :returns: list of datasets inserted
+    """
+    trxl = TransactionsLog.open('add_datasets', ctx)
+
+    if project_id is None:
+        raise InvalidValueError(msg="'project_id' cannot be None")
+    if datasource_name is None:
+        raise InvalidValueError(msg="'datasource_name' cannot be None")
+    if datasets is None:
+        raise InvalidValueError(msg="'datasets' cannot be None")
+
+    datasource_type = find_datasource_type_db(name=datasource_name)
+    project = find_project(project_id)
+
+    added = []
+    exception = None
+
+    for dataset in datasets:
+        try:
+            datasource = find_datasource_uri_db(datasource_type, dataset['uri'])
+        except NotFoundError:
+            datasource = add_datasource_db(trxl, datasource_type, dataset['uri'])
+
+        try:
+            new_dataset = add_dataset_db(trxl, project, datasource, dataset['category'], dataset['filters'])
+            added.append(new_dataset)
+        except ValueError as e:
+            exception = InvalidValueError(msg=str(e))
+            continue
+        except AlreadyExistsError as exc:
+            exception = exc
+            continue
+
+    if exception:
+        raise exception
+
+    trxl.close()
+
+    return added
+
+
+@django.db.transaction.atomic
 def add_dataset(ctx, project_id, datasource_name, uri, category, filters):
     """Add a data set to the registry.
 
